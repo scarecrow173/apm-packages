@@ -23,7 +23,7 @@ import type { E2ECase } from "../harness/case_types";
  * the `taskId` field, so the projection sees two records for one task and
  * reports `duplicate-task-id` — fail closed, never a silent dedup.
  *
- * 07c is the artifact-graph sibling: two spec docs sharing `id: SPEC-0001`
+ * 07c is the knowledge-graph sibling: two spec docs sharing `id: SPEC-0001`
  * yield a `duplicate-id` issue, which `deriveHardBlockers` promotes to a hard
  * blocker → same-node blocked route at `probe`, zero dispatches. Deviation
  * from the brief: the yield is `input-required`, not `unrecoverable-blocker`
@@ -32,8 +32,8 @@ import type { E2ECase } from "../harness/case_types";
  * maps any blocked route carrying `focus-required` to `input-required`
  * (caller_runner.ts:592). `duplicate-id` itself is colon-free, so the
  * sanitized trace keeps it verbatim; the duplicated id also makes the two
- * `SPEC-0001`-targeting relations ambiguous → `broken-relation:sha256:<12hex>`
- * tokens.
+ * `SPEC-0001`-targeting relations ambiguous → `knowledge:sha256:<12hex>`
+ * tokens (an `ambiguous-relation-target` issue).
  */
 export const case07a: E2ECase = {
   id: "e2e-07a",
@@ -43,7 +43,7 @@ export const case07a: E2ECase = {
     taskStatuses: ["todo", "todo"],
     dependsOn: [["TASK-0002"], ["TASK-0001"]],
   },
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   script: {
     // The scripted repairs complete honestly but leave the cycle intact —
     // that is what makes the retry loop deterministic.
@@ -88,7 +88,7 @@ export const case07b: E2ECase = {
       }, null, 2),
     },
   },
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   script: {
     "task-graph-to-planning": { audits: { design: "completed" }, delegate: "completed" },
     "planning-retry": { audits: { design: "completed" }, delegate: "completed" },
@@ -119,7 +119,7 @@ export const case07c: E2ECase = {
   },
   // Focus is supplied AND still overridden: duplicate-id force-injects
   // focus-required, so the run fails closed with input-required.
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   expect: {
     yield: "input-required",
     edgeSequence: [null],
@@ -127,7 +127,7 @@ export const case07c: E2ECase = {
     blockersContain: [
       "duplicate-id", // colon-free → verbatim token
       "focus-required", // force-injected by the duplicate → input-required (not unrecoverable-blocker)
-      /^broken-relation:sha256:[0-9a-f]{12}$/, // ambiguous SPEC-0001 references
+      /^knowledge:sha256:[0-9a-f]{12}$/, // ambiguous SPEC-0001 references → knowledge:* token
     ],
     events: [
       { kind: "route-selected", count: 1 },

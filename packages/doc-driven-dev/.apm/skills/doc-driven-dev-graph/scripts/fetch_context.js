@@ -28147,7 +28147,7 @@ var graphEdgeSchema = external_exports.object({
   priority: external_exports.number().int()
 }).strict();
 var graphDefinitionSchema = external_exports.object({
-  schemaVersion: external_exports.literal(2),
+  schemaVersion: external_exports.literal(3),
   id: external_exports.string().min(1),
   entry: graphNodeId,
   runtimeSignals: external_exports.array(external_exports.string().min(1)).default([]),

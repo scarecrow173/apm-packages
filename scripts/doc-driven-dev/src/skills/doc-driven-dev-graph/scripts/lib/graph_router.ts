@@ -7,8 +7,13 @@ import { evaluateCondition } from "./graph_conditions";
 import type { GraphState } from "./graph_state";
 import type { TaskGraphResult } from "./task_graph";
 
+// GraphRoute v3 (Issue #243): the same one-edge shape — `current`, `next`,
+// the chosen `edgeId`/`condition`, `status`, `delegate`, `requiredAudits`,
+// `blockers`, `taskGraph`, `commitGate` — re-based on GraphStateV3. The
+// `taskGraph` field still carries the selected run's Dynamic Task Graph
+// projection for the caller (never durable plan/task Markdown).
 export type GraphRoute = {
-  schemaVersion: 2;
+  schemaVersion: 3;
   graphId: string;
   current: GraphNodeId;
   next: GraphNodeId;
@@ -74,7 +79,7 @@ function routeResult(
   additionalBlockers: Iterable<string> = [],
 ): GraphRoute {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     graphId: input.definition.id,
     current: input.current,
     next: result.next,
@@ -84,7 +89,7 @@ function routeResult(
     delegate: result.delegate,
     requiredAudits: sortedUnique(result.requiredAudits),
     blockers: sortedUnique([...input.state.blockers, ...additionalBlockers]),
-    taskGraph: input.state.taskGraph,
+    taskGraph: input.state.execution.taskGraph,
     commitGate: result.commitGate,
   };
 }

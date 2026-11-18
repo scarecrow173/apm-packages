@@ -50,9 +50,14 @@ function snapshot(inventory: InventoryItem[] = []): DashboardSnapshot {
     requested: { focus: [], current: null, signals: [] },
     definition,
     state: {
-      schemaVersion: 2, graphId: definition.graphId, cwd: "C:/secret/repository", taskDir: "docs/tasks",
-      focus: [], artifactGraph: { nodes: [], edges: [], issues: [] }, gates: {}, signals: [],
-      blockers: [], hardBlockers: [], taskGraph: null, verification: null, run: null,
+      schemaVersion: 3, graphId: definition.graphId, cwd: "C:/secret/repository",
+      knowledge: {
+        graph: { nodes: [], edges: [], derivedEdges: [], checkEdges: [], issues: [] },
+        documents: [],
+      },
+      execution: { run: null, taskGraph: null },
+      verification: null,
+      focus: [], gates: {}, signals: [], blockers: [], hardBlockers: [],
     },
     decision: null,
     inventory,
@@ -114,7 +119,7 @@ test("secondary sections use chip-based signals, callout route preview, and tint
   value.requested.signals = ["requested-signal"];
   value.decision = {
     route: {
-      schemaVersion: 2, graphId: definition.graphId, current: "spec", next: "plan",
+      schemaVersion: 3, graphId: definition.graphId, current: "spec", next: "plan",
       edgeId: "spec-to-plan", condition: "ready", status: "edge", delegate: null,
       requiredAudits: ["audit-spec"], blockers: [], taskGraph: null, commitGate: false,
     },
@@ -177,7 +182,7 @@ test("attention section surfaces blocked route reasons instead of claiming nothi
   value.requested.current = "migration";
   value.decision = {
     route: {
-      schemaVersion: 2, graphId: definition.graphId, current: "migration", next: "migration",
+      schemaVersion: 3, graphId: definition.graphId, current: "migration", next: "migration",
       edgeId: null, condition: "blocked", status: "blocked", delegate: null,
       requiredAudits: [], blockers: [], taskGraph: null, commitGate: false,
     },
@@ -299,7 +304,7 @@ test("repository-wide and selected focus task summaries are explicitly distinct"
   ]);
   value.requested.focus = ["docs/designs/a.md"];
   value.state.focus = ["docs/designs/a.md"];
-  value.state.taskGraph = {
+  value.state.execution.taskGraph = {
     schemaVersion: 2, runId: "run-a",
     plan: { path: "runs/run-a/plan.md", digest: "a".repeat(64), approved: true },
     nodes: [
@@ -334,7 +339,7 @@ test("blocked route preview is shown as supplied evidence", () => {
   value.requested.signals = ["explicit-signal"];
   value.decision = {
     route: {
-      schemaVersion: 2, graphId: definition.graphId, current: "briefing", next: "briefing",
+      schemaVersion: 3, graphId: definition.graphId, current: "briefing", next: "briefing",
       edgeId: null, condition: "blocked", status: "blocked", delegate: null,
       requiredAudits: ["audit-x"], blockers: ["hard-x"], taskGraph: null, commitGate: true,
     },
@@ -471,7 +476,7 @@ test("current node and selected edge get dedicated svg classes", () => {
   value.requested.current = "briefing";
   value.decision = {
     route: {
-      schemaVersion: 2, graphId: definition.graphId, current: "briefing", next: "design",
+      schemaVersion: 3, graphId: definition.graphId, current: "briefing", next: "design",
       edgeId: "briefing-to-design", condition: "spec-gap", status: "edge", delegate: "design-doc",
       requiredAudits: [], blockers: [], taskGraph: null, commitGate: false,
     },

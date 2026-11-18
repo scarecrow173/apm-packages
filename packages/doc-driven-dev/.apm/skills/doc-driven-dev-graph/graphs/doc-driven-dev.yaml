@@ -1,11 +1,15 @@
-schemaVersion: 2
+# Graph Definition v3 (Issue #243): routing on the Knowledge + Execution +
+# Evidence stores. Plans, tasks, approvals, and checkpoints live in the
+# Execution Store; verification authority is the HEAD-bound Verification
+# Summary — there are no migration, follow-up-triage, or legacy audit edges.
+# Normal route:
+#   probe → briefing → design → planning → task-graph → implementation
+#         → verification → knowledge-consolidation → exit-audit → complete
+schemaVersion: 3
 id: doc-driven-dev
 entry: probe
-runtimeSignals: [focus-required, exit-audit-pass, commit-waived]
+runtimeSignals: [focus-required, exit-audit-pass, commit-waived, knowledge-consolidated]
 conditions:
-  migration-requested: { kind: signal, signal: migration-requested }
-  migration-incomplete: { kind: signal, signal: migration-incomplete }
-  migration-complete: { kind: signal, signal: migration-complete }
   spec-gap: { kind: signal, signal: spec-gap }
   design-gap: { kind: signal, signal: design-gap }
   constraint-gap: { kind: signal, signal: constraint-gap }
@@ -14,13 +18,6 @@ conditions:
   tasks-active: { kind: task-graph, state: active }
   tasks-runnable: { kind: task-graph, state: runnable }
   tasks-idle: { kind: task-graph, state: idle }
-  followups-unclassified: { kind: signal, signal: followups-unclassified }
-  followup-bug-fix: { kind: signal, signal: followup-bug-fix }
-  followup-decision-briefing: { kind: signal, signal: followup-decision-briefing }
-  followup-decision-design: { kind: signal, signal: followup-decision-design }
-  followup-new-feature: { kind: signal, signal: followup-new-feature }
-  followup-doc-only: { kind: signal, signal: followup-doc-only }
-  followup-terminal: { kind: signal, signal: followup-terminal }
   bootstrap: { kind: gate, gate: bootstrap, status: pass }
   bootstrap-not-pass: { kind: gate, gate: bootstrap, status: not-pass }
   briefing: { kind: gate, gate: briefing, status: pass }
@@ -31,27 +28,36 @@ conditions:
   planning-not-pass: { kind: gate, gate: planning, status: not-pass }
   implementation: { kind: gate, gate: implementation, status: pass }
   implementation-not-pass: { kind: gate, gate: implementation, status: not-pass }
-  followup-triage-not-pass: { kind: gate, gate: followup-triage, status: not-pass }
+  verification: { kind: gate, gate: verification, status: pass }
+  verification-not-pass: { kind: gate, gate: verification, status: not-pass }
+  knowledge-consolidation: { kind: gate, gate: knowledge-consolidation, status: pass }
+  knowledge-consolidation-not-pass: { kind: gate, gate: knowledge-consolidation, status: not-pass }
   exit-audit: { kind: gate, gate: exit-audit, status: pass }
   exit-audit-not-pass: { kind: gate, gate: exit-audit, status: not-pass }
 nodes:
   probe: { kind: action }
-  migration: { kind: action, delegate: migrate_docs }
   bootstrap: { kind: action, delegate: scaffold_docs }
   briefing: { kind: delegate, delegate: briefing-flow, audits: [spec, adr] }
   design: { kind: action, delegate: design-doc, audits: [design] }
   planning: { kind: delegate, delegate: planning-flow, audits: [design] }
-  task-graph: { kind: action, delegate: build_task_graph, audits: [plan, task, test-spec] }
+  # The task graph is a projection of the selected Execution Store run —
+  # audits read the durable design it plans against; plans/tasks are never
+  # durable Markdown.
+  task-graph: { kind: action, delegate: build_task_graph, audits: [design] }
   implementation: { kind: delegate, delegate: implementation-flow, commitGate: true }
-  followup-triage: { kind: action, audits: [task, impl-record] }
-  exit-audit: { kind: audit, delegate: doc-status, audits: [all, impl-record, experiment-log], requiresGates: [bootstrap, briefing, design, planning, implementation, followup-triage] }
+  # Verification is assessment, not dispatch: audits read the Verification
+  # Design documents (durable intent); the gate reads the HEAD-bound
+  # Verification Summary built from Evidence Records (the measurement).
+  verification: { kind: action, audits: [verification] }
+  # The caller signals `knowledge-consolidated` once the consolidation
+  # decision is honestly taken — integrate findings or deliberately persist
+  # nothing. The gate never infers it.
+  knowledge-consolidation: { kind: delegate, delegate: knowledge-doc, audits: [knowledge] }
+  exit-audit: { kind: audit, delegate: doc-status, audits: [all], requiresGates: [bootstrap, briefing, design, planning, implementation, verification, knowledge-consolidation] }
   complete: { kind: terminal }
 edges:
-  - { id: probe-to-migration, from: probe, to: migration, when: migration-requested, priority: 10 }
-  - { id: probe-to-bootstrap, from: probe, to: bootstrap, when: bootstrap-not-pass, priority: 20 }
-  - { id: probe-to-briefing, from: probe, to: briefing, when: bootstrap, priority: 30 }
-  - { id: migration-retry, from: migration, to: migration, when: migration-incomplete, priority: 10 }
-  - { id: migration-to-bootstrap, from: migration, to: bootstrap, when: migration-complete, priority: 20 }
+  - { id: probe-to-bootstrap, from: probe, to: bootstrap, when: bootstrap-not-pass, priority: 10 }
+  - { id: probe-to-briefing, from: probe, to: briefing, when: bootstrap, priority: 20 }
   - { id: bootstrap-retry, from: bootstrap, to: bootstrap, when: bootstrap-not-pass, priority: 10 }
   - { id: bootstrap-to-briefing, from: bootstrap, to: briefing, when: bootstrap, priority: 20 }
   - { id: briefing-retry, from: briefing, to: briefing, when: briefing-not-pass, priority: 10 }
@@ -66,29 +72,27 @@ edges:
   - { id: task-graph-retry, from: task-graph, to: task-graph, when: task-graph-retry, priority: 20 }
   - { id: task-graph-to-active-implementation, from: task-graph, to: implementation, when: tasks-active, priority: 30 }
   - { id: task-graph-to-implementation, from: task-graph, to: implementation, when: tasks-runnable, priority: 40 }
-  - { id: task-graph-to-followup-triage, from: task-graph, to: followup-triage, when: tasks-idle, priority: 50 }
+  # All tasks terminal — no runnable/active/blocked work remains. Route to
+  # implementation so its own gate confirms sufficiency (and the commitGate
+  # semantics still apply) before verification.
+  - { id: task-graph-idle-to-implementation, from: task-graph, to: implementation, when: tasks-idle, priority: 50 }
   - { id: implementation-retry, from: implementation, to: implementation, when: implementation-not-pass, priority: 10 }
   - { id: implementation-to-briefing, from: implementation, to: briefing, when: spec-gap, priority: 20 }
   - { id: implementation-to-design, from: implementation, to: design, when: design-gap, priority: 30 }
   - { id: implementation-constraint-to-design, from: implementation, to: design, when: constraint-gap, priority: 40 }
-  - { id: implementation-to-followup-triage, from: implementation, to: followup-triage, when: implementation, priority: 50 }
-  - { id: followup-triage-retry, from: followup-triage, to: followup-triage, when: followups-unclassified, priority: 10 }
-  - { id: followup-triage-to-bootstrap-repair, from: followup-triage, to: bootstrap, when: bootstrap-not-pass, priority: 20 }
-  - { id: followup-triage-to-briefing-repair, from: followup-triage, to: briefing, when: briefing-not-pass, priority: 30 }
-  - { id: followup-triage-to-design-repair, from: followup-triage, to: design, when: design-not-pass, priority: 40 }
-  - { id: followup-triage-to-planning-repair, from: followup-triage, to: planning, when: planning-not-pass, priority: 50 }
-  - { id: followup-triage-to-implementation-repair, from: followup-triage, to: implementation, when: implementation-not-pass, priority: 60 }
-  - { id: followup-triage-to-planning, from: followup-triage, to: planning, when: followup-bug-fix, priority: 70 }
-  - { id: followup-triage-to-briefing, from: followup-triage, to: briefing, when: followup-decision-briefing, priority: 80 }
-  - { id: followup-triage-to-design, from: followup-triage, to: design, when: followup-decision-design, priority: 90 }
-  - { id: followup-triage-new-feature, from: followup-triage, to: briefing, when: followup-new-feature, priority: 100 }
-  - { id: followup-triage-doc-only, from: followup-triage, to: exit-audit, when: followup-doc-only, priority: 110 }
-  - { id: followup-triage-terminal, from: followup-triage, to: exit-audit, when: followup-terminal, priority: 120 }
+  - { id: implementation-to-verification, from: implementation, to: verification, when: implementation, priority: 50 }
+  # Insufficient or stale evidence — implement more (or record evidence)
+  # and come back. Bounded by the caller's per-edge dispatch budget.
+  - { id: verification-to-implementation, from: verification, to: implementation, when: verification-not-pass, priority: 10 }
+  - { id: verification-to-knowledge-consolidation, from: verification, to: knowledge-consolidation, when: verification, priority: 20 }
+  - { id: knowledge-consolidation-retry, from: knowledge-consolidation, to: knowledge-consolidation, when: knowledge-consolidation-not-pass, priority: 10 }
+  - { id: knowledge-consolidation-to-exit-audit, from: knowledge-consolidation, to: exit-audit, when: knowledge-consolidation, priority: 20 }
   - { id: exit-audit-to-bootstrap-repair, from: exit-audit, to: bootstrap, when: bootstrap-not-pass, priority: 10 }
   - { id: exit-audit-to-briefing-repair, from: exit-audit, to: briefing, when: briefing-not-pass, priority: 20 }
   - { id: exit-audit-to-design-repair, from: exit-audit, to: design, when: design-not-pass, priority: 30 }
   - { id: exit-audit-to-planning-repair, from: exit-audit, to: planning, when: planning-not-pass, priority: 40 }
   - { id: exit-audit-to-implementation-repair, from: exit-audit, to: implementation, when: implementation-not-pass, priority: 50 }
-  - { id: exit-audit-to-followup-triage-repair, from: exit-audit, to: followup-triage, when: followup-triage-not-pass, priority: 60 }
-  - { id: exit-audit-retry, from: exit-audit, to: exit-audit, when: exit-audit-not-pass, priority: 70 }
-  - { id: exit-audit-to-complete, from: exit-audit, to: complete, when: exit-audit, priority: 80 }
+  - { id: exit-audit-to-verification-repair, from: exit-audit, to: verification, when: verification-not-pass, priority: 60 }
+  - { id: exit-audit-to-knowledge-consolidation-repair, from: exit-audit, to: knowledge-consolidation, when: knowledge-consolidation-not-pass, priority: 70 }
+  - { id: exit-audit-retry, from: exit-audit, to: exit-audit, when: exit-audit-not-pass, priority: 80 }
+  - { id: exit-audit-to-complete, from: exit-audit, to: complete, when: exit-audit, priority: 90 }

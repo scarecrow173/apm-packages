@@ -36,7 +36,7 @@ For each selected edge:
 7. Dispatch only the returned delegate.
 8. If an audit or delegate explicitly requires input, approval, or authority,
    yield without claiming the edge checkpoint complete.
-9. Persist completion, gate, and follow-up evidence as run records: each
+9. Persist completion, gate, and verification evidence as run records: each
    accepted `completed` outcome is recorded first as an Effect Receipt in the
    run's Execution Store, then the edge checkpoint record binds the completed
    receipts, the refreshed outcome outputs, and the evidence-phase declared
@@ -55,18 +55,17 @@ For each selected edge:
 12. Re-enter from `next` with a fresh state projection.
 13. In `single-step` mode yield; in `run-until-yield` mode repeat.
 
-The caller owns the route invocation: `runCaller` appends a pinned
-`--task-dir docs/tasks` after any adapter `prefixArgs` so every
-re-projection scans the same deterministic corpus root for artifact-graph
-and focus bookkeeping. Last flag wins deliberately; an adapter-supplied
-`--task-dir` is never honored. An adapter selects the Execution Store run by
+The caller owns the route invocation: under Graph Route v3 there is no
+`--task-dir` — plan/task state lives in the Execution Store, and
+`route_graph.js` rejects the flag outright. The durable corpus is the only
+artifact scan root. An adapter selects the Execution Store run by
 placing `--run <run-id>` (with `--state-root`/`--allow-external-root` when
 needed) in `prefixArgs`; with no `--run`, the router applies the
-single-active-run rule — zero candidates leave the Task Graph null without
-a blocker (planning has not materialized a run yet), while several fail
-closed as ambiguous (`task-graph-run-ambiguous`).
+single-active-run-for-this-chain rule — zero candidates leave the Task
+Graph null without a blocker (planning has not materialized a run yet),
+while several fail closed as ambiguous (`task-graph-run-ambiguous`).
 
-Record completion, gate, and follow-up evidence in the run's Execution Store:
+Record completion, gate, and verification evidence in the run's Execution Store:
 `recordReceipt` for each accepted completed outcome, then `recordCheckpoint`
 for the edge. Receipts prove execution-side effects completed; they are not
 Verification Evidence.
@@ -81,8 +80,9 @@ Graph State, or the Execution Store records.
 
 ## Git commit boundary
 
-Across briefing, spec, ADR, design, plan, test-spec, task, implementation,
-follow-up, and audit work, make each reviewable logical change one commit. A logical change
+Across briefing, spec, ADR, design, plan, task, implementation,
+verification, knowledge-consolidation, and audit work, make each reviewable
+logical change one commit. A logical change
 should be explainable and reviewable on its own, have a clear verification
 method where practical, have a clear meaning if reverted, and contain no
 unrelated changes. Minimizing or maximizing the number of commits is not a
@@ -148,13 +148,11 @@ field compares against the resolved reference `revision`.)
 The caller adapter normalizes the declared script delegates (`migrate_docs`,
 `scaffold_docs`, and `build_task_graph` — the migration scripts are owned by
 `doc-maintenance`) and named audits (`spec`, `adr`,
-`design`, `plan`, `task`, `test-spec`, `impl-record`, `experiment-log`, and
-`all`) into `EffectOutcome`. Under Document Registry 3 the `plan`, `task`,
-and `test-spec` names are refused scopes — `audit_docs.js --type <name>` fails
-at the registry gate (`plan`/`task` are execution-bound; `test-spec` is a
-legacy migration-only format), so the adapter never normalizes a completed
-outcome for them until the Graph Definition v3 rewire (#243) replaces the
-superseded `audits:` lists.
+`design`, `verification`, `knowledge`, and `all`) into `EffectOutcome`.
+Under Document Registry 3 the legacy `plan`, `task`, and `test-spec` audit
+names are refused scopes — `audit_docs.js --type <name>` fails at the
+registry gate (`plan`/`task` are execution-bound; `test-spec` is a legacy
+migration-only format) — and they appear in no v3 `audits:` list.
 Skills that can emit the footer return it directly. Missing or malformed adapter
 outputs yield `authority-required`; it never advances a checkpoint. The
 effect-specific canonical input/output mapping is defined in

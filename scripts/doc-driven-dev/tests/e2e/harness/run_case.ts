@@ -32,9 +32,13 @@ const ROUTER_CLI = path.resolve(__dirname, "../../../src/skills/doc-driven-dev-g
 
 export function runCase(e2eCase: E2ECase): { run: CaseRun; report: CaseReport } {
   const started = Date.now();
-  // Graph-run fixtures always carry the Registry 3 verification document —
-  // the `test-spec` audit's refused scope binds it on every task-graph edge.
-  const repo = createFixtureRepo({ verificationDoc: true, ...(e2eCase.fixture ?? {}) });
+  // Graph-run fixtures always carry the Registry 3 durable docs the declared
+  // audits bind — the verification-intent document and the knowledge record.
+  const repo = createFixtureRepo({
+    verificationDoc: true,
+    knowledgeDoc: true,
+    ...(e2eCase.fixture ?? {}),
+  });
   const graphPath = e2eCase.graph
     ? path.resolve(repo, e2eCase.graph)
     : resolveGraphPath(undefined, repo);

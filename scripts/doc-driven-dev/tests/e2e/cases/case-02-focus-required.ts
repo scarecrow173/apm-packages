@@ -12,19 +12,19 @@ import type { E2ECase } from "../harness/case_types";
  * blocked leg saves no pending edge, so there is nothing to resume — focus
  * simply becomes a fresh-run option. The happy sequence then replays end to
  * end. The case-level `events` tally is whole-run scoped: 1 blocked route in
- * leg 1 + 8 edges + 1 terminal row in leg 2 = 10 route-selected events.
+ * leg 1 + 9 edges + 1 terminal row in leg 2 = 11 route-selected events.
  */
 export const case02: E2ECase = {
   id: "e2e-02",
   description: "focus-required blocks leg 1; fresh leg 2 with focus reaches terminal",
   fixture: { taskStatuses: ["todo"] },
-  signals: ["followup-terminal", "exit-audit-pass"],
+  signals: ["knowledge-consolidated", "exit-audit-pass"],
   script: {
     "probe-to-briefing": { audits: { spec: "completed", adr: "completed" }, delegate: "completed" },
     "briefing-to-design": { audits: { design: "completed" }, delegate: "completed" },
     "design-to-planning": { audits: { design: "completed" }, delegate: "completed" },
     "planning-to-task-graph": {
-      audits: { plan: "completed", task: "completed", "test-spec": "completed" },
+      audits: { design: "completed" },
       delegate: "completed",
     },
     "task-graph-to-implementation": {
@@ -32,8 +32,9 @@ export const case02: E2ECase = {
       mutate: [{ task: { taskId: "TASK-0001", status: "done" } }],
       commitEvidence: true,
     },
-    "implementation-to-followup-triage": { audits: { task: "completed", "impl-record": "completed" } },
-    "followup-triage-terminal": { audits: { all: "completed", "experiment-log": "completed", "impl-record": "completed" }, delegate: "completed" },
+    "implementation-to-verification": { audits: { verification: "completed" } },
+    "verification-to-knowledge-consolidation": { audits: { knowledge: "completed" }, delegate: "completed" },
+    "knowledge-consolidation-to-exit-audit": { audits: { all: "completed" }, delegate: "completed" },
     "exit-audit-to-complete": {},
   },
   steps: [
@@ -54,8 +55,7 @@ export const case02: E2ECase = {
         yield: "terminal",
         edgeSequence: [
           "probe-to-briefing", "briefing-to-design", "design-to-planning",
-          "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-followup-triage",
-          "followup-triage-terminal", "exit-audit-to-complete", null,
+          "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-verification", "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit", "exit-audit-to-complete", null,
         ],
       },
     },
@@ -64,16 +64,14 @@ export const case02: E2ECase = {
     yield: "terminal",
     edgeSequence: [
       "probe-to-briefing", "briefing-to-design", "design-to-planning",
-      "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-followup-triage",
-      "followup-triage-terminal", "exit-audit-to-complete", null,
+      "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-verification", "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit", "exit-audit-to-complete", null,
     ],
     completedEdges: [
       "probe-to-briefing", "briefing-to-design", "design-to-planning",
-      "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-followup-triage",
-      "followup-triage-terminal", "exit-audit-to-complete",
+      "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-verification", "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit", "exit-audit-to-complete",
     ],
     events: [
-      { kind: "route-selected", count: 10 }, // whole-run: 1 blocked (leg 1) + 8 edges + 1 terminal (leg 2)
+      { kind: "route-selected", count: 11 }, // whole-run: 1 blocked (leg 1) + 9 edges + 1 terminal (leg 2)
       { kind: "run-yield", count: 2 },
     ],
     finalFiles: {

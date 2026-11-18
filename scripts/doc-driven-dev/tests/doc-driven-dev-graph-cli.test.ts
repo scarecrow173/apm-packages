@@ -37,9 +37,29 @@ function tempRepo() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "doc-driven-dev-graph-cli-"));
 }
 
+// Graph State v3 requires an explicit, resolvable focus for any non-terminal
+// route — a bare checkout is `focus-required`-blocked. Custom-graph fixtures
+// get a lone durable spec so `--focus SPEC-0001` resolves a one-doc chain,
+// and a baseline commit so the auto-computed Verification Summary binds to
+// HEAD (zero required checks -> verified, no stray verification blocker).
+function focusedRepo(): string {
+  const repo = tempRepo();
+  writeArtifact(repo, "docs/specs/0001-graph.md", {
+    id: "SPEC-0001", type: "spec", status: "proposed", title: "Graph",
+  }, "# Graph\n\n## Acceptance Criteria\n\n- [ ] graph\n");
+  const git = (args: string[]) => {
+    const result = spawnSync("git", args, { cwd: repo, encoding: "utf8" });
+    if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
+  };
+  git(["init", "-q"]);
+  git(["add", "-A"]);
+  git(["-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-qm", "baseline"]);
+  return repo;
+}
+
 function graphFile(repo: string): string {
   const file = path.join(repo, "graph.yaml");
-  fs.writeFileSync(file, `schemaVersion: 2
+  fs.writeFileSync(file, `schemaVersion: 3
 id: cli-fixture
 entry: start
 conditions:
@@ -85,10 +105,11 @@ function completeRepo(taskStatuses: Array<"todo" | "in-progress" | "blocked" | "
   }, "# Graph\n\n## Acceptance Criteria\n\n- [ ] graph\n");
   writeArtifact(repo, "docs/adr/0001-graph.md", {
     id: "ADR-0001", type: "adr", status: "accepted", title: "Graph",
+    relations: { "decides-for": ["DESIGN-0001"] },
   }, "# Graph\n\n## Considered Options\n\n### A\n\n### B\n");
   writeArtifact(repo, "docs/designs/0001-graph.md", {
     id: "DESIGN-0001", type: "design", status: "approved", title: "Graph",
-    relations: { "derives-from": ["SPEC-0001", "ADR-0001"] },
+    relations: { realizes: ["SPEC-0001"] },
   }, "# Graph\n");
   writeArtifact(repo, "docs/plans/0001-graph.md", {
     id: "PLAN-0001", type: "plan", status: "approved", title: "Graph",
@@ -112,7 +133,7 @@ function completeRepo(taskStatuses: Array<"todo" | "in-progress" | "blocked" | "
   createRun(repo, {
     runId: RUN_ID,
     graphId: "doc-driven-dev",
-    focus: ["docs/plans/0001-graph.md"],
+    focus: ["docs/designs/0001-graph.md"],
     plan: "# Plan\n\nStore-managed run plan.\n",
     tasks: taskStatuses.map((status, index) => ({
       taskId: `TASK-${String(index + 1).padStart(4, "0")}`,
@@ -140,9 +161,12 @@ function preDesignRepo(): string {
   for (const relativePath of ["docs/designs/0001-graph.md", "docs/plans/0001-graph.md", "docs/tasks/0001-task.md"]) {
     fs.rmSync(path.join(repo, relativePath));
   }
+  // The pre-design chain pairs spec+ADR through a capture-layer anchor:
+  // discovery.motivates -> spec plus discovery.informs -> adr (the v1
+  // stored direction is always anchor -> artifact, Issue #235).
   writeArtifact(repo, "docs/discovery/0001-graph.md", {
     id: "DISC-0001", type: "discovery", status: "confirmed", title: "Graph Discovery",
-    relations: { "derived-by": ["SPEC-0001", "ADR-0001"] },
+    relations: { motivates: ["SPEC-0001"], informs: ["SPEC-0001", "ADR-0001"] },
   }, "# Graph Discovery\n");
   for (const [relativePath, id, type] of [
     ["docs/specs/0001-graph.md", "SPEC-0001", "spec"],
@@ -152,7 +176,7 @@ function preDesignRepo(): string {
       ? "# Graph\n\n## Acceptance Criteria\n\n- [ ] graph\n"
       : "# Graph\n\n## Considered Options\n\n### A\n\n### B\n";
     writeArtifact(repo, relativePath, {
-      id, type, status: "proposed", title: "Graph", relations: { "derives-from": ["DISC-0001"] },
+      id, type, status: "proposed", title: "Graph",
     }, body);
   }
   return repo;
@@ -204,9 +228,9 @@ function runGeneratedInspect(cwd: string, args: string[]) {
 }
 
 test("default entry and one-edge JSON output are GraphRoute-shaped", () => {
-  const repo = tempRepo();
+  const repo = focusedRepo();
   const graph = graphFile(repo);
-  const args = ["--graph", graph, "--signal", "advance", "--signal", "finish", "--json"];
+  const args = ["--graph", graph, "--focus", "SPEC-0001", "--signal", "advance", "--signal", "finish", "--json"];
   const source = runSource(repo, args);
   const generated = runCli(generatedCli, repo, args);
   assert.equal(source.status, 0, source.stderr);
@@ -218,7 +242,7 @@ test("default entry and one-edge JSON output are GraphRoute-shaped", () => {
     "requiredAudits", "schemaVersion", "status", "taskGraph",
   ]);
   assert.deepEqual(route, {
-    schemaVersion: 2,
+    schemaVersion: 3,
     graphId: "cli-fixture",
     current: "start",
     next: "next",
@@ -245,7 +269,7 @@ test("source and generated CLIs route a pre-design briefing chain identically", 
   assert.equal(generated.status, 0, generated.stderr);
   assert.deepEqual(JSON.parse(generated.stdout), JSON.parse(source.stdout));
   assert.deepEqual(JSON.parse(source.stdout), {
-    schemaVersion: 2,
+    schemaVersion: 3,
     graphId: "doc-driven-dev",
     current: "briefing",
     next: "design",
@@ -262,31 +286,35 @@ test("source and generated CLIs route a pre-design briefing chain identically", 
 
 function sharedUpstreamRepo(): string {
   const repo = preDesignRepo();
+  // IDEA-0001 is the shared upstream for three chains: idea.motivates ->
+  // spec is the only v1 spelling (Issue #235).
   writeArtifact(repo, "docs/ideas/0001-root.md", {
     id: "IDEA-0001", type: "idea", status: "active", title: "Root Idea",
+    relations: { motivates: ["SPEC-0001", "SPEC-0002", "SPEC-0003"] },
   }, "# Root Idea\n");
   writeArtifact(repo, "docs/discovery/0001-graph.md", {
     id: "DISC-0001", type: "discovery", status: "confirmed", title: "Graph Discovery",
-    relations: { "derived-by": ["SPEC-0001", "ADR-0001"], "derives-from": ["IDEA-0001"] },
+    relations: { motivates: ["SPEC-0001"], informs: ["SPEC-0001", "ADR-0001"] },
   }, "# Graph Discovery\n");
   for (const index of [2, 3]) {
     const suffix = String(index).padStart(4, "0");
     writeArtifact(repo, `docs/discovery/${suffix}-chain.md`, {
       id: `DISC-${suffix}`, type: "discovery", status: "confirmed", title: `Discovery ${index}`,
-      relations: { "derives-from": ["IDEA-0001"] },
+      relations: { motivates: [`SPEC-${suffix}`], informs: ["IDEA-0001"] },
     }, `# Discovery ${index}\n`);
     writeArtifact(repo, `docs/specs/${suffix}-chain.md`, {
       id: `SPEC-${suffix}`, type: "spec", status: "proposed", title: `Spec ${index}`,
-      relations: { "derives-from": [`DISC-${suffix}`] },
     }, `# Spec ${index}\n\n## Acceptance Criteria\n\n- [ ] chain\n`);
     writeArtifact(repo, `docs/adr/${suffix}-chain.md`, {
       id: `ADR-${suffix}`, type: "adr", status: "accepted", title: `ADR ${index}`,
-      relations: { "derives-from": [`DISC-${suffix}`] },
+      relations: { "decides-for": [`DESIGN-${suffix}`] },
     }, `# ADR ${index}\n\n## Considered Options\n\n### A\n\n### B\n`);
     writeArtifact(repo, `docs/designs/${suffix}-chain.md`, {
       id: `DESIGN-${suffix}`, type: "design", status: "approved", title: `Design ${index}`,
-      relations: { "derives-from": [`SPEC-${suffix}`, `ADR-${suffix}`] },
+      relations: { realizes: [`SPEC-${suffix}`] },
     }, `# Design ${index}\n`);
+    // Pre-v3 plan corpus is migration inventory — the projection never
+    // reads it (Issue #243); it stays to prove exactly that.
     writeArtifact(repo, `docs/plans/${suffix}-chain.md`, {
       id: `PLAN-${suffix}`, type: "plan", status: "completed", title: `Plan ${index}`,
       relations: { "derives-from": [`DESIGN-${suffix}`] },
@@ -316,9 +344,11 @@ test("source and generated CLIs route a unique chain past shared-upstream plans"
 
 test("source and generated CLIs route an approved design through planning-flow identically", () => {
   const repo = approvedDesignRepo();
+  // The Execution Store run's manifest focus joins the design's chain, so the
+  // task graph projects on every route and planning passes to task-graph.
   const expected = {
     design: {
-      schemaVersion: 2,
+      schemaVersion: 3,
       graphId: "doc-driven-dev",
       current: "design",
       next: "planning",
@@ -328,21 +358,19 @@ test("source and generated CLIs route an approved design through planning-flow i
       delegate: "planning-flow",
       requiredAudits: ["design"],
       blockers: [],
-      taskGraph: null,
       commitGate: false,
     },
     planning: {
-      schemaVersion: 2,
+      schemaVersion: 3,
       graphId: "doc-driven-dev",
       current: "planning",
-      next: "planning",
-      edgeId: "planning-retry",
-      condition: "planning-not-pass",
+      next: "task-graph",
+      edgeId: "planning-to-task-graph",
+      condition: "planning",
       status: "edge",
-      delegate: "planning-flow",
+      delegate: "build_task_graph",
       requiredAudits: ["design"],
       blockers: [],
-      taskGraph: null,
       commitGate: false,
     },
   };
@@ -357,7 +385,13 @@ test("source and generated CLIs route an approved design through planning-flow i
     assert.equal(source.status, 0, source.stderr);
     assert.equal(generated.status, 0, generated.stderr);
     assert.deepEqual(JSON.parse(source.stdout), JSON.parse(generated.stdout));
-    assert.deepEqual(JSON.parse(source.stdout), expected[current]);
+    const route = JSON.parse(source.stdout) as Record<string, unknown>;
+    const taskGraph = route.taskGraph;
+    delete route.taskGraph;
+    assert.deepEqual(route, expected[current]);
+    assert.ok(taskGraph !== null && typeof taskGraph === "object", `${current}: task graph must project`);
+    assert.deepEqual((taskGraph as { runnable: string[] }).runnable, ["TASK-0001"], current);
+    assert.equal((taskGraph as { runId: string }).runId, RUN_ID, current);
   }
 });
 
@@ -394,10 +428,10 @@ test("accepts runtime signals declared separately from edge conditions", () => {
 
 test("relative explicit graph paths remain process-cwd-relative when --cwd selects runtime state", () => {
   const processRepo = tempRepo();
-  const runtimeRepo = tempRepo();
+  const runtimeRepo = focusedRepo();
   graphFile(processRepo);
   const result = runSource(processRepo, [
-    "--graph", "graph.yaml", "--cwd", runtimeRepo, "--signal", "advance", "--json",
+    "--graph", "graph.yaml", "--cwd", runtimeRepo, "--focus", "SPEC-0001", "--signal", "advance", "--json",
   ]);
   assert.equal(result.status, 0, result.stderr);
   const route = JSON.parse(result.stdout);
@@ -444,9 +478,9 @@ test("canonical graph skill and generated CLI replace the lifecycle skill", () =
 });
 
 test("generated CLI smoke matches source CLI terminology", { skip: !fs.existsSync(generatedCli) }, () => {
-  const repo = tempRepo();
+  const repo = focusedRepo();
   const graph = graphFile(repo);
-  const result = runCli(generatedCli, repo, ["--graph", graph, "--signal", "advance", "--json"]);
+  const result = runCli(generatedCli, repo, ["--graph", graph, "--focus", "SPEC-0001", "--signal", "advance", "--json"]);
   assert.equal(result.status, 0, result.stderr);
   const route = JSON.parse(result.stdout);
   assert.equal(route.graphId, "cli-fixture");
@@ -459,7 +493,7 @@ test("resumable active task graph runs through source and generated CLIs", () =>
     ["done", "in-progress", "in-progress", "in-progress"],
     [[], ["TASK-0001"], ["TASK-0001"], ["TASK-0002"]],
   );
-  const args = ["--focus", "PLAN-0001", "--current", "task-graph", "--explain", "--json"];
+  const args = ["--focus", "DESIGN-0001", "--current", "task-graph", "--explain", "--json"];
 
   for (const [name, result] of [
     ["source", runSource(repo, args)],
@@ -481,7 +515,7 @@ test("resumable active task graph runs through source and generated CLIs", () =>
 
 test("active task takes priority over runnable task in source and generated CLIs", () => {
   const repo = completeRepo(["in-progress", "todo"]);
-  const args = ["--focus", "PLAN-0001", "--current", "task-graph", "--explain", "--json"];
+  const args = ["--focus", "DESIGN-0001", "--current", "task-graph", "--explain", "--json"];
 
   for (const [name, result] of [
     ["source", runSource(repo, args)],
@@ -504,7 +538,7 @@ test("active task takes priority over runnable task in source and generated CLIs
 
 test("runnable prerequisite progresses while dependent active task remains unresolved", () => {
   const repo = completeRepo(["todo", "in-progress"], [[], ["TASK-0001"]]);
-  const args = ["--focus", "PLAN-0001", "--current", "task-graph", "--explain", "--json"];
+  const args = ["--focus", "DESIGN-0001", "--current", "task-graph", "--explain", "--json"];
 
   for (const [name, result] of [
     ["source", runSource(repo, args)],
@@ -529,25 +563,25 @@ test("table-driven CLI routes exercise every migration scenario with one edge", 
   const scenarios: Scenario[] = [
     {
       name: "bootstrap required",
-      setup: () => ({ repo: tempRepo() }),
+      setup: () => ({ repo: focusedRepo(), args: ["--focus", "SPEC-0001"] }),
       edgeId: "probe-to-bootstrap",
       next: "bootstrap",
     },
     {
       name: "happy path",
-      setup: () => ({ repo: completeRepo(), args: ["--focus", "PLAN-0001"] }),
+      setup: () => ({ repo: completeRepo(), args: ["--focus", "DESIGN-0001"] }),
       edgeId: "probe-to-briefing",
       next: "briefing",
     },
     {
       name: "spec gap",
-      setup: () => ({ repo: completeRepo(), args: ["--focus", "PLAN-0001", "--current", "design", "--signal", "spec-gap"] }),
+      setup: () => ({ repo: completeRepo(), args: ["--focus", "DESIGN-0001", "--current", "design", "--signal", "spec-gap"] }),
       edgeId: "design-to-briefing",
       next: "briefing",
     },
     {
       name: "design gap",
-      setup: () => ({ repo: completeRepo(), args: ["--focus", "PLAN-0001", "--current", "planning", "--signal", "design-gap"] }),
+      setup: () => ({ repo: completeRepo(), args: ["--focus", "DESIGN-0001", "--current", "planning", "--signal", "design-gap"] }),
       edgeId: "planning-to-design",
       next: "design",
     },
@@ -555,7 +589,7 @@ test("table-driven CLI routes exercise every migration scenario with one edge", 
       name: "invalid task graph",
       setup: () => ({
         repo: completeRepo(["todo", "todo"], [["TASK-0002"], ["TASK-0001"]]),
-        args: ["--focus", "PLAN-0001", "--current", "task-graph"],
+        args: ["--focus", "DESIGN-0001", "--current", "task-graph"],
       }),
       edgeId: "task-graph-to-planning",
       next: "planning",
@@ -564,7 +598,7 @@ test("table-driven CLI routes exercise every migration scenario with one edge", 
       name: "runnable task graph",
       setup: () => ({
         repo: completeRepo(["todo"]),
-        args: ["--focus", "PLAN-0001", "--current", "task-graph"],
+        args: ["--focus", "DESIGN-0001", "--current", "task-graph"],
       }),
       edgeId: "task-graph-to-implementation",
       next: "implementation",
@@ -577,7 +611,7 @@ test("table-driven CLI routes exercise every migration scenario with one edge", 
       name: "parallel runnable tasks",
       setup: () => ({
         repo: completeRepo(["todo", "todo"]),
-        args: ["--focus", "PLAN-0001", "--current", "task-graph"],
+        args: ["--focus", "DESIGN-0001", "--current", "task-graph"],
       }),
       edgeId: "task-graph-to-implementation",
       next: "implementation",
@@ -590,33 +624,57 @@ test("table-driven CLI routes exercise every migration scenario with one edge", 
       name: "implementation retry",
       setup: () => ({
         repo: completeRepo(["todo"]),
-        args: ["--focus", "PLAN-0001", "--current", "implementation"],
+        args: ["--focus", "DESIGN-0001", "--current", "implementation"],
       }),
       edgeId: "implementation-retry",
       next: "implementation",
       assertRoute: (route) => assert.equal(route.commitGate, true),
     },
-    ...([
-      ["followup-bug-fix", "followup-triage-to-planning", "planning"],
-      ["followup-decision-briefing", "followup-triage-to-briefing", "briefing"],
-      ["followup-decision-design", "followup-triage-to-design", "design"],
-      ["followup-new-feature", "followup-triage-new-feature", "briefing"],
-      ["followup-doc-only", "followup-triage-doc-only", "exit-audit"],
-      ["followup-terminal", "followup-triage-terminal", "exit-audit"],
-    ] as const).map(([signal, edgeId, next]) => ({
-      name: signal,
+    {
+      name: "implementation complete routes to verification",
       setup: () => ({
-        repo: completeRepo(),
-        args: ["--focus", "PLAN-0001", "--current", "followup-triage", "--signal", signal],
+        repo: completeRepo(["done"]),
+        args: ["--focus", "DESIGN-0001", "--current", "implementation"],
       }),
-      edgeId,
-      next,
-    })),
+      edgeId: "implementation-to-verification",
+      next: "verification",
+      assertRoute: (route) => {
+        assert.equal(route.commitGate, false);
+        assert.deepEqual(route.requiredAudits, ["verification"]);
+      },
+    },
+    {
+      name: "verified summary routes to knowledge consolidation",
+      setup: () => ({
+        repo: completeRepo(["done"]),
+        args: ["--focus", "DESIGN-0001", "--current", "verification"],
+      }),
+      edgeId: "verification-to-knowledge-consolidation",
+      next: "knowledge-consolidation",
+    },
+    {
+      name: "knowledge consolidation retries until the caller signals it",
+      setup: () => ({
+        repo: completeRepo(["done"]),
+        args: ["--focus", "DESIGN-0001", "--current", "knowledge-consolidation"],
+      }),
+      edgeId: "knowledge-consolidation-retry",
+      next: "knowledge-consolidation",
+    },
+    {
+      name: "knowledge consolidated routes to exit audit",
+      setup: () => ({
+        repo: completeRepo(["done"]),
+        args: ["--focus", "DESIGN-0001", "--current", "knowledge-consolidation", "--signal", "knowledge-consolidated"],
+      }),
+      edgeId: "knowledge-consolidation-to-exit-audit",
+      next: "exit-audit",
+    },
     {
       name: "wont-do task remains non-runnable",
       setup: () => ({
         repo: completeRepo(["wont-do"]),
-        args: ["--focus", "PLAN-0001", "--current", "task-graph"],
+        args: ["--focus", "DESIGN-0001", "--current", "task-graph"],
       }),
       edgeId: null,
       next: "task-graph",
@@ -629,7 +687,7 @@ test("table-driven CLI routes exercise every migration scenario with one edge", 
       name: "upstream regression returns to briefing",
       setup: () => ({
         repo: completeRepo(),
-        args: ["--focus", "PLAN-0001", "--current", "implementation", "--signal", "spec-gap"],
+        args: ["--focus", "DESIGN-0001", "--current", "implementation", "--signal", "spec-gap"],
       }),
       edgeId: "implementation-to-briefing",
       next: "briefing",
@@ -639,14 +697,23 @@ test("table-driven CLI routes exercise every migration scenario with one edge", 
       name: "exit audit retry",
       setup: () => ({
         repo: completeRepo(),
-        args: ["--focus", "PLAN-0001", "--current", "exit-audit", "--signal", "followup-terminal"],
+        args: ["--focus", "DESIGN-0001", "--current", "exit-audit", "--signal", "knowledge-consolidated"],
       }),
       edgeId: "exit-audit-retry",
       next: "exit-audit",
     },
     {
+      name: "exit audit pass routes to complete",
+      setup: () => ({
+        repo: completeRepo(),
+        args: ["--focus", "DESIGN-0001", "--current", "exit-audit", "--signal", "knowledge-consolidated", "--signal", "exit-audit-pass"],
+      }),
+      edgeId: "exit-audit-to-complete",
+      next: "complete",
+    },
+    {
       name: "terminal re-entry",
-      setup: () => ({ repo: completeRepo(), args: ["--focus", "PLAN-0001", "--current", "complete"] }),
+      setup: () => ({ repo: completeRepo(), args: ["--focus", "DESIGN-0001", "--current", "complete"] }),
       edgeId: null,
       next: "complete",
       status: "terminal",
@@ -654,9 +721,9 @@ test("table-driven CLI routes exercise every migration scenario with one edge", 
     {
       name: "custom graph",
       setup: () => {
-        const repo = tempRepo();
+        const repo = focusedRepo();
         const graph = graphFile(repo).replace("cli-fixture", "custom-fixture");
-        return { repo, graph, args: ["--current", "start", "--signal", "advance"] };
+        return { repo, graph, args: ["--current", "start", "--focus", "SPEC-0001", "--signal", "advance"] };
       },
       edgeId: "start-to-next",
       next: "next",
@@ -677,10 +744,10 @@ test("table-driven CLI routes exercise every migration scenario with one edge", 
 });
 
 test("explain mode preserves the ordinary route under a separate envelope", () => {
-  const repo = tempRepo();
+  const repo = focusedRepo();
   const graph = graphFile(repo);
-  const ordinaryResult = runSource(repo, ["--graph", graph, "--signal", "advance", "--json"]);
-  const explainedResult = runSource(repo, ["--graph", graph, "--signal", "advance", "--explain", "--json"]);
+  const ordinaryResult = runSource(repo, ["--graph", graph, "--focus", "SPEC-0001", "--signal", "advance", "--json"]);
+  const explainedResult = runSource(repo, ["--graph", graph, "--focus", "SPEC-0001", "--signal", "advance", "--explain", "--json"]);
   assert.equal(ordinaryResult.status, 0, ordinaryResult.stderr);
   assert.equal(explainedResult.status, 0, explainedResult.stderr);
   const ordinary = JSON.parse(ordinaryResult.stdout);
@@ -693,7 +760,7 @@ test("explain mode preserves the ordinary route under a separate envelope", () =
 test("inspection CLI emits runtime state only for an explicit selector", () => {
   const repo = completeRepo();
   const graph = path.join(repo, "graph.yaml");
-  fs.writeFileSync(graph, `schemaVersion: 2\nid: cli-fixture\nentry: start\nconditions: {}\nnodes: { start: { kind: terminal } }\nedges: []\n`, "utf8");
+  fs.writeFileSync(graph, `schemaVersion: 3\nid: cli-fixture\nentry: start\nconditions: {}\nnodes: { start: { kind: terminal } }\nedges: []\n`, "utf8");
 
   const definitionOnly = runInspect(repo, ["--graph", graph, "--format", "json"]);
   assert.equal(definitionOnly.status, 0, definitionOnly.stderr);
@@ -701,7 +768,7 @@ test("inspection CLI emits runtime state only for an explicit selector", () => {
   assert.deepEqual(Object.keys(inspected), ["definition"]);
 
   const withState = runInspect(repo, [
-    "--graph", graph, "--format", "json", "--cwd", repo, "--focus", "PLAN-0001",
+    "--graph", graph, "--format", "json", "--cwd", repo, "--focus", "DESIGN-0001",
     // The fixture graph id (cli-fixture) never matches the run's manifest
     // graphId, so the task graph only appears through the explicit selector.
     "--run", RUN_ID,
@@ -710,14 +777,15 @@ test("inspection CLI emits runtime state only for an explicit selector", () => {
   const selected = JSON.parse(withState.stdout);
   assert.ok(selected.definition);
   assert.ok(selected.state);
-  assert.ok(selected.artifactGraph);
+  assert.ok(selected.knowledge);
   assert.ok(selected.taskGraph);
   assert.deepEqual(Object.keys(selected.state), [
-    "schemaVersion", "graphId", "cwd", "taskDir", "focus", "gates", "signals", "blockers", "hardBlockers",
+    "schemaVersion", "graphId", "cwd", "focus", "gates", "signals", "blockers", "hardBlockers",
+    "execution", "verification",
   ]);
-  assert.equal(selected.artifactGraph.nodes.some((node: { id: string }) => node.id === "PLAN-0001"), true);
-  assert.equal(selected.artifactGraph.edges.some((edge: { relation: string; kind: string }) => (
-    edge.relation === "derives-from" && edge.kind === "lineage"
+  assert.equal(selected.knowledge.nodes.some((node: { id: string }) => node.id === "DESIGN-0001"), true);
+  assert.equal(selected.knowledge.edges.some((edge: { relation: string }) => (
+    edge.relation === "realizes"
   )), true);
   assert.equal(selected.taskGraph.runId, RUN_ID);
   assert.deepEqual(selected.taskGraph.nodes[0], {
@@ -750,7 +818,8 @@ test("inspection Mermaid rejects runtime projection selectors", () => {
   const selectors = [
     [["--cwd", repo], /mermaid.*cwd|cwd.*mermaid/i],
     [["--focus", "MISSING"], /mermaid.*focus|focus.*mermaid/i],
-    [["--task-dir", "docs/tasks"], /mermaid.*task-dir|task-dir.*mermaid/i],
+    // --task-dir is rejected as a v3-removed selector before format checks.
+    [["--task-dir", "docs/tasks"], /task-dir.*not accepted|not accepted.*task-dir/i],
   ] as const;
 
   for (const [selector, message] of selectors) {
@@ -779,28 +848,21 @@ test("CLI rejects unknown options, missing values, bad graphs, and invalid focus
   assert.match(invalidFocus.stderr, /focus|invalid|unknown/i);
 });
 
-test("--task-dir escaping the checkout fails closed identically on route and inspect CLIs", () => {
+test("--task-dir fails closed identically on route and inspect CLIs under Graph State v3", () => {
   const repo = completeRepo();
   const outsideAbsolute = path.dirname(repo);
-  for (const taskDir of ["../outside", "./../outside", outsideAbsolute]) {
+  // Graph State v3 rejects --task-dir unconditionally — plan/task state lives
+  // in the Execution Store and is selected with --run/--state-root.
+  for (const taskDir of ["docs/tasks", "docs/../docs/tasks", "../outside", "./../outside", outsideAbsolute]) {
     for (const [name, result] of [
-      ["route(source)", runSource(repo, ["--task-dir", taskDir, "--focus", "PLAN-0001", "--json"])],
-      ["route(generated)", runCli(generatedCli, repo, ["--task-dir", taskDir, "--focus", "PLAN-0001", "--json"])],
+      ["route(source)", runSource(repo, ["--task-dir", taskDir, "--focus", "DESIGN-0001", "--json"])],
+      ["route(generated)", runCli(generatedCli, repo, ["--task-dir", taskDir, "--focus", "DESIGN-0001", "--json"])],
       ["inspect(source)", runInspect(repo, ["--task-dir", taskDir, "--format", "json", "--cwd", repo])],
       ["inspect(generated)", runGeneratedInspect(repo, ["--task-dir", taskDir, "--format", "json", "--cwd", repo])],
     ] as const) {
       assert.notEqual(result.status, 0, `${name} --task-dir ${taskDir} must exit nonzero`);
-      assert.match(result.stderr, /--task-dir escapes the checkout/, `${name} --task-dir ${taskDir}`);
+      assert.match(result.stderr, /--task-dir is not accepted/, `${name} --task-dir ${taskDir}`);
     }
-  }
-
-  // Contained task dirs — default, explicit, and redundant-but-inside —
-  // project state normally on both CLIs.
-  for (const taskDir of ["docs/tasks", "docs/../docs/tasks"]) {
-    const route = runSource(repo, ["--task-dir", taskDir, "--focus", "PLAN-0001", "--json"]);
-    assert.equal(route.status, 0, `${taskDir}: ${route.stderr}`);
-    const inspection = runInspect(repo, ["--task-dir", taskDir, "--format", "json", "--cwd", repo]);
-    assert.equal(inspection.status, 0, `${taskDir}: ${inspection.stderr}`);
   }
 });
 
@@ -887,7 +949,7 @@ test("generated graph CLIs resolve owner-relative tasks and existing local files
   const routeResult = runCli(generatedCli, repo, [
     "--graph", canonicalGraphPath(),
     "--current", "task-graph",
-    "--focus", "PLAN-0001",
+    "--focus", "DESIGN-0001",
     "--cwd", repo,
     "--json",
   ]);

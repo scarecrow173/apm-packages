@@ -78,27 +78,30 @@ Graph Definition bindings are explicit:
   dispatched by name to the `doc-maintenance` scripts that own migration;
 - briefing delegates to `briefing-flow`; design delegates to `design-doc`;
 - the planning node audits the approved design and dispatches `planning-flow`,
-  which sequences `plan-doc` -> approval yield -> `test-spec-doc` -> `task-doc`;
-- the task-graph node audits `plan`, `task`, and `test-spec` and dispatches
+  which owns the Execution Store run's `plan.md` and task records
+  (`plan-doc`/`task-doc` conventions govern the record contract and pre-v3
+  migration — no durable plan/task/test-spec Markdown is written);
+- the task-graph node audits the durable `design` and dispatches
   `build_task_graph`, executed by `build_task_graph.js`;
-- implementation delegates to `implementation-flow`; exit verification audits
-  with `doc-status`.
+- implementation delegates to `implementation-flow`; the verification node
+  audits `verification` (the durable Verification Design documents) while its
+  gate reads the HEAD-bound Verification Summary;
+- knowledge consolidation audits `knowledge` and dispatches `knowledge-doc`;
+  exit audit audits `all` and dispatches `doc-status`.
 
 Delegates own their briefing, planning, and implementation subgraphs. The
 caller runs returned audits before dispatching exactly the returned delegate.
 `focus-required` is a hard stop until explicit focus is supplied.
 
-Under Document Registry 3 the `plan`, `task`, and `test-spec` audit names
-above are *refused* scopes, not readers: `audit_docs.js --type <name>`
-fails at the registry gate because `plan`/`task` are execution-bound
-(their state lives in the Execution Store, their creators refuse durable
-Git writes) and `test-spec` is a legacy migration-only format. The
-`audits:` lists those names appear in (`task-graph`, `followup-triage`)
-still carry them from the Registry 2 definition — they are superseded
-pending the Graph Definition v3 rewire (#243), so a dispatched
-`plan`/`task`/`test-spec` audit resolves to a refusal today. Durable
-graph artifacts are `idea`, `brainstorm`, `discovery`, `spec`, `design`,
-`adr`, `knowledge`, and `verification`.
+Every `audits:` name in the v3 definition is a durable scope — `spec`,
+`adr`, `design`, `verification`, `knowledge`, or `all`. Under Document
+Registry 3 the legacy `plan`, `task`, and `test-spec` audit names are
+*refused* scopes, not readers: `audit_docs.js --type <name>` fails at the
+registry gate because `plan`/`task` are execution-bound (their state lives
+in the Execution Store, their creators refuse durable Git writes) and
+`test-spec` is a legacy migration-only format. Durable graph artifacts are
+`idea`, `brainstorm`, `discovery`, `spec`, `design`, `adr`, `knowledge`,
+and `verification`.
 
 ## Runtime loop
 
@@ -135,7 +138,7 @@ continuation. A task marked
 `wont-do` never satisfies a dependency; unresolved tasks remain blocked in the
 Dynamic Task Graph.
 
-The implementation gate's authority is a **Verification Summary** (Issue
+The verification gate's authority is a **Verification Summary** (Issue
 `#241`) bound to `HEAD` — not a caller-asserted signal. The gate passes
 only when a supplied or auto-computed summary binds to `HEAD` and reports
 `verdict: "verified"`; missing, stale, failed, or indeterminate
@@ -145,9 +148,14 @@ waiver / conditional out-of-scope channel). Semantics and blocker
 taxonomy:
 [`references/verification-summary-contract.md`](references/verification-summary-contract.md).
 
-After implementation, the `follow-up triage` node requires a passing
-implementation gate and one typed follow-up signal before routing to
-repair, planning, a new briefing, or exit audit.
+After implementation, the `verification` node audits the durable
+Verification Design documents; a passing verification gate routes to
+`knowledge-consolidation`, where the caller signals `knowledge-consolidated`
+once the consolidation decision is honestly taken (integrating findings or
+deliberately persisting nothing — the gate never infers it). The
+`exit-audit` node requires every upstream gate to pass plus the
+`exit-audit-pass` signal before routing to `complete`; unmet upstream gates
+route to the matching repair edge instead.
 
 ## Git commit boundary
 
@@ -226,7 +234,7 @@ explicit terminal/blocked result:
 
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
-  --current followup-triage --signal followup-terminal --json
+  --current exit-audit --signal exit-audit-pass --json
 ```
 
 The command evaluates the selected node and returns one `GraphRoute`. It does
@@ -239,7 +247,7 @@ the evidence used to choose it:
 
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
-  --current followup-triage --signal followup-terminal --explain --json
+  --current exit-audit --signal exit-audit-pass --explain --json
 ```
 
 The result is `{ "route": GraphRoute, "explanation": ... }`. The explanation

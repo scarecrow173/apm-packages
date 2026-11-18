@@ -1025,19 +1025,21 @@ test("normalizeTarget maps revspec spellings and refuses unresolvable targets", 
 });
 
 // ---------------------------------------------------------------------------
-// Graph gate binding — the summary IS the implementation gate's authority
+// Graph gate binding — the summary IS the verification gate's authority
+// (Issue #241; the implementation gate itself only checks task completion)
 // ---------------------------------------------------------------------------
 
 function chainRepo(): string {
   const repo = knowledgeRepo({ gitInit: true });
   writeDoc(repo, "docs/adr/adr.md", {
     id: "ADR-0001", type: "adr", status: "accepted", title: "ADR",
+    relations: { "decides-for": ["DESIGN-0001"] },
   }, "# ADR\n\n## Considered Options\n\n### A\n\n### B\n");
   writeDoc(repo, "docs/designs/design.md", {
     id: "DESIGN-0001", type: "design", status: "approved", title: "Design",
-    relations: { "derives-from": ["SPEC-abcd", "ADR-0001"] },
+    relations: { realizes: ["SPEC-abcd"] },
   }, "# Design\n");
-  // The implementation gate also needs a completed Dynamic Task Graph — an
+  // Gate evaluation needs the focused chain plus a selected run — an
   // Execution Store run whose every task is done, bound to the chain.
   createRun(repo, {
     runId: "RUN-0001",
@@ -1051,18 +1053,18 @@ function chainRepo(): string {
   return repo;
 }
 
-test("the implementation gate fails closed without a summary and passes on a HEAD-bound verified one", async () => {
+test("the verification gate fails closed without a summary and passes on a HEAD-bound verified one", async () => {
   const repo = chainRepo();
   const head = resolveCommitSubject(repo, "HEAD");
   assert.ok(head !== null);
   const focus = ["DESIGN-0001"];
 
-  const missing = projectGraphState({ cwd: repo, focus });
+  const missing = await projectGraphState({ cwd: repo, focus });
   assert.equal(missing.verification, null);
-  assert.equal(missing.gates.implementation.status, "blocked");
-  assert.ok(missing.gates.implementation.reasons.includes("verification-summary"));
+  assert.equal(missing.gates.verification.status, "blocked");
+  assert.ok(missing.gates.verification.reasons.includes("verification-summary"));
 
-  const stale = projectGraphState({
+  const stale = await projectGraphState({
     cwd: repo,
     focus,
     verificationSummary: {
@@ -1071,10 +1073,10 @@ test("the implementation gate fails closed without a summary and passes on a HEA
     },
   });
   assert.equal(stale.verification?.boundToHead, false);
-  assert.equal(stale.gates.implementation.status, "blocked");
-  assert.ok(stale.gates.implementation.reasons.includes("verification-summary-target-mismatch"));
+  assert.equal(stale.gates.verification.status, "blocked");
+  assert.ok(stale.gates.verification.reasons.includes("verification-summary-target-mismatch"));
 
-  const indeterminate = projectGraphState({
+  const indeterminate = await projectGraphState({
     cwd: repo,
     focus,
     verificationSummary: {
@@ -1085,11 +1087,11 @@ test("the implementation gate fails closed without a summary and passes on a HEA
     },
   });
   assert.equal(indeterminate.verification?.boundToHead, true);
-  assert.equal(indeterminate.gates.implementation.status, "blocked");
-  assert.ok(indeterminate.gates.implementation.reasons.includes("verification-indeterminate"));
-  assert.ok(indeterminate.gates.implementation.reasons.includes("required-check-undetermined:VD-efgh::CHK-01"));
+  assert.equal(indeterminate.gates.verification.status, "blocked");
+  assert.ok(indeterminate.gates.verification.reasons.includes("verification-indeterminate"));
+  assert.ok(indeterminate.gates.verification.reasons.includes("required-check-undetermined:VD-efgh::CHK-01"));
 
-  const verified = projectGraphState({
+  const verified = await projectGraphState({
     cwd: repo,
     focus,
     verificationSummary: {
@@ -1098,10 +1100,10 @@ test("the implementation gate fails closed without a summary and passes on a HEA
     },
   });
   assert.equal(verified.verification?.boundToHead, true);
-  assert.equal(verified.gates.implementation.status, "pass", JSON.stringify(verified.gates.implementation));
+  assert.equal(verified.gates.verification.status, "pass", JSON.stringify(verified.gates.verification));
 });
 
-test("a HEAD the checkout cannot resolve reports head-unreadable — never a target mismatch", () => {
+test("a HEAD the checkout cannot resolve reports head-unreadable — never a target mismatch", async () => {
   const repo = chainRepo();
   const head = resolveCommitSubject(repo, "HEAD");
   assert.ok(head !== null);
@@ -1112,11 +1114,11 @@ test("a HEAD the checkout cannot resolve reports head-unreadable — never a tar
   // Removing .git makes HEAD unresolvable: binding becomes unprovable,
   // which fails closed but must not be mislabeled a stale artifact.
   fs.rmSync(path.join(repo, ".git"), { recursive: true, force: true });
-  const state = projectGraphState({ cwd: repo, focus: ["DESIGN-0001"], verificationSummary: summary });
+  const state = await projectGraphState({ cwd: repo, focus: ["DESIGN-0001"], verificationSummary: summary });
   assert.equal(state.verification?.boundToHead, null);
-  assert.equal(state.gates.implementation.status, "blocked");
-  assert.ok(state.gates.implementation.reasons.includes("verification-summary-head-unreadable"));
-  assert.ok(!state.gates.implementation.reasons.includes("verification-summary-target-mismatch"));
+  assert.equal(state.gates.verification.status, "blocked");
+  assert.ok(state.gates.verification.reasons.includes("verification-summary-head-unreadable"));
+  assert.ok(!state.gates.verification.reasons.includes("verification-summary-target-mismatch"));
 });
 
 test("a verified verdict over un-covered required coverage is inconsistent — refused and gated", async () => {
@@ -1136,10 +1138,10 @@ test("a verified verdict over un-covered required coverage is inconsistent — r
   assert.equal(validateVerificationSummary(JSON.parse(JSON.stringify(forged))), false);
   // And the gate re-checks the cheap invariant on trusted input — a
   // hand-projected inconsistent summary is blocked, never trusted.
-  const state = projectGraphState({ cwd: repo, focus: ["DESIGN-0001"], verificationSummary: forged });
+  const state = await projectGraphState({ cwd: repo, focus: ["DESIGN-0001"], verificationSummary: forged });
   assert.equal(state.verification?.boundToHead, true);
-  assert.equal(state.gates.implementation.status, "blocked");
-  assert.ok(state.gates.implementation.reasons.includes("verification-summary-inconsistent"));
+  assert.equal(state.gates.verification.status, "blocked");
+  assert.ok(state.gates.verification.reasons.includes("verification-summary-inconsistent"));
 });
 
 function emptySummary() {

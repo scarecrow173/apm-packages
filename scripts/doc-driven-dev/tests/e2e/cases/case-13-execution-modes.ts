@@ -15,13 +15,15 @@ import { case01 } from "./case-01-happy-path";
  *   probe-to-briefing          2 audits [adr, spec] + briefing-flow       = 3
  *   briefing-to-design         1 audit  [design]     + design-doc         = 2
  *   design-to-planning         1 audit  [design]     + planning-flow      = 2
- *   planning-to-task-graph     3 audits [plan,task,test-spec] + build_task_graph = 4
+ *   planning-to-task-graph     1 audit  [design]     + build_task_graph   = 2
  *   task-graph-to-implementation                       implementation-flow = 1
- *   implementation-to-followup-triage 2 audits [task, impl-record]         = 2
- *   followup-triage-terminal   3 audits [all, experiment-log, impl-record]
- *                                        + doc-status                     = 4
+ *   implementation-to-verification       1 audit  [verification]          = 1
+ *   verification-to-knowledge-consolidation
+ *                              1 audit  [knowledge]  + knowledge-doc      = 2
+ *   knowledge-consolidation-to-exit-audit
+ *                              1 audit  [all]        + doc-status         = 2
  *   exit-audit-to-complete     (terminal — evidence only)                  = 0
- *                                                                     = 18
+ *                                                                     = 15
  *
  * Host capabilities are declared maximal (all three modes) so the selected
  * mode is the policy's own choice — no `host-unsupported` fallback noise.
@@ -34,11 +36,12 @@ const ALL_MODES: ReadonlySet<DelegateMode> = new Set<DelegateMode>([
 
 const HAPPY_EDGES = [
   "probe-to-briefing", "briefing-to-design", "design-to-planning",
-  "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-followup-triage",
-  "followup-triage-terminal", "exit-audit-to-complete",
+  "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-verification",
+  "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit",
+  "exit-audit-to-complete",
 ];
-const GATE_SIGNALS = ["followup-terminal", "exit-audit-pass"];
-const DISPATCH_TOTAL = 18;
+const GATE_SIGNALS = ["knowledge-consolidated", "exit-audit-pass"];
+const DISPATCH_TOTAL = 15;
 
 /**
  * PolicyFacts for one dispatch: effect identity from the runner's dispatch,
@@ -63,7 +66,7 @@ const facts = (effect: CallerEffect, overrides: Partial<PolicyFacts> = {}): Poli
  * e2e-01. Every `effect-dispatched` carries `executionMode:"tool"` (the
  * declared scripted-adapter mode) and NO `modeReason` key. The modeReason
  * absence is structural: `dispatchEffect` only writes it inside the
- * `decision` branch, which requires `options.policy` — so "16/16 tool, 0
+ * `decision` branch, which requires `options.policy` — so "15/15 tool, 0
  * anything else" transitively pins zero modeReason emissions. Proves the
  * additive trace schema doesn't perturb existing runs.
  */
@@ -71,7 +74,7 @@ export const case13a: E2ECase = {
   id: "e2e-13a",
   description: "no policy: declared mode \"tool\" unchanged, no modeReason",
   fixture: { taskStatuses: ["todo"] },
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   signals: GATE_SIGNALS,
   script: case01.script,
   expect: {
@@ -96,7 +99,7 @@ export const case13a: E2ECase = {
  * (→ same-context, reason `shared-judgment`); `build_task_graph` on
  * planning-to-task-graph gets the inert row (`independentScope:false`,
  * `contextCost:"low"` → same-context, reason `default`); every other effect
- * gets the same inert row → all 16 dispatches are `same-context` and the
+ * gets the same inert row → all 15 dispatches are `same-context` and the
  * declared "tool" mode is fully overridden. The run still reaches terminal —
  * the policy never changes what executes.
  */
@@ -110,7 +113,7 @@ export const case13b: E2ECase = {
   id: "e2e-13b",
   description: "declared policy: briefing-flow sharedJudgment → same-context + modeReason, runs to terminal",
   fixture: { taskStatuses: ["todo"] },
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   signals: GATE_SIGNALS,
   script: case01.script,
   policy: policySharedJudgment,
@@ -155,7 +158,7 @@ export const case13c: E2ECase = {
   id: "e2e-13c",
   description: "isolated-subagent policy on spec audit: malformed outcome → identical authority-required",
   fixture: { taskStatuses: ["todo"] },
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   script: {
     "probe-to-briefing": {
       audits: { adr: "completed", spec: { malformed: "scope-mismatch" } },

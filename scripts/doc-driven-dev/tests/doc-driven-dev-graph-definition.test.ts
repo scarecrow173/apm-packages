@@ -2,12 +2,17 @@ import type { GraphDefinition } from "../src/skills/doc-driven-dev-graph/scripts
 
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { loadGraphDefinition, parseGraphDefinition } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition";
+import {
+  GRAPH_MIGRATION_GUIDANCE,
+  loadGraphDefinition,
+  parseGraphDefinition,
+} from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition";
 
 const validFixture = `
-schemaVersion: 2
+schemaVersion: 3
 id: doc-driven-dev
 entry: probe
 conditions:
@@ -77,15 +82,44 @@ const emptyRuntimeSignalFixture = runtimeSignalsFixture.replace(
   "runtimeSignals: [\"\", exit-audit-pass]",
 );
 
-test("parses a schema-v2 graph definition with declared conditions", () => {
+test("parses a schema-v3 graph definition with declared conditions", () => {
   const definition = parseGraphDefinition(validFixture);
-  assert.equal(definition.schemaVersion, 2);
+  assert.equal(definition.schemaVersion, 3);
   assert.equal(definition.id, "doc-driven-dev");
   assert.equal(definition.entry, "probe");
   assert.deepEqual(definition.runtimeSignals, []);
   assert.equal(definition.conditions["focus-required"].kind, "signal");
   assert.deepEqual(definition.conditions["tasks-active"], { kind: "task-graph", state: "active" });
   assert.equal(definition.edges[0].priority, 10);
+});
+
+// Legacy v2 definitions are migration-domain data: normal runtime refuses
+// them outright and names the migration lane instead of parsing them
+// through a compatibility shim (Issue #243).
+test("refuses a schema-v2 graph definition with migration guidance", () => {
+  const v2Fixture = validFixture.replace("schemaVersion: 3", "schemaVersion: 2");
+  assert.throws(
+    () => parseGraphDefinition(v2Fixture),
+    (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.match(error.message, /Invalid graph definition:/);
+      assert.match(error.message, /schemaVersion 2 is not supported by normal runtime/);
+      assert.match(error.message, /doc_maintenance\.js migrate plan --json/);
+      return true;
+    },
+  );
+  assert.ok(GRAPH_MIGRATION_GUIDANCE.includes("migrate apply --expect <planHash>"));
+
+  const file = path.join(
+    fs.mkdtempSync(path.join(os.tmpdir(), "graph-v2-")),
+    "graph.yaml",
+  );
+  try {
+    fs.writeFileSync(file, v2Fixture, "utf8");
+    assert.throws(() => loadGraphDefinition(file), /schemaVersion 2 is not supported/);
+  } finally {
+    fs.rmSync(path.dirname(file), { recursive: true, force: true });
+  }
 });
 
 test("parses and validates Graph Definition-owned runtime signal vocabulary", () => {
@@ -104,19 +138,19 @@ test("loads and validates the distributed doc-driven-dev graph definition", () =
     "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml",
   );
   const definition: GraphDefinition = loadGraphDefinition(file);
-  assert.equal(definition.schemaVersion, 2);
+  assert.equal(definition.schemaVersion, 3);
   assert.equal(definition.id, "doc-driven-dev");
   assert.ok(definition.edges.length > 0);
 });
 
-test("exit-audit binds shared and owner audits in stable order", () => {
+test("exit-audit binds shared audits in stable order", () => {
   const file = path.resolve(
     __dirname,
     "../../../packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml",
   );
   const definition: GraphDefinition = loadGraphDefinition(file);
   const node = definition.nodes["exit-audit"];
-  assert.deepEqual(node.audits, ["all", "impl-record", "experiment-log"]);
+  assert.deepEqual(node.audits, ["all"]);
 });
 
 test("rejects an edge that uses an unknown condition", () => {

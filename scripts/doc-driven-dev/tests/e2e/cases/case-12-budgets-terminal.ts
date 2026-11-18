@@ -29,14 +29,14 @@ export const case12a: E2ECase = {
   id: "e2e-12a",
   description: "maxHops 3 → budget-exhausted after exactly 3 completed edges",
   fixture: { taskStatuses: ["todo"] },
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   maxHops: 3,
   script: {
     "probe-to-briefing": { audits: { spec: "completed", adr: "completed" }, delegate: "completed" },
     "briefing-to-design": { audits: { design: "completed" }, delegate: "completed" },
     "design-to-planning": { audits: { design: "completed" }, delegate: "completed" },
     "planning-to-task-graph": {
-      audits: { plan: "completed", task: "completed", "test-spec": "completed" },
+      audits: { design: "completed" },
       delegate: "completed",
     },
   },
@@ -60,7 +60,7 @@ export const case12b: E2ECase = {
   description: "identical delegate retry outcomes → repeatedRetry guard → budget-exhausted",
   current: "briefing",
   fixture: { taskStatuses: ["todo"] },
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   script: {
     "briefing-to-design": {
       audits: { design: "completed" },

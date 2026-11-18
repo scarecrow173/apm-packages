@@ -29,8 +29,8 @@ export const case03: E2ECase = {
       },
     },
   },
-  focus: ["PLAN-0001"],
-  signals: ["followup-terminal", "exit-audit-pass"],
+  focus: ["DESIGN-0001"],
+  signals: ["knowledge-consolidated", "exit-audit-pass"],
   script: {
     "briefing-retry": {
       audits: { spec: "completed", adr: "completed" },
@@ -40,7 +40,7 @@ export const case03: E2ECase = {
     "briefing-to-design": { audits: { design: "completed" }, delegate: "completed" },
     "design-to-planning": { audits: { design: "completed" }, delegate: "completed" },
     "planning-to-task-graph": {
-      audits: { plan: "completed", task: "completed", "test-spec": "completed" },
+      audits: { design: "completed" },
       delegate: "completed",
     },
     "task-graph-to-implementation": {
@@ -48,23 +48,22 @@ export const case03: E2ECase = {
       mutate: [{ task: { taskId: "TASK-0001", status: "done" } }],
       commitEvidence: true,
     },
-    "implementation-to-followup-triage": { audits: { task: "completed", "impl-record": "completed" } },
-    "followup-triage-terminal": { audits: { all: "completed", "experiment-log": "completed", "impl-record": "completed" }, delegate: "completed" },
+    "implementation-to-verification": { audits: { verification: "completed" } },
+    "verification-to-knowledge-consolidation": { audits: { knowledge: "completed" }, delegate: "completed" },
+    "knowledge-consolidation-to-exit-audit": { audits: { all: "completed" }, delegate: "completed" },
     "exit-audit-to-complete": {},
   },
   expect: {
     yield: "terminal",
     edgeSequence: [
       "briefing-retry", "briefing-to-design", "design-to-planning",
-      "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-followup-triage",
-      "followup-triage-terminal", "exit-audit-to-complete", null,
+      "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-verification", "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit", "exit-audit-to-complete", null,
     ],
     completedEdges: [
       "briefing-retry", "briefing-to-design", "design-to-planning",
-      "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-followup-triage",
-      "followup-triage-terminal", "exit-audit-to-complete",
+      "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-verification", "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit", "exit-audit-to-complete",
     ],
-    events: [{ kind: "route-selected", count: 9 }],
+    events: [{ kind: "route-selected", count: 10 }],
     finalFiles: {
       "docs/specs/0001-graph.md": { frontmatter: { status: "approved" } },
       // Corpus doc untouched — the run record is the task authority.

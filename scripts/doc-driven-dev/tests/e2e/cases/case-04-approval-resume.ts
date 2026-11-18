@@ -22,8 +22,8 @@ export const case04: E2ECase = {
   id: "e2e-04",
   description: "approval-required yield → pending edge resume → terminal",
   fixture: { taskStatuses: ["todo"] },
-  focus: ["PLAN-0001"],
-  signals: ["followup-terminal", "exit-audit-pass"],
+  focus: ["DESIGN-0001"],
+  signals: ["knowledge-consolidated", "exit-audit-pass"],
   script: {
     "probe-to-briefing": { audits: { spec: "completed", adr: "completed" }, delegate: "completed" },
     "briefing-to-design": { audits: { design: "completed" }, delegate: "completed" },
@@ -33,7 +33,7 @@ export const case04: E2ECase = {
       delegate: [{ yield: "approval-required" }, "completed"],
     },
     "planning-to-task-graph": {
-      audits: { plan: "completed", task: "completed", "test-spec": "completed" },
+      audits: { design: "completed" },
       delegate: "completed",
     },
     "task-graph-to-implementation": {
@@ -41,8 +41,9 @@ export const case04: E2ECase = {
       mutate: [{ task: { taskId: "TASK-0001", status: "done" } }],
       commitEvidence: true,
     },
-    "implementation-to-followup-triage": { audits: { task: "completed", "impl-record": "completed" } },
-    "followup-triage-terminal": { audits: { all: "completed", "experiment-log": "completed", "impl-record": "completed" }, delegate: "completed" },
+    "implementation-to-verification": { audits: { verification: "completed" } },
+    "verification-to-knowledge-consolidation": { audits: { knowledge: "completed" }, delegate: "completed" },
+    "knowledge-consolidation-to-exit-audit": { audits: { all: "completed" }, delegate: "completed" },
     "exit-audit-to-complete": {},
   },
   steps: [
@@ -62,7 +63,7 @@ export const case04: E2ECase = {
         yield: "terminal",
         edgeSequence: [
           "design-to-planning", "planning-to-task-graph", "task-graph-to-implementation",
-          "implementation-to-followup-triage", "followup-triage-terminal", "exit-audit-to-complete", null,
+          "implementation-to-verification", "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit", "exit-audit-to-complete", null,
         ],
         events: [
           // Pending audits are reused, not re-run, on the resumed edge…
@@ -77,15 +78,14 @@ export const case04: E2ECase = {
     yield: "terminal",
     edgeSequence: [
       "design-to-planning", "planning-to-task-graph", "task-graph-to-implementation",
-      "implementation-to-followup-triage", "followup-triage-terminal", "exit-audit-to-complete", null,
+      "implementation-to-verification", "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit", "exit-audit-to-complete", null,
     ],
     completedEdges: [
       "probe-to-briefing", "briefing-to-design", "design-to-planning",
-      "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-followup-triage",
-      "followup-triage-terminal", "exit-audit-to-complete",
+      "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-verification", "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit", "exit-audit-to-complete",
     ],
     events: [
-      { kind: "route-selected", count: 10 }, // whole-run: 3 (leg 1) + 6 edges + 1 terminal (leg 2)
+      { kind: "route-selected", count: 11 }, // whole-run: 3 (leg 1) + 7 edges + 1 terminal (leg 2)
       { kind: "run-yield", count: 2 },
     ],
     finalFiles: {

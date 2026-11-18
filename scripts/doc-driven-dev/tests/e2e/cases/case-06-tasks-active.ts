@@ -25,14 +25,14 @@ export const case06: E2ECase = {
     taskStatuses: ["done", "in-progress", "todo"],
     dependsOn: [[], ["TASK-0001"], ["TASK-0001"]],
   },
-  focus: ["PLAN-0001"],
-  signals: ["followup-terminal", "exit-audit-pass"],
+  focus: ["DESIGN-0001"],
+  signals: ["knowledge-consolidated", "exit-audit-pass"],
   script: {
     "probe-to-briefing": { audits: { spec: "completed", adr: "completed" }, delegate: "completed" },
     "briefing-to-design": { audits: { design: "completed" }, delegate: "completed" },
     "design-to-planning": { audits: { design: "completed" }, delegate: "completed" },
     "planning-to-task-graph": {
-      audits: { plan: "completed", task: "completed", "test-spec": "completed" },
+      audits: { design: "completed" },
       delegate: "completed",
     },
     "task-graph-to-active-implementation": {
@@ -43,27 +43,26 @@ export const case06: E2ECase = {
       ],
       commitEvidence: true,
     },
-    "implementation-to-followup-triage": { audits: { task: "completed", "impl-record": "completed" } },
-    "followup-triage-terminal": { audits: { all: "completed", "experiment-log": "completed", "impl-record": "completed" }, delegate: "completed" },
+    "implementation-to-verification": { audits: { verification: "completed" } },
+    "verification-to-knowledge-consolidation": { audits: { knowledge: "completed" }, delegate: "completed" },
+    "knowledge-consolidation-to-exit-audit": { audits: { all: "completed" }, delegate: "completed" },
     "exit-audit-to-complete": {},
   },
   expect: {
     yield: "terminal",
     edgeSequence: [
       "probe-to-briefing", "briefing-to-design", "design-to-planning",
-      "planning-to-task-graph", "task-graph-to-active-implementation", "implementation-to-followup-triage",
-      "followup-triage-terminal", "exit-audit-to-complete", null,
+      "planning-to-task-graph", "task-graph-to-active-implementation", "implementation-to-verification", "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit", "exit-audit-to-complete", null,
     ],
     completedEdges: [
       "probe-to-briefing", "briefing-to-design", "design-to-planning",
-      "planning-to-task-graph", "task-graph-to-active-implementation", "implementation-to-followup-triage",
-      "followup-triage-terminal", "exit-audit-to-complete",
+      "planning-to-task-graph", "task-graph-to-active-implementation", "implementation-to-verification", "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit", "exit-audit-to-complete",
     ],
     tasksContain: [
       { edgeId: "task-graph-to-active-implementation", id: "TASK-0002", status: "in-progress" },
       { edgeId: "task-graph-to-active-implementation", id: "TASK-0003", status: "todo" },
     ],
-    events: [{ kind: "route-selected", count: 9 }],
+    events: [{ kind: "route-selected", count: 10 }],
     finalFiles: {
       // Corpus docs keep their initial statuses — never the authority.
       "docs/tasks/0002-task.md": { frontmatter: { status: "in-progress" } },

@@ -32,7 +32,8 @@ import type { E2ECase } from "../harness/case_types";
  * TASK-0001 (`todo`) — the honest post-repair state that makes
  * `tasks-runnable` true so the fourth edge reaches `implementation`
  * (with all tasks `done` that edge cannot match — verified live: the
- * completed-only projection selects `task-graph-to-followup-triage` instead).
+ * completed-only projection selects `task-graph-idle-to-implementation`
+ * instead).
  * `implementation-flow` then marks it `done` again so the
  * next implementation projection still passes the gate. `commit-waived`
  * (declared runtime signal) skips the commit baseline inside the loop;
@@ -41,23 +42,25 @@ import type { E2ECase } from "../harness/case_types";
  * commit.
  *
  * Leg 2 resumes by handoff (`signals` is a leg-scoped override that beats the
- * handoff): constraint-gap cleared, followup-terminal + exit-audit-pass
- * supplied → `implementation-to-followup-triage` → `followup-triage-terminal`
- * → `exit-audit-to-complete` → `terminal`. The budget handoff threads through:
- * leg 2 starts at hops 4 of 10.
+ * handoff): constraint-gap cleared, knowledge-consolidated + exit-audit-pass
+ * supplied → `implementation-to-verification` →
+ * `verification-to-knowledge-consolidation` →
+ * `knowledge-consolidation-to-exit-audit` → `exit-audit-to-complete` →
+ * `terminal`. The budget handoff threads through: leg 2 starts at hops 4
+ * of 10.
  */
 export const case08: E2ECase = {
   id: "e2e-08",
   description: "constraint-gap repair loop → route-fingerprint budget-exhausted → resume → terminal",
   current: "implementation",
   fixture: { taskStatuses: ["done"] },
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   signals: ["constraint-gap", "commit-waived"],
   script: {
     "implementation-constraint-to-design": { audits: { design: "completed" }, delegate: "completed" },
     "design-to-planning": { audits: { design: "completed" }, delegate: "completed" },
     "planning-to-task-graph": {
-      audits: { plan: "completed", task: "completed", "test-spec": "completed" },
+      audits: { design: "completed" },
       delegate: "completed",
       // The constraint repair reopens the task record for re-implementation:
       // the next task-graph projection sees it runnable → task-graph-to-implementation.
@@ -68,8 +71,9 @@ export const case08: E2ECase = {
       mutate: [{ task: { taskId: "TASK-0001", status: "done" } }],
       commitEvidence: true,
     },
-    "implementation-to-followup-triage": { audits: { task: "completed", "impl-record": "completed" } },
-    "followup-triage-terminal": { audits: { all: "completed", "experiment-log": "completed", "impl-record": "completed" }, delegate: "completed" },
+    "implementation-to-verification": { audits: { verification: "completed" } },
+    "verification-to-knowledge-consolidation": { audits: { knowledge: "completed" }, delegate: "completed" },
+    "knowledge-consolidation-to-exit-audit": { audits: { all: "completed" }, delegate: "completed" },
     "exit-audit-to-complete": {},
   },
   steps: [
@@ -92,11 +96,11 @@ export const case08: E2ECase = {
     {
       // Leg 2: resumed handoff (current/hops/maxHops thread through); the
       // repair signal is cleared and the gate signals are supplied instead.
-      options: { signals: ["followup-terminal", "exit-audit-pass"] },
+      options: { signals: ["knowledge-consolidated", "exit-audit-pass"] },
       expect: {
         yield: "terminal",
         edgeSequence: [
-          "implementation-to-followup-triage", "followup-triage-terminal",
+          "implementation-to-verification", "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit",
           "exit-audit-to-complete", null,
         ],
       },
@@ -105,17 +109,17 @@ export const case08: E2ECase = {
   expect: {
     yield: "terminal",
     edgeSequence: [
-      "implementation-to-followup-triage", "followup-triage-terminal",
+      "implementation-to-verification", "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit",
       "exit-audit-to-complete", null,
     ],
     completedEdges: [
       "implementation-constraint-to-design", "design-to-planning",
       "planning-to-task-graph", "task-graph-to-implementation",
-      "implementation-to-followup-triage", "followup-triage-terminal",
+      "implementation-to-verification", "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit",
       "exit-audit-to-complete",
     ],
     events: [
-      { kind: "route-selected", count: 9 }, // 5 (leg 1) + 4 (leg 2)
+      { kind: "route-selected", count: 10 }, // 5 (leg 1) + 5 (leg 2)
       { kind: "run-yield", count: 2 },
     ],
     // Corpus doc untouched — the run record is the task authority.

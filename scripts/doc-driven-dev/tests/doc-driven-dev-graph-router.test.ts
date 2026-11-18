@@ -3,6 +3,7 @@ import type {
   GraphDefinition,
 } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition";
 import type { GraphState } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_state";
+import type { TaskGraphResult } from "../src/skills/doc-driven-dev-graph/scripts/lib/task_graph";
 
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -11,28 +12,33 @@ import test from "node:test";
 import { evaluateCondition } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_conditions";
 import { evaluateRouteDecision, routeGraph } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_router";
 
-function stateWith(input: Partial<Pick<GraphState, "gates" | "signals" | "blockers" | "hardBlockers" | "taskGraph">> = {}): GraphState {
+function stateWith(
+  input: Partial<Pick<GraphState, "gates" | "signals" | "blockers" | "hardBlockers">>
+    & { taskGraph?: TaskGraphResult | null } = {},
+): GraphState {
+  const { taskGraph = null, ...rest } = input;
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     graphId: "arbitrary-graph",
     cwd: process.cwd(),
-    taskDir: "docs/tasks",
+    knowledge: {
+      graph: { nodes: [], edges: [], derivedEdges: [], checkEdges: [], issues: [] },
+      documents: [],
+    },
+    execution: { run: null, taskGraph },
+    verification: null,
     focus: [],
-    artifactGraph: { nodes: [], edges: [], issues: [] },
     gates: {},
     signals: [],
     blockers: [],
     hardBlockers: [],
-    taskGraph: null,
-    verification: null,
-    run: null,
-    ...input,
+    ...rest,
   };
 }
 
 function definitionWith(input: Partial<GraphDefinition>): GraphDefinition {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     id: "arbitrary-graph",
     entry: "alpha",
     conditions: {
@@ -99,7 +105,7 @@ test("one route invocation never follows the selected destination", () => {
   });
   const state = stateWith({ signals: ["first", "second"] });
   const route = routeGraph({ current: "alpha", definition, state });
-  assert.equal(route.schemaVersion, 2);
+  assert.equal(route.schemaVersion, 3);
   assert.equal(route.graphId, "arbitrary-graph");
   assert.equal(route.current, "alpha");
   assert.equal(route.next, "beta");
@@ -114,7 +120,7 @@ test("one route invocation never follows the selected destination", () => {
 
 test("returns terminal status when re-entering a terminal node", () => {
   const definition: GraphDefinition = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     id: "arbitrary-graph",
     entry: "finished",
     conditions: {},
@@ -123,7 +129,7 @@ test("returns terminal status when re-entering a terminal node", () => {
   };
   const route = routeGraph({ current: "finished", definition, state: stateWith() });
   assert.deepEqual(route, {
-    schemaVersion: 2,
+    schemaVersion: 3,
     graphId: "arbitrary-graph",
     current: "finished",
     next: "finished",
@@ -146,8 +152,9 @@ test("returns terminal status when re-entering a terminal node", () => {
     nodes: { finished: { kind: "terminal", delegate: "final-handler", audits: ["z-audit", "a-audit"] } },
   };
   const taskGraph = {
-    schemaVersion: 1 as const,
-    plan: "docs/plans/example.md",
+    schemaVersion: 2 as const,
+    runId: "RUN-1",
+    plan: null,
     nodes: [],
     edges: [],
     runnable: [],
@@ -162,13 +169,13 @@ test("returns terminal status when re-entering a terminal node", () => {
     definition: hardBlockedDefinition,
     state: stateWith({
       blockers: ["z-blocker", "a-blocker"],
-      hardBlockers: ["artifact-graph"],
+      hardBlockers: ["knowledge"],
       taskGraph,
     }),
   };
   const hardBlockedRoute = routeGraph(hardBlockedInput);
   assert.deepEqual(hardBlockedRoute, {
-    schemaVersion: 2,
+    schemaVersion: 3,
     graphId: "arbitrary-graph",
     current: "finished",
     next: "finished",
@@ -277,9 +284,10 @@ test("evaluates runnable, active, invalid, and idle task-graph conditions", () =
   const active: GraphCondition = { kind: "task-graph", state: "active" };
   const invalid: GraphCondition = { kind: "task-graph", state: "invalid" };
   const idle: GraphCondition = { kind: "task-graph", state: "idle" };
-  const taskGraph = (overrides: Record<string, unknown> = {}): NonNullable<GraphState["taskGraph"]> => ({
-    schemaVersion: 1,
-    plan: "docs/plans/example.md",
+  const taskGraph = (overrides: Record<string, unknown> = {}): NonNullable<GraphState["execution"]["taskGraph"]> => ({
+    schemaVersion: 2,
+    runId: "RUN-1",
+    plan: null,
     nodes: [],
     edges: [],
     runnable: [],
@@ -289,7 +297,7 @@ test("evaluates runnable, active, invalid, and idle task-graph conditions", () =
     blocked: [],
     issues: [],
     ...overrides,
-  } as NonNullable<GraphState["taskGraph"]>);
+  } as NonNullable<GraphState["execution"]["taskGraph"]>);
 
   assert.equal(evaluateCondition(runnable, stateWith({ taskGraph: taskGraph({ runnable: ["TASK-1"] }) })), true);
   assert.equal(evaluateCondition(runnable, stateWith({ taskGraph: null })), false);
@@ -316,6 +324,6 @@ test("does not encode domain node IDs in the generic router", () => {
     "utf8",
   );
   assert.doesNotMatch(source, /planning/);
-  assert.doesNotMatch(source, /followup-triage/);
+  assert.doesNotMatch(source, /verification/);
   assert.doesNotMatch(source, /exit-audit/);
 });

@@ -11,7 +11,7 @@ authority は Graph Definition です。
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/inspect_graph.js \
   [--graph <path>] [--format json|mermaid] [--cwd <path>] \
-  [--focus <artifact>] [--task-dir <path>] \
+  [--focus <artifact>] \
   [--run <run-id> [--state-root <path>] [--allow-external-root]]
 ```
 
@@ -108,15 +108,13 @@ Execution Store に保存してから次の turn を呼び出します。
 ## Runtime projection の包含
 
 JSON inspection は既定では `definition` だけを含みます。runtime selector（`--cwd`、
-`--focus`、`--task-dir`、`--run` のいずれか）を渡すと、新しい projection の `state`、
-`artifactGraph`、`taskGraph` が追加されます。projection は read-only で、route、delegate
+`--focus`、`--run` のいずれか）を渡すと、新しい projection の `state`、
+`knowledge`、`taskGraph` が追加されます —— Graph State v3 の 3 つの
+store view（knowledge graph、execution、verification）であり、
+`artifactGraph` key も `--task-dir` も存在しません。plan/task 状態は
+Execution Store にあり、この flag は拒否されます。projection は read-only で、route、delegate
 dispatch、並行 state store の作成を行いません。明示的 focus が invalid または required
-に解決される場合は推測せず fail-closed になります。checkout 外に解決される
-`--task-dir` は、どの file も読まれる前に caller error となります —
-`route_graph.js` と `fetch_context.js` が強制するのと同じ containment rule
-で、symlinked directory が外を指せないよう real path で適用されます。
-`--task-dir` は再帰的な scan root です — `.` は `node_modules`/`.git` を
-含む checkout 全体を走査するため、focused な directory に保ってください。
+に解決される場合は推測せず fail-closed になります。
 
 `--run` は `taskGraph` projection が読み取る Execution Store run を選択します —
 明示的で、推測されません。`--state-root` は store root を上書きし、
@@ -129,7 +127,9 @@ selection 自体が block されます（`task-graph-run-unreadable`）。
 
 Mermaid format は definition-only であり、`--cwd`、`--focus`、`--task-dir`、
 `--run`、`--state-root` を拒否します。
-JSON はこれらの selector を runtime projection 用に受け付けます。
+JSON は `--cwd`、`--focus`、`--run`、`--state-root`、
+`--allow-external-root` を runtime projection 用に受け付けます ——
+`--task-dir` は決して受け付けません。
 
 ## Mermaid output
 

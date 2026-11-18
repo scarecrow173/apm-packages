@@ -26,7 +26,7 @@ export type GraphEdge = {
 };
 
 export type GraphDefinition = {
-  schemaVersion: 2;
+  schemaVersion: 3;
   id: string;
   entry: GraphNodeId;
   runtimeSignals?: string[];
@@ -67,7 +67,7 @@ const graphEdgeSchema = z.object({
 }).strict();
 
 const graphDefinitionSchema = z.object({
-  schemaVersion: z.literal(2),
+  schemaVersion: z.literal(3),
   id: z.string().min(1),
   entry: graphNodeId,
   runtimeSignals: z.array(z.string().min(1)).default([]),
@@ -170,10 +170,27 @@ function validateGraphDefinition(value: z.infer<typeof graphDefinitionSchema>): 
   return value as GraphDefinition;
 }
 
-/** Parse and validate Graph Definition v2 YAML content. */
+// Graph Definition v3 is the only schema normal runtime accepts — a v2
+// definition is migration-domain data, never silently parsed (Issue #243).
+// The refusal names the migration lane (`#245`/`#247` own the tooling); there
+// is no dual-schema parse path and no compatibility shim.
+export const GRAPH_MIGRATION_GUIDANCE =
+  "Graph Definition schemaVersion 2 is not supported by normal runtime. " +
+  "Run `node .apm/skills/doc-maintenance/scripts/doc_maintenance.js migrate plan --json` " +
+  "to evaluate the repository's legacy artifacts, then `migrate apply --expect <planHash>`";
+
+function detectLegacySchema(parsed: unknown): void {
+  if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
+    const version = (parsed as Record<string, unknown>).schemaVersion;
+    if (version === 2) throw invalidGraph(GRAPH_MIGRATION_GUIDANCE);
+  }
+}
+
+/** Parse and validate Graph Definition v3 YAML content. */
 export function parseGraphDefinition(source: string): GraphDefinition {
   try {
     const parsed = yaml.load(source);
+    detectLegacySchema(parsed);
     const result = graphDefinitionSchema.safeParse(parsed);
     if (!result.success) throw invalidGraph(formatIssue(result.error));
     return validateGraphDefinition(result.data);
@@ -185,7 +202,7 @@ export function parseGraphDefinition(source: string): GraphDefinition {
   }
 }
 
-/** Load and validate a Graph Definition v2 YAML file. */
+/** Load and validate a Graph Definition v3 YAML file. */
 export function loadGraphDefinition(file: string): GraphDefinition {
   try {
     return parseGraphDefinition(fs.readFileSync(file, "utf8"));

@@ -38230,6 +38230,17 @@ function extractCheckAnchors(document3) {
   }
   return anchors;
 }
+function resolveClaimReference(graph, ref) {
+  const parsed = parseClaimReference(ref.trim());
+  if (!parsed) return { status: "invalid" };
+  const matches = graph.nodes.filter((candidate) => candidate.id === parsed.docId);
+  if (matches.length === 0) return { status: "unresolved-document" };
+  if (matches.length > 1) return { status: "ambiguous" };
+  const node3 = matches[0];
+  const claim2 = node3.claims.find((candidate) => candidate.key === parsed.key);
+  if (!claim2) return { status: "unresolved-claim", node: node3 };
+  return { status: "resolved", node: node3, claim: claim2 };
+}
 var V1_FIELDS = new Set(knowledgeRelationFields());
 var INVERSES = knowledgeRelationInverses();
 function declaredRelationFields(type) {
@@ -39740,177 +39751,6 @@ function scanArtifactGraph(options2, collector) {
     }
   };
 }
-function lineageEdges(graph, pathValue) {
-  return graph.edges.filter((edge) => edge.kind === "lineage" && (edge.from === pathValue || edge.to === pathValue));
-}
-function lineageComponent(graph, starts) {
-  const visited = /* @__PURE__ */ new Set();
-  const queue = [...starts].sort(compareStrings2);
-  while (queue.length > 0) {
-    const current = queue.shift();
-    if (visited.has(current)) continue;
-    visited.add(current);
-    for (const edge of lineageEdges(graph, current)) {
-      const next = edge.from === current ? edge.to : edge.from;
-      if (next && !visited.has(next)) queue.push(next);
-    }
-    queue.sort(compareStrings2);
-  }
-  return [...visited].sort(compareStrings2);
-}
-function artifactRelationTargets(graph, sourcePath, relationNames) {
-  const names = new Set(relationNames);
-  return graph.edges.filter((edge) => edge.kind === "lineage" && edge.from === sourcePath && edge.to !== null && names.has(edge.relation)).map((edge) => edge.to).sort(compareStrings2);
-}
-function artifactHasRelation(graph, sourcePath, relationNames, targetPath) {
-  return Boolean(sourcePath && targetPath && artifactRelationTargets(graph, sourcePath, relationNames).includes(targetPath));
-}
-var CHAIN_STATUSES = {
-  spec: /* @__PURE__ */ new Set(["proposed", "approved", "implemented"]),
-  adr: /* @__PURE__ */ new Set(["proposed", "accepted"]),
-  design: /* @__PURE__ */ new Set(["approved"]),
-  plan: /* @__PURE__ */ new Set(["approved", "in-progress", "completed"])
-};
-function isValidChainRecord(record2) {
-  return Boolean(record2.type && CHAIN_STATUSES[record2.type]?.has(record2.status ?? ""));
-}
-function chainKey(chain) {
-  return [chain.spec, chain.adr, chain.design, chain.plan].map((value) => value ?? "").join("\0");
-}
-function chainMembers(chain) {
-  return new Set([chain.spec, chain.adr, chain.design, chain.plan, ...chain.tasks, ...chain.anchors ?? []].filter((value) => Boolean(value)));
-}
-function preDesignAnchors(graph, records, spec, adr) {
-  const direct = graph.edges.some((edge) => edge.kind === "lineage" && ["decides-for", "derives-from", "derived-by", "refines", "refined-by"].includes(edge.relation) && (edge.from === spec.path && edge.to === adr.path || edge.from === adr.path && edge.to === spec.path));
-  const discoveries = records.filter((record2) => (record2.type === "discovery" || record2.type === "brainstorm") && [spec, adr].every((artifact) => graph.edges.some((edge) => edge.from === record2.path && edge.to === artifact.path && (edge.relation === "motivates" || edge.relation === "informs") || edge.from === artifact.path && edge.to === record2.path && edge.relation === "derives-from" || edge.from === record2.path && edge.to === artifact.path && edge.relation === "derived-by")));
-  return direct || discoveries.length > 0 ? discoveries.map((record2) => record2.path) : void 0;
-}
-function designClaimsSpec(graph, designPath, specPath) {
-  return Boolean(specPath) && (artifactHasRelation(graph, designPath, ["realizes"], specPath) || artifactHasRelation(graph, designPath, ["derives-from", "implements"], specPath));
-}
-function designClaimsAdr(graph, designPath, adrPath) {
-  return Boolean(adrPath) && (artifactHasRelation(graph, adrPath, ["decides-for"], designPath) || artifactHasRelation(graph, designPath, ["derives-from", "implements"], adrPath));
-}
-function designAdrDecision(graph, designPath, adrPath) {
-  return Boolean(adrPath) && (artifactHasRelation(graph, adrPath, ["decides-for"], designPath) || artifactHasRelation(graph, designPath, ["derives-from"], adrPath));
-}
-function artifactChainCandidates(graph, records) {
-  const specs = records.filter((record2) => record2.type === "spec" && isValidChainRecord(record2));
-  const adrs = records.filter((record2) => record2.type === "adr" && isValidChainRecord(record2));
-  const designs = records.filter((record2) => record2.type === "design" && isValidChainRecord(record2));
-  const plans = records.filter((record2) => record2.type === "plan" && isValidChainRecord(record2));
-  const tasks = records.filter((record2) => record2.type === "task");
-  const chains = /* @__PURE__ */ new Map();
-  const add = (chain) => {
-    chains.set(chainKey(chain), chain);
-  };
-  const cartesian = (values, fallback) => values.length > 0 ? values : fallback;
-  for (const design of designs) {
-    const relatedSpecs = specs.filter((candidate) => designClaimsSpec(graph, design.path, candidate.path));
-    const relatedAdrs = adrs.filter((candidate) => designClaimsAdr(graph, design.path, candidate.path));
-    const relatedPlans = plans.filter((candidate) => artifactHasRelation(graph, candidate.path, ["derives-from", "design"], design.path));
-    for (const spec of cartesian(relatedSpecs, [void 0])) {
-      for (const adr of cartesian(relatedAdrs, [void 0])) {
-        for (const plan of cartesian(relatedPlans, [void 0])) {
-          add({
-            spec: spec?.path,
-            adr: adr?.path,
-            design: design.path,
-            plan: plan?.path,
-            tasks: plan ? tasks.filter((task) => artifactHasRelation(graph, task.path, ["implements"], plan.path)).map((task) => task.path) : []
-          });
-        }
-      }
-    }
-  }
-  for (const plan of plans) {
-    if (designs.some((design) => artifactHasRelation(graph, plan.path, ["derives-from", "design"], design.path))) continue;
-    add({ plan: plan.path, tasks: tasks.filter((task) => artifactHasRelation(graph, task.path, ["implements"], plan.path)).map((task) => task.path) });
-  }
-  const unassignedSpecs = specs.filter((spec) => !designs.some((design) => designClaimsSpec(graph, design.path, spec.path)));
-  const paired = /* @__PURE__ */ new Set();
-  for (const spec of unassignedSpecs) {
-    for (const adr of adrs) {
-      const anchors = preDesignAnchors(graph, records, spec, adr);
-      if (!anchors) continue;
-      add({ spec: spec.path, adr: adr.path, tasks: [], anchors });
-      paired.add(spec.path);
-      paired.add(adr.path);
-    }
-  }
-  for (const artifact of [...specs, ...adrs]) {
-    if (!paired.has(artifact.path) && !designs.some((design) => artifact.type === "adr" ? designClaimsAdr(graph, design.path, artifact.path) : designClaimsSpec(graph, design.path, artifact.path))) {
-      add(artifact.type === "spec" ? { spec: artifact.path, tasks: [] } : { adr: artifact.path, tasks: [] });
-    }
-  }
-  return [...chains.values()].sort((left, right) => compareStrings2(chainKey(left), chainKey(right)));
-}
-function selectArtifactChain(graph, records, focusPaths) {
-  const focus = [...focusPaths];
-  const candidates = artifactChainCandidates(graph, records).filter((chain) => {
-    const members2 = chainMembers(chain);
-    return focus.every((focusPath) => members2.has(focusPath));
-  });
-  return candidates.length === 1 ? candidates[0] : void 0;
-}
-function isArtifactFocusAmbiguous(graph, records, focusPaths) {
-  const focus = [...focusPaths];
-  const relevant = focus.some((focusPath) => {
-    const type = records.find((record2) => record2.path === focusPath)?.type;
-    return ["discovery", "spec", "adr", "design", "plan", "task"].includes(type ?? "");
-  });
-  if (!relevant) return false;
-  const candidates = artifactChainCandidates(graph, records).filter((chain) => {
-    const members2 = chainMembers(chain);
-    return focus.every((focusPath) => members2.has(focusPath));
-  });
-  return candidates.length > 1;
-}
-function resolveArtifactFocus(cwd, graph, records, values) {
-  const rawValues = [...values];
-  if (rawValues.length === 0) {
-    const active = records.filter((record2) => record2.status && ACTIVE_STATUSES_FOR_FOCUS.has(record2.status));
-    return { focus: [], blockers: active.length > 0 ? ["focus-required"] : [] };
-  }
-  let duplicateId = false;
-  const normalized = rawValues.map((value) => {
-    const byId = records.filter((record2) => record2.id === value);
-    if (byId.length > 1) {
-      duplicateId = true;
-      return value;
-    }
-    if (byId.length === 1) return byId[0].path;
-    return normalizeArtifactPath(cwd, value);
-  });
-  const focus = sortedUnique(normalized);
-  if (duplicateId) return { focus, blockers: ["focus-required"] };
-  if (focus.some((focusPath) => !records.some((record2) => record2.path === focusPath))) {
-    return { focus, blockers: ["focus-invalid"] };
-  }
-  if (isArtifactFocusAmbiguous(graph, records, focus)) return { focus, blockers: ["focus-required"] };
-  const chain = selectArtifactChain(graph, records, focus);
-  if (focus.length > 1 && !chain) return { focus, blockers: ["focus-required"] };
-  const rank = { plan: 0, design: 1, spec: 2, adr: 3, task: 4 };
-  const focused = records.filter((record2) => focus.includes(record2.path)).sort((left, right) => (rank[left.type ?? ""] ?? 9) - (rank[right.type ?? ""] ?? 9) || compareStrings2(left.path, right.path))[0];
-  if (!chain) {
-    const component = lineageComponent(graph, focus);
-    const plans = records.filter((record2) => component.includes(record2.path) && record2.type === "plan");
-    if (plans.length > 1 && focused?.type !== "plan") return { focus, blockers: ["focus-required"] };
-  }
-  return { focus, focusedPath: focused?.path, blockers: [] };
-}
-var ACTIVE_STATUSES_FOR_FOCUS = /* @__PURE__ */ new Set([
-  "draft",
-  "proposed",
-  "approved",
-  "in-progress",
-  "todo",
-  "blocked",
-  "capturing",
-  "confirmed",
-  "routed",
-  "active"
-]);
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_definition.ts
 var import_node_fs6 = __toESM(require("node:fs"));
@@ -39942,7 +39782,7 @@ var graphEdgeSchema = external_exports.object({
   priority: external_exports.number().int()
 }).strict();
 var graphDefinitionSchema = external_exports.object({
-  schemaVersion: external_exports.literal(2),
+  schemaVersion: external_exports.literal(3),
   id: external_exports.string().min(1),
   entry: graphNodeId,
   runtimeSignals: external_exports.array(external_exports.string().min(1)).default([]),
@@ -40028,9 +39868,17 @@ function validateGraphDefinition(value) {
   }
   return value;
 }
+var GRAPH_MIGRATION_GUIDANCE = "Graph Definition schemaVersion 2 is not supported by normal runtime. Run `node .apm/skills/doc-maintenance/scripts/doc_maintenance.js migrate plan --json` to evaluate the repository's legacy artifacts, then `migrate apply --expect <planHash>`";
+function detectLegacySchema(parsed) {
+  if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
+    const version2 = parsed.schemaVersion;
+    if (version2 === 2) throw invalidGraph(GRAPH_MIGRATION_GUIDANCE);
+  }
+}
 function parseGraphDefinition(source) {
   try {
     const parsed = load(source);
+    detectLegacySchema(parsed);
     const result = graphDefinitionSchema.safeParse(parsed);
     if (!result.success) throw invalidGraph(formatIssue(result.error));
     return validateGraphDefinition(result.data);
@@ -40151,12 +39999,12 @@ function evaluateCondition(condition, state) {
   if (condition.kind === "gate") {
     return condition.status === "pass" ? state.gates[condition.gate]?.status === "pass" : state.gates[condition.gate]?.status !== "pass";
   }
-  if (condition.state === "runnable") return (state.taskGraph?.runnable.length ?? 0) > 0;
+  if (condition.state === "runnable") return (state.execution.taskGraph?.runnable.length ?? 0) > 0;
   if (condition.state === "active") {
-    return (state.taskGraph?.issues.length ?? 0) === 0 && (state.taskGraph?.resumableActive.length ?? 0) > 0;
+    return (state.execution.taskGraph?.issues.length ?? 0) === 0 && (state.execution.taskGraph?.resumableActive.length ?? 0) > 0;
   }
-  if (condition.state === "invalid") return (state.taskGraph?.issues.length ?? 0) > 0;
-  return state.taskGraph !== null && state.taskGraph.completed.length > 0 && state.taskGraph.runnable.length === 0 && state.taskGraph.active.length === 0 && state.taskGraph.blocked.length === 0 && state.taskGraph.issues.length === 0;
+  if (condition.state === "invalid") return (state.execution.taskGraph?.issues.length ?? 0) > 0;
+  return state.execution.taskGraph !== null && state.execution.taskGraph.completed.length > 0 && state.execution.taskGraph.runnable.length === 0 && state.execution.taskGraph.active.length === 0 && state.execution.taskGraph.blocked.length === 0 && state.execution.taskGraph.issues.length === 0;
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_router.ts
@@ -40168,7 +40016,7 @@ function sortedUnique2(values) {
 }
 function routeResult(input2, result, additionalBlockers = []) {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     graphId: input2.definition.id,
     current: input2.current,
     next: result.next,
@@ -40178,7 +40026,7 @@ function routeResult(input2, result, additionalBlockers = []) {
     delegate: result.delegate,
     requiredAudits: sortedUnique2(result.requiredAudits),
     blockers: sortedUnique2([...input2.state.blockers, ...additionalBlockers]),
-    taskGraph: input2.state.taskGraph,
+    taskGraph: input2.state.execution.taskGraph,
     commitGate: result.commitGate
   };
 }
@@ -41622,19 +41470,8 @@ function subHeadingCount(section, depth = 3) {
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_state.ts
-var FOLLOWUP_SIGNALS = /* @__PURE__ */ new Set([
-  "followup-bug-fix",
-  "followup-decision-briefing",
-  "followup-decision-design",
-  "followup-new-feature",
-  "followup-doc-only",
-  "followup-terminal"
-]);
-function compareStrings5(left, right) {
-  return left.localeCompare(right);
-}
 function sortedUnique4(values) {
-  return [...new Set(values)].sort(compareStrings5);
+  return [...new Set(values)].sort(compareStrings);
 }
 function gate(status, reasons = []) {
   return { status, reasons: sortedUnique4(reasons) };
@@ -41654,6 +41491,185 @@ function bootstrapReasons(cwd) {
   }
   return reasons;
 }
+var CHAIN_STATUSES = {
+  spec: /* @__PURE__ */ new Set(["proposed", "approved", "implemented"]),
+  adr: /* @__PURE__ */ new Set(["proposed", "accepted"]),
+  design: /* @__PURE__ */ new Set(["approved"])
+};
+function chainKey(chain) {
+  return [chain.spec, chain.adr, chain.design].map((value) => value ?? "").join("\0");
+}
+function chainMembers(chain) {
+  return new Set([chain.spec, chain.adr, chain.design, ...chain.anchors ?? []].filter((value) => Boolean(value)));
+}
+function hasKnowledgeEdge(graph, fromPath, relation, toPath) {
+  return graph.edges.some((edge) => edge.resolution === "resolved" && edge.from.path === fromPath && edge.relation === relation && edge.to?.path === toPath);
+}
+function designClaimsSpec(graph, designPath, specPath) {
+  return Boolean(specPath) && hasKnowledgeEdge(graph, designPath, "realizes", specPath);
+}
+function designClaimsAdr(graph, designPath, adrPath) {
+  return Boolean(adrPath) && hasKnowledgeEdge(graph, adrPath, "decides-for", designPath);
+}
+function preDesignAnchors(graph, records, spec, adr) {
+  const direct = hasKnowledgeEdge(graph, adr.path, "decides-for", spec.path);
+  const discoveries = records.filter((record2) => (record2.type === "discovery" || record2.type === "brainstorm") && [spec, adr].every((artifact) => hasKnowledgeEdge(graph, record2.path, "motivates", artifact.path) || hasKnowledgeEdge(graph, record2.path, "informs", artifact.path)));
+  return direct || discoveries.length > 0 ? discoveries.map((record2) => record2.path) : void 0;
+}
+function artifactChainCandidates(graph, records) {
+  const specs = records.filter((record2) => record2.type === "spec" && CHAIN_STATUSES.spec.has(record2.status ?? ""));
+  const adrs = records.filter((record2) => record2.type === "adr" && CHAIN_STATUSES.adr.has(record2.status ?? ""));
+  const designs = records.filter((record2) => record2.type === "design" && CHAIN_STATUSES.design.has(record2.status ?? ""));
+  const chains = /* @__PURE__ */ new Map();
+  const add = (chain) => {
+    chains.set(chainKey(chain), chain);
+  };
+  const cartesian = (values, fallback) => values.length > 0 ? values : fallback;
+  for (const design of designs) {
+    const relatedSpecs = specs.filter((candidate) => designClaimsSpec(graph, design.path, candidate.path));
+    const relatedAdrs = adrs.filter((candidate) => designClaimsAdr(graph, design.path, candidate.path));
+    for (const spec of cartesian(relatedSpecs, [void 0])) {
+      for (const adr of cartesian(relatedAdrs, [void 0])) {
+        add({ spec: spec?.path, adr: adr?.path, design: design.path });
+      }
+    }
+  }
+  const unassignedSpecs = specs.filter((spec) => !designs.some((design) => designClaimsSpec(graph, design.path, spec.path)));
+  const paired = /* @__PURE__ */ new Set();
+  for (const spec of unassignedSpecs) {
+    for (const adr of adrs) {
+      const anchors = preDesignAnchors(graph, records, spec, adr);
+      if (!anchors) continue;
+      add({ spec: spec.path, adr: adr.path, anchors });
+      paired.add(spec.path);
+      paired.add(adr.path);
+    }
+  }
+  for (const artifact of [...specs, ...adrs]) {
+    if (!paired.has(artifact.path) && !designs.some((design) => artifact.type === "adr" ? designClaimsAdr(graph, design.path, artifact.path) : designClaimsSpec(graph, design.path, artifact.path))) {
+      add(artifact.type === "spec" ? { spec: artifact.path } : { adr: artifact.path });
+    }
+  }
+  return [...chains.values()].sort((left, right) => compareStrings(chainKey(left), chainKey(right)));
+}
+function selectArtifactChain(graph, records, focusPaths) {
+  const focus = [...focusPaths];
+  const candidates = artifactChainCandidates(graph, records).filter((chain) => {
+    const members2 = chainMembers(chain);
+    return focus.every((focusPath) => members2.has(focusPath));
+  });
+  return candidates.length === 1 ? candidates[0] : void 0;
+}
+function isFocusAmbiguous(graph, records, focusPaths) {
+  const focus = [...focusPaths];
+  const relevant = focus.some((focusPath) => {
+    const type = records.find((record2) => record2.path === focusPath)?.type;
+    return ["discovery", "brainstorm", "spec", "adr", "design"].includes(type ?? "");
+  });
+  if (!relevant) return false;
+  const candidates = artifactChainCandidates(graph, records).filter((chain) => {
+    const members2 = chainMembers(chain);
+    return focus.every((focusPath) => members2.has(focusPath));
+  });
+  return candidates.length > 1;
+}
+var FOCUS_RANK = { design: 0, spec: 1, adr: 2, discovery: 3, brainstorm: 4 };
+function primaryPathByArtifactKey(records) {
+  const primaries = /* @__PURE__ */ new Map();
+  for (const [key, group] of groupByArtifact(records)) {
+    const nonLocalized = group.filter((document3) => !/\.[a-z]{2}\.md$/i.test(import_node_path10.default.posix.basename(document3.path)));
+    const pool = nonLocalized.length > 0 ? nonLocalized : group;
+    primaries.set(key, [...pool].sort((a, b) => compareStrings(a.path, b.path))[0].path);
+  }
+  return primaries;
+}
+function resolveFocus(cwd, records, knowledge, options2) {
+  const rawValues = [...options2.focus ?? []];
+  if (rawValues.length === 0) {
+    const active = records.filter((record2) => record2.status && ACTIVE_STATUSES_FOR_FOCUS.has(record2.status));
+    return { focus: [], runId: null, blockers: active.length > 0 ? ["focus-required"] : [] };
+  }
+  const primaries = primaryPathByArtifactKey(records);
+  const byId = /* @__PURE__ */ new Map();
+  for (const record2 of records) {
+    if (!record2.id) continue;
+    const group = byId.get(record2.id) ?? [];
+    group.push(record2);
+    byId.set(record2.id, group);
+  }
+  const primaryFor = (group) => {
+    const keys = new Set(group.map((record2) => artifactKeyOf(record2.path)));
+    return [...keys].map((key) => primaries.get(key)).filter((value) => Boolean(value)).map((key) => records.find((record2) => record2.path === key));
+  };
+  const listed = listRuns(cwd, {
+    stateRoot: options2.stateRoot,
+    allowExternalRoot: options2.allowExternalRoot
+  });
+  const runIds = new Set(listed.map((run) => run.runId));
+  const focus = [];
+  const runTokens = /* @__PURE__ */ new Set();
+  const blockers = /* @__PURE__ */ new Set();
+  for (const rawToken of rawValues) {
+    const token = rawToken.trim();
+    if (!token) continue;
+    if (parseClaimReference(token)) {
+      const resolved = resolveClaimReference(knowledge, token);
+      if (resolved.status === "resolved") {
+        focus.push(resolved.node.path);
+        continue;
+      }
+      blockers.add(resolved.status === "ambiguous" ? "focus-required" : "focus-invalid");
+      continue;
+    }
+    const idGroup = byId.get(token);
+    if (idGroup) {
+      const idPrimaries = primaryFor(idGroup);
+      if (idPrimaries.length === 1) {
+        focus.push(idPrimaries[0].path);
+      } else {
+        blockers.add("focus-required");
+      }
+      continue;
+    }
+    if (runIds.has(token)) {
+      if (runTokens.size > 0 && !runTokens.has(token)) blockers.add("focus-invalid");
+      runTokens.add(token);
+      try {
+        const snapshot = loadRun(cwd, token, {
+          stateRoot: options2.stateRoot,
+          allowExternalRoot: options2.allowExternalRoot
+        });
+        const runFocus = runFocusPaths(snapshot.manifest.focus);
+        if (runFocus) focus.push(...runFocus);
+      } catch {
+        blockers.add("task-graph-run-unreadable");
+      }
+      continue;
+    }
+    const normalized = normalizeRepoPath(cwd, token);
+    const primary = primaries.get(artifactKeyOf(normalized));
+    if (primary) {
+      focus.push(primary);
+      continue;
+    }
+    blockers.add("focus-invalid");
+  }
+  const resolvedFocus = sortedUnique4(focus);
+  if (blockers.size > 0) {
+    return { focus: resolvedFocus, runId: null, blockers: sortedUnique4(blockers) };
+  }
+  const runId = runTokens.size === 1 ? [...runTokens][0] : null;
+  if (isFocusAmbiguous(knowledge, records, resolvedFocus)) {
+    return { focus: resolvedFocus, runId, blockers: ["focus-required"] };
+  }
+  const chain = selectArtifactChain(knowledge, records, resolvedFocus);
+  if (resolvedFocus.length > 1 && !chain) return { focus: resolvedFocus, runId, blockers: ["focus-required"] };
+  const focused = records.filter((record2) => resolvedFocus.includes(record2.path)).sort((left, right) => (FOCUS_RANK[left.type ?? ""] ?? 9) - (FOCUS_RANK[right.type ?? ""] ?? 9) || compareStrings(left.path, right.path))[0];
+  return { focus: resolvedFocus, runId, focusedPath: focused?.path, blockers: [] };
+}
+function normalizeRepoPath(cwd, target) {
+  return import_node_path10.default.relative(import_node_path10.default.resolve(cwd), import_node_path10.default.resolve(cwd, target)).split(import_node_path10.default.sep).join("/");
+}
 function findRecord(records, pathValue) {
   return pathValue ? records.find((record2) => record2.path === pathValue) : void 0;
 }
@@ -41666,10 +41682,14 @@ function runMatchesGraph(snapshot, graphId, members2) {
   const focus = runFocusPaths(snapshot.manifest.focus);
   return focus !== null && members2 !== null && focus.every((entry) => members2.has(entry));
 }
-function resolveRunSnapshot(cwd, graphId, chain, options2) {
+function resolveRunSnapshot(cwd, graphId, chain, focusRunId, options2) {
   const store = { stateRoot: options2.stateRoot, allowExternalRoot: options2.allowExternalRoot };
-  if (options2.runId !== void 0) {
-    return { snapshot: loadRun(cwd, options2.runId, store), blocker: null };
+  if (options2.runId !== void 0 && focusRunId !== null && options2.runId !== focusRunId) {
+    return { snapshot: null, blocker: "focus-invalid" };
+  }
+  const selectedId = options2.runId ?? focusRunId;
+  if (selectedId !== void 0 && selectedId !== null) {
+    return { snapshot: loadRun(cwd, selectedId, store), blocker: null };
   }
   const members2 = chain === void 0 ? null : chainMembers(chain);
   const listed = listRuns(cwd, store);
@@ -41695,53 +41715,40 @@ function deriveSignals(input2, blockers, gates, taskGraph) {
   const signals = new Set(input2);
   if (blockers.includes("focus-required")) signals.add("focus-required");
   if (blockers.includes("bootstrap-incomplete")) signals.add("bootstrap-incomplete");
-  const followups = [...signals].filter((signal) => FOLLOWUP_SIGNALS.has(signal));
-  if (followups.length === 0) signals.add("followups-unclassified");
-  if (followups.length > 1) signals.add("followups-conflicting");
   if (blockers.length === 0 && Object.values(gates).length > 0 && Object.values(gates).every((result) => result.status === "pass") && (!taskGraph || taskGraph.issues.length === 0)) signals.add("graph-complete");
   return sortedUnique4(signals);
 }
-function deriveHardBlockers(blockers, signals, gates) {
+function deriveHardBlockers(blockers, gates) {
   return sortedUnique4([
-    ...blockers.filter((blocker) => blocker === "focus-required" || blocker === "focus-invalid" || blocker === "duplicate-id" || blocker.startsWith("broken-relation:")),
-    ...signals.includes("followups-conflicting") ? ["followups-conflicting"] : [],
-    ...gates["artifact-graph"]?.status !== "pass" && gates["artifact-graph"] ? ["artifact-graph"] : []
+    ...blockers.filter((blocker) => blocker === "focus-required" || blocker === "focus-invalid" || blocker === "duplicate-id" || blocker.startsWith("knowledge:")),
+    ...gates.knowledge && gates.knowledge.status !== "pass" ? ["knowledge"] : []
   ]);
 }
-function fallbackRecords(cwd, graph) {
-  return graph.nodes.map((node3) => ({
-    ...node3,
-    absolutePath: import_node_path10.default.join(cwd, node3.path),
-    body: "",
-    status: null,
-    relations: {},
-    relationIssues: []
-  }));
-}
-function evaluateGraphGates(state, collector) {
+function evaluateGraphGates(state) {
   const cwd = import_node_path10.default.resolve(state.cwd);
-  const projection = scanArtifactGraph({ cwd, taskDir: state.taskDir }, collector);
-  const records = projection.records.length > 0 ? projection.records : fallbackRecords(cwd, state.artifactGraph);
-  const resolution = resolveArtifactFocus(cwd, state.artifactGraph, records, state.focus);
-  const focused = findRecord(records, resolution.focusedPath);
-  const chain = focused ? selectArtifactChain(state.artifactGraph, records, state.focus) : void 0;
-  const taskGraph = state.taskGraph;
+  const records = state.knowledge.documents;
+  const focusBlocked = state.blockers.includes("focus-required") || state.blockers.includes("focus-invalid");
+  const focused = focusBlocked ? void 0 : findRecord(records, focusRank(state, records));
+  const chain = focused ? selectArtifactChain(state.knowledge.graph, records, state.focus) : void 0;
+  const taskGraph = state.execution.taskGraph;
   const bootstrap = bootstrapReasons(cwd);
   const gates = {
-    bootstrap: gate(bootstrap.length === 0 ? "pass" : "fail", bootstrap)
+    bootstrap: gate(bootstrap.length === 0 ? "pass" : "fail", bootstrap),
+    // Knowledge integrity (Issue #235): any projection issue — a duplicate
+    // Claim ID, an unresolvable stored relation, a legacy relation field —
+    // blocks routing outright. The durable corpus is the authority, so its
+    // corruption is a hard blocker, never a repairable stage.
+    knowledge: gate(
+      state.knowledge.graph.issues.length === 0 ? "pass" : "blocked",
+      state.knowledge.graph.issues.map((issue2) => `knowledge:${issue2.code}`)
+    )
   };
-  const graphIssues = [...new Map([
-    ...state.artifactGraph.issues,
-    ...projection.graph.issues
-  ].map((issue2) => [`${issue2.code}\0${issue2.message}`, issue2])).values()];
-  if (graphIssues.length > 0) {
-    gates["artifact-graph"] = gate("blocked", graphIssues.map((issue2) => `artifact-graph:${issue2.code}`));
-  }
   if (!focused) {
     gates.briefing = gate(state.blockers.includes("focus-required") ? "blocked" : "fail", [state.blockers.includes("focus-required") ? "focus-required" : "focus-missing"]);
     gates.design = gate("blocked", ["focus-required"]);
     gates.planning = gate("blocked", ["focus-required"]);
     gates.implementation = gate("blocked", ["focus-required"]);
+    gates.verification = gate("blocked", ["focus-required"]);
   } else {
     const spec = findRecord(records, chain?.spec);
     const adr = findRecord(records, chain?.adr);
@@ -41754,13 +41761,13 @@ function evaluateGraphGates(state, collector) {
     gates.briefing = gate(briefingReasons.length === 0 ? "pass" : "fail", briefingReasons);
     const designReasons = [];
     if (!design || design.status !== "approved") designReasons.push("design-status");
-    if (!design || !designClaimsSpec(state.artifactGraph, design.path, spec?.path)) designReasons.push("design-spec-relation");
-    if (!design || !designAdrDecision(state.artifactGraph, design.path, adr?.path)) designReasons.push("design-adr-relation");
+    if (!design || !designClaimsSpec(state.knowledge.graph, design.path, spec?.path)) designReasons.push("design-spec-relation");
+    if (!design || !designClaimsAdr(state.knowledge.graph, design.path, adr?.path)) designReasons.push("design-adr-relation");
     gates.design = gate(designReasons.length === 0 ? "pass" : "fail", designReasons);
     const planningReasons = [];
-    if (state.taskGraph?.plan?.approved !== true) planningReasons.push("plan-status");
+    if (state.execution.taskGraph?.plan?.approved !== true) planningReasons.push("plan-status");
     const members2 = chain === void 0 ? null : chainMembers(chain);
-    const runFocus = state.run?.focus ?? null;
+    const runFocus = state.execution.run?.focus ?? null;
     if (runFocus === null || members2 === null || !runFocus.every((entry) => members2.has(entry))) {
       planningReasons.push("plan-design-relation");
     }
@@ -41773,83 +41780,117 @@ function evaluateGraphGates(state, collector) {
     const implementationReasons = [];
     if (!taskGraph || taskGraph.nodes.length === 0) implementationReasons.push("no-selected-tasks");
     if (taskGraph && taskGraph.nodes.some((node3) => !["done", "wont-do"].includes(node3.status))) implementationReasons.push("tasks-incomplete");
+    gates.implementation = gate(implementationReasons.length === 0 ? "pass" : "fail", implementationReasons);
+    const verificationReasons = [];
     const verification = state.verification;
     if (verification == null) {
-      implementationReasons.push("verification-summary");
+      verificationReasons.push("verification-summary");
     } else if (verification.boundToHead === null) {
-      implementationReasons.push("verification-summary-head-unreadable");
+      verificationReasons.push("verification-summary-head-unreadable");
     } else if (!verification.boundToHead) {
-      implementationReasons.push("verification-summary-target-mismatch");
+      verificationReasons.push("verification-summary-target-mismatch");
     } else if (verification.summary.verdict !== "verified") {
-      implementationReasons.push(`verification-${verification.summary.verdict}`);
-      implementationReasons.push(...verification.summary.reasons);
+      verificationReasons.push(`verification-${verification.summary.verdict}`);
+      verificationReasons.push(...verification.summary.reasons);
     } else if (verificationCoverageGap(verification.summary)) {
-      implementationReasons.push("verification-summary-inconsistent");
+      verificationReasons.push("verification-summary-inconsistent");
     }
-    gates.implementation = gate(implementationReasons.length === 0 ? "pass" : "blocked", implementationReasons);
+    gates.verification = gate(verificationReasons.length === 0 ? "pass" : "blocked", verificationReasons);
   }
-  const followups = state.signals.filter((signal) => FOLLOWUP_SIGNALS.has(signal));
-  gates["followup-triage"] = followups.length === 1 && !state.signals.includes("followups-unclassified") ? gate("pass") : followups.length === 0 ? gate("blocked", ["followups-unclassified"]) : gate("blocked", ["followups-conflicting"]);
+  gates["knowledge-consolidation"] = state.signals.includes("knowledge-consolidated") ? gate("pass") : gate("fail", ["knowledge-consolidation-pending"]);
   gates["exit-audit"] = state.signals.includes("exit-audit-pass") ? gate("pass") : gate("blocked", ["exit-audit-pass"]);
   return gates;
 }
-function projectGraphState(options2, collector) {
+function focusRank(state, records) {
+  return records.filter((record2) => state.focus.includes(record2.path)).sort((left, right) => (FOCUS_RANK[left.type ?? ""] ?? 9) - (FOCUS_RANK[right.type ?? ""] ?? 9) || compareStrings(left.path, right.path))[0]?.path;
+}
+async function projectGraphState(options2, collector) {
   const cwd = import_node_path10.default.resolve(options2.cwd);
-  const taskDir = resolveContainedTaskDir(cwd, options2.taskDir);
-  const projection = scanArtifactGraph({ cwd, taskDir }, collector);
-  const resolution = resolveArtifactFocus(cwd, projection.graph, projection.records, options2.focus ?? []);
-  const blockers = sortedUnique4([
-    ...resolution.blockers,
-    ...projection.graph.issues.map((issue2) => issue2.code === "duplicate-id" ? "duplicate-id" : `broken-relation:${issue2.message}`),
-    ...projection.graph.issues.some((issue2) => issue2.code === "duplicate-id") ? ["focus-required"] : [],
-    ...bootstrapReasons(cwd).length > 0 ? ["bootstrap-incomplete"] : []
-  ]);
-  const chain = resolution.blockers.length === 0 && !projection.graph.issues.some((issue2) => issue2.code === "duplicate-id") ? selectArtifactChain(projection.graph, projection.records, resolution.focus) : void 0;
+  if (collector) collector.scans += 1;
+  const model = await scanRepository({ cwd, roots: [...DURABLE_DOC_DIRS], includeTopLevelMarkdown: false });
+  const knowledge = projectKnowledgeGraph(model);
+  const records = model.canonicalDocuments;
+  if (collector) {
+    for (const document3 of model.files) {
+      collector.filesRead += 1;
+      collector.filePaths.add(document3.path);
+      try {
+        collector.bytesRead += import_node_fs10.default.statSync(document3.absolutePath).size;
+      } catch {
+      }
+    }
+  }
+  const graphId = options2.graphId ?? "doc-driven-dev";
+  const resolution = resolveFocus(cwd, records, knowledge, {
+    focus: options2.focus,
+    stateRoot: options2.stateRoot,
+    allowExternalRoot: options2.allowExternalRoot
+  });
+  const chain = resolution.blockers.length === 0 ? selectArtifactChain(knowledge, records, resolution.focus) : void 0;
   const { snapshot: run, blocker: runBlocker } = resolveRunSnapshot(
     cwd,
-    options2.graphId ?? "doc-driven-dev",
+    graphId,
     chain,
+    resolution.runId,
     options2
   );
   const taskGraph = run ? projectRunTasks(run) : null;
-  if (taskGraph?.issues.length) blockers.push("task-graph-invalid");
-  if (runBlocker !== null) blockers.push(runBlocker);
+  const duplicateIds = model.duplicateIds();
+  const blockers = sortedUnique4([
+    ...resolution.blockers,
+    ...knowledge.issues.map((issue2) => `knowledge:${issue2.code}`),
+    ...duplicateIds.length > 0 ? ["duplicate-id", "focus-required"] : [],
+    ...taskGraph && taskGraph.issues.length > 0 ? ["task-graph-invalid"] : [],
+    ...runBlocker !== null ? [runBlocker] : [],
+    ...bootstrapReasons(cwd).length > 0 ? ["bootstrap-incomplete"] : []
+  ]);
   const verification = options2.verificationSummary === void 0 ? null : (() => {
     const head = resolveCommitSubject(cwd, "HEAD");
     return {
       summary: options2.verificationSummary,
-      boundToHead: head === null ? null : options2.verificationSummary.target.subjectDigest === head.subjectDigest
+      boundToHead: head === null ? null : options2.verificationSummary.target.subjectDigest === head.subjectDigest,
+      documents: knowledge.nodes.filter((node3) => node3.type === "verification").map((node3) => node3.path).sort(compareStrings)
     };
   })();
   const state = {
-    schemaVersion: 2,
-    graphId: options2.graphId ?? "doc-driven-dev",
+    schemaVersion: 3,
+    graphId,
     cwd,
-    taskDir,
+    knowledge: { graph: knowledge, documents: records },
+    execution: {
+      run: run === null ? null : {
+        runId: run.runId,
+        status: run.status,
+        focus: runFocusPaths(run.manifest.focus)
+      },
+      taskGraph
+    },
+    verification,
     focus: resolution.focus,
-    artifactGraph: projection.graph,
     gates: {},
     signals: sortedUnique4(options2.signals ?? []),
-    blockers: sortedUnique4(blockers),
-    hardBlockers: [],
-    taskGraph,
-    verification,
-    run: run === null ? null : {
-      runId: run.runId,
-      status: run.status,
-      focus: runFocusPaths(run.manifest.focus)
-    }
+    blockers,
+    hardBlockers: []
   };
   state.signals = deriveSignals(state.signals, state.blockers, state.gates, taskGraph);
-  state.gates = evaluateGraphGates(state, collector);
-  if (state.gates.planning?.reasons.some((reason) => reason.startsWith("task-graph:"))) {
-    state.blockers = sortedUnique4([...state.blockers, "task-graph-invalid"]);
-    state.gates = evaluateGraphGates(state, collector);
+  state.gates = evaluateGraphGates(state);
+  if (state.gates.verification && state.gates.verification.status !== "pass") {
+    state.blockers = sortedUnique4([...state.blockers, ...state.gates.verification.reasons]);
   }
   state.signals = deriveSignals(state.signals, state.blockers, state.gates, taskGraph);
-  state.hardBlockers = deriveHardBlockers(state.blockers, state.signals, state.gates);
+  state.hardBlockers = deriveHardBlockers(state.blockers, state.gates);
   return state;
 }
+var ACTIVE_STATUSES_FOR_FOCUS = /* @__PURE__ */ new Set([
+  "draft",
+  "proposed",
+  "approved",
+  "in-progress",
+  "capturing",
+  "confirmed",
+  "routed",
+  "active"
+]);
 
 // src/skills/doc-driven-dev-graph/scripts/lib/dashboard_collect.ts
 async function collectDashboard(options2) {
@@ -41870,7 +41911,7 @@ async function collectDashboard(options2) {
   }
   const collected = await collectFindings(options2.cwd, { type: "all", externalLinks: false });
   const artifacts = scanArtifactGraph({ cwd: options2.cwd });
-  const state = projectGraphState({
+  const state = await projectGraphState({
     cwd: options2.cwd,
     graphId: definition2.id,
     focus: options2.focus,
@@ -42439,7 +42480,7 @@ function renderCharts(snapshot) {
     { label: "warning", count: severityCount("warning"), cls: "fill-warning", sw: "var(--unknown)" },
     { label: "info", count: severityCount("info"), cls: "fill-info", sw: "var(--progress)" }
   ], "findings \u306A\u3057");
-  const selected = snapshot.state.taskGraph;
+  const selected = snapshot.state.execution.taskGraph;
   let focused;
   if (selected) {
     const selectedSummary = summarizeTasks(selected.nodes);
@@ -42629,14 +42670,14 @@ function renderDocuments(snapshot) {
 }
 function renderRelations(snapshot, ids) {
   const anchor2 = (pathValue) => ids.has(pathValue) ? `<a href="#${ids.get(pathValue)}">${e(pathValue)}</a>` : e(pathValue);
-  const items = snapshot.state.artifactGraph.edges.map((edge) => `<li class="row-item"><code>${anchor2(edge.from)}</code> <span class="chip">${e(edge.relation)}</span> <span class="route-arrow" aria-hidden="true">\u2192</span> ${edge.to ? `<code>${anchor2(edge.to)}</code>` : `<span class="warning">${edge.external ? "external" : "\u672A\u89E3\u6C7A"}</span>`} <span class="row-meta">${e(edge.kind)}</span></li>`);
+  const items = snapshot.state.knowledge.graph.edges.map((edge) => `<li class="row-item"><code>${anchor2(edge.from.path)}</code> <span class="chip">${e(edge.relation)}</span> <span class="route-arrow" aria-hidden="true">\u2192</span> ${edge.to ? `<code>${anchor2(edge.to.path)}</code>` : `<span class="warning">${e(edge.resolution)}</span>`} <span class="row-meta">${e(edge.resolution)}</span></li>`);
   return `<details><summary>\u6587\u66F8\u9593\u306E\u95A2\u4FC2</summary>${items.length === 0 ? `<p class="empty">\u306A\u3057</p>` : `<ul class="row-list">${items.join("")}</ul>`}</details>`;
 }
 function renderDiagnostics(snapshot) {
   const severityClass = (severity) => severity === "error" ? "status-blocked" : severity === "warning" ? "status-unknown" : "status-in-progress";
   const findings = snapshot.findings.map((finding2) => `<li class="row-item${finding2.severity === "error" ? " row-danger" : ""}"><span class="status-pill ${severityClass(finding2.severity)}">${e(finding2.severity)}</span>${finding2.blocking ? ` <span class="badge badge-blocked">blocking</span>` : ""} <code>${e(finding2.ruleId)}</code> <span class="row-title">${e(finding2.message)}</span> <span class="row-meta">${e(finding2.path)}${finding2.line === null ? "" : `:${e(finding2.line)}`}</span></li>`);
   const blockingCount = snapshot.findings.filter((finding2) => finding2.blocking).length;
-  const graphIssues = snapshot.state.artifactGraph.issues.map((issue2) => `<li class="row-item"><code>${e(issue2.code)}</code> <span class="row-title">${e(issue2.message)}</span></li>`);
+  const graphIssues = snapshot.state.knowledge.graph.issues.map((issue2) => `<li class="row-item"><code>${e(issue2.code)}</code> <span class="row-title">${e(issue2.message)}</span></li>`);
   const notes = snapshot.coverageNotes.map((note) => `<li class="row-item">${e(note)}</li>`);
   const rows = (items) => items.length === 0 ? `<p class="empty">\u306A\u3057</p>` : `<ul class="row-list">${items.join("")}</ul>`;
   return `<section id="diagnostics" aria-labelledby="diagnostics-heading"><h2 id="diagnostics-heading">\u8A3A\u65AD</h2><p class="detail-toggle"><button type="button" data-open-all="#diagnostics">\u3059\u3079\u3066\u958B\u304F</button> <button type="button" data-close-all="#diagnostics">\u3059\u3079\u3066\u7573\u3080</button></p><details${blockingCount > 0 ? " open" : ""}><summary>findings (${findings.length} / blocking ${blockingCount})</summary>${rows(findings)}</details><details><summary>artifact relation issues (${graphIssues.length})</summary>${rows(graphIssues)}</details><details><summary>\u5BFE\u8C61\u5916\u30FB\u4E0D\u660E\u60C5\u5831 (${notes.length})</summary>${rows(notes)}</details></section>`;

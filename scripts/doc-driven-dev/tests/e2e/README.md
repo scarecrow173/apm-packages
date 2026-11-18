@@ -98,7 +98,7 @@ and register it in `cases/index.ts`. Fields:
 | `id`, `description` | Case identity; tests are named `e2e <id>: <description>`. |
 | `fixture` | `createFixtureRepo` options: `files` overrides (`DocSpec` / raw `string` / `null` to delete), `taskStatuses`, `dependsOn`, `secondPlan`, `scaffoldDirs`. Defaults to the standard happy fixture. |
 | `current` | Start node (default: graph entry). Use to start mid-graph. |
-| `focus`, `signals` | Caller focus ids and runtime signals. Routing past `focus-required` needs `focus`; the implementation/followup/exit-audit gates need their `*-verified`/`*-pass` signals. |
+| `focus`, `signals` | Caller focus ids and runtime signals. Routing past `focus-required` needs `focus`; the knowledge-consolidation gate needs `knowledge-consolidated` and the exit-audit gate needs `exit-audit-pass` (the verification gate reads the HEAD-bound Verification Summary, never a signal). |
 | `graph` | Custom graph YAML (repo-relative). |
 | `maxHops`, `mode` | Hop budget; `run-until-yield` (default) or `single-step`. |
 | `script` | `Record<edgeId, EdgeScript>` — `audits`/`delegate` outcome specs (scalar repeats, queue consumed per dispatch), `mutate` document mutators applied when the delegate completes, `commitEvidence` to commit during evidence persistence, `subDispatches` internal dispatch plan, `reportActual` to simulate a dishonest self-report. Unscripted effects throw — no silent defaults. |
@@ -162,7 +162,7 @@ report); the aligned pass/fail table is emitted via test diagnostics.
 | e2e-02 | `focus-required` blocks leg 1; fresh leg 2 with focus reaches terminal | yield; fresh-run legs |
 | e2e-03 | Briefing gate not-pass -> briefing-retry -> complete | repair-edge retry |
 | e2e-04 | `approval-required` yield -> pending-edge resume -> terminal | yield/resume |
-| e2e-05 | Dangling `verified-by` -> `broken-relation` blocker -> `unrecoverable-blocker` | contract-violation detection |
+| e2e-05 | Dangling `realizes` -> `knowledge:*` integrity blocker -> `unrecoverable-blocker` | contract-violation detection |
 | e2e-06 | `tasks-active` outranks `tasks-runnable` | task-graph routing |
 | e2e-07a | Task dependency cycle -> `task-graph-to-planning` -> `budget-exhausted` | fail-closed task graph |
 | e2e-07b | Duplicate task id -> `duplicate-task-id` -> `task-graph-to-planning` -> `budget-exhausted` | fail-closed task graph |

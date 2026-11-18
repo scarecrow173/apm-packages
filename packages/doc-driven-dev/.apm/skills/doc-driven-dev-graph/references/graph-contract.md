@@ -5,9 +5,9 @@ distributed `graphs/doc-driven-dev.yaml` file is the authority for concrete
 node, edge, condition, and delegate declarations. Prose must not invent a
 transition or flatten a delegated subgraph.
 
-## Graph Definition v2
+## Graph Definition v3
 
-The definition has `schemaVersion: 2`, a stable `id`, an `entry` node ID,
+The definition has `schemaVersion: 3`, a stable `id`, an `entry` node ID,
 optional `runtimeSignals`, and named `conditions`, `nodes`, and `edges`:
 
 - `runtimeSignals` lists caller-provided signal values accepted by the CLI;
@@ -48,7 +48,7 @@ The stable JSON object contains exactly:
 
 | Field | Meaning |
 | --- | --- |
-| `schemaVersion` | Public route schema, currently `2`. |
+| `schemaVersion` | Public route schema, currently `3`. |
 | `graphId` | Selected definition ID. |
 | `current` / `next` | Current node and one-step destination. |
 | `edgeId` | Selected edge ID, or `null` for terminal/blocked. |

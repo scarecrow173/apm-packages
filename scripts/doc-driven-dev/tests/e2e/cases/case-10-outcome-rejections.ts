@@ -53,7 +53,7 @@ export const case10a: E2ECase = {
   id: "e2e-10a",
   description: "missing proof on spec audit outcome → authority-required",
   fixture: { taskStatuses: ["todo"] },
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   script: script("missing-proof"),
   expect: expectContract,
 };
@@ -62,7 +62,7 @@ export const case10b: E2ECase = {
   id: "e2e-10b",
   description: "stale evidence fingerprint on spec audit outcome → authority-required",
   fixture: { taskStatuses: ["todo"] },
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   script: script("stale-revision"),
   expect: expectContract,
 };
@@ -71,7 +71,7 @@ export const case10c: E2ECase = {
   id: "e2e-10c",
   description: "scope-mismatched inputs on spec audit outcome → authority-required",
   fixture: { taskStatuses: ["todo"] },
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   script: script("scope-mismatch"),
   expect: expectContract,
 };

@@ -3426,7 +3426,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs14 = require("fs");
+    var fs13 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify = require_stringify();
@@ -3510,7 +3510,7 @@ var require_gray_matter = __commonJS({
       return stringify(file2, data, options2);
     };
     matter4.read = function(filepath, options2) {
-      const str2 = fs14.readFileSync(filepath, "utf8");
+      const str2 = fs13.readFileSync(filepath, "utf8");
       const file2 = matter4(str2, options2);
       file2.path = filepath;
       return file2;
@@ -4515,7 +4515,7 @@ var init_default = __esm({
 });
 
 // node_modules/.pnpm/is-plain-obj@4.1.0/node_modules/is-plain-obj/index.js
-function isPlainObject6(value) {
+function isPlainObject3(value) {
   if (typeof value !== "object" || value === null) {
     return false;
   }
@@ -4809,10 +4809,10 @@ var init_vfile_message = __esm({
 });
 
 // node_modules/.pnpm/vfile@6.0.3/node_modules/vfile/lib/minpath.js
-var import_node_path8;
+var import_node_path3;
 var init_minpath = __esm({
   "node_modules/.pnpm/vfile@6.0.3/node_modules/vfile/lib/minpath.js"() {
-    import_node_path8 = __toESM(require("node:path"), 1);
+    import_node_path3 = __toESM(require("node:path"), 1);
   }
 });
 
@@ -4847,9 +4847,9 @@ var init_minurl = __esm({
 
 // node_modules/.pnpm/vfile@6.0.3/node_modules/vfile/lib/index.js
 function assertPart(part, name) {
-  if (part && part.includes(import_node_path8.default.sep)) {
+  if (part && part.includes(import_node_path3.default.sep)) {
     throw new Error(
-      "`" + name + "` cannot be a path: did not expect `" + import_node_path8.default.sep + "`"
+      "`" + name + "` cannot be a path: did not expect `" + import_node_path3.default.sep + "`"
     );
   }
 }
@@ -4858,8 +4858,8 @@ function assertNonEmpty(part, name) {
     throw new Error("`" + name + "` cannot be empty");
   }
 }
-function assertPath(path13, name) {
-  if (!path13) {
+function assertPath(path12, name) {
+  if (!path12) {
     throw new Error("Setting `" + name + "` requires `path` to be set too");
   }
 }
@@ -4947,7 +4947,7 @@ var init_lib4 = __esm({
        *   Basename.
        */
       get basename() {
-        return typeof this.path === "string" ? import_node_path8.default.basename(this.path) : void 0;
+        return typeof this.path === "string" ? import_node_path3.default.basename(this.path) : void 0;
       }
       /**
        * Set basename (including extname) (`'index.min.js'`).
@@ -4964,7 +4964,7 @@ var init_lib4 = __esm({
       set basename(basename) {
         assertNonEmpty(basename, "basename");
         assertPart(basename, "basename");
-        this.path = import_node_path8.default.join(this.dirname || "", basename);
+        this.path = import_node_path3.default.join(this.dirname || "", basename);
       }
       /**
        * Get the parent path (example: `'~'`).
@@ -4973,7 +4973,7 @@ var init_lib4 = __esm({
        *   Dirname.
        */
       get dirname() {
-        return typeof this.path === "string" ? import_node_path8.default.dirname(this.path) : void 0;
+        return typeof this.path === "string" ? import_node_path3.default.dirname(this.path) : void 0;
       }
       /**
        * Set the parent path (example: `'~'`).
@@ -4987,7 +4987,7 @@ var init_lib4 = __esm({
        */
       set dirname(dirname) {
         assertPath(this.basename, "dirname");
-        this.path = import_node_path8.default.join(dirname || "", this.basename);
+        this.path = import_node_path3.default.join(dirname || "", this.basename);
       }
       /**
        * Get the extname (including dot) (example: `'.js'`).
@@ -4996,7 +4996,7 @@ var init_lib4 = __esm({
        *   Extname.
        */
       get extname() {
-        return typeof this.path === "string" ? import_node_path8.default.extname(this.path) : void 0;
+        return typeof this.path === "string" ? import_node_path3.default.extname(this.path) : void 0;
       }
       /**
        * Set the extname (including dot) (example: `'.js'`).
@@ -5021,7 +5021,7 @@ var init_lib4 = __esm({
             throw new Error("`extname` cannot contain multiple dots");
           }
         }
-        this.path = import_node_path8.default.join(this.dirname, this.stem + (extname || ""));
+        this.path = import_node_path3.default.join(this.dirname, this.stem + (extname || ""));
       }
       /**
        * Get the full path (example: `'~/index.min.js'`).
@@ -5044,13 +5044,13 @@ var init_lib4 = __esm({
        * @returns {undefined}
        *   Nothing.
        */
-      set path(path13) {
-        if (isUrl(path13)) {
-          path13 = (0, import_node_url.fileURLToPath)(path13);
+      set path(path12) {
+        if (isUrl(path12)) {
+          path12 = (0, import_node_url.fileURLToPath)(path12);
         }
-        assertNonEmpty(path13, "path");
-        if (this.path !== path13) {
-          this.history.push(path13);
+        assertNonEmpty(path12, "path");
+        if (this.path !== path12) {
+          this.history.push(path12);
         }
       }
       /**
@@ -5060,7 +5060,7 @@ var init_lib4 = __esm({
        *   Stem.
        */
       get stem() {
-        return typeof this.path === "string" ? import_node_path8.default.basename(this.path, this.extname) : void 0;
+        return typeof this.path === "string" ? import_node_path3.default.basename(this.path, this.extname) : void 0;
       }
       /**
        * Set the stem (basename w/o extname) (example: `'index.min'`).
@@ -5077,7 +5077,7 @@ var init_lib4 = __esm({
       set stem(stem) {
         assertNonEmpty(stem, "stem");
         assertPart(stem, "stem");
-        this.path = import_node_path8.default.join(this.dirname || "", stem + (this.extname || ""));
+        this.path = import_node_path3.default.join(this.dirname || "", stem + (this.extname || ""));
       }
       // Normal prototypal methods.
       /**
@@ -5366,7 +5366,7 @@ function assertUnfrozen(name, frozen) {
   }
 }
 function assertNode(node3) {
-  if (!isPlainObject6(node3) || typeof node3.type !== "string") {
+  if (!isPlainObject3(node3) || typeof node3.type !== "string") {
     throw new TypeError("Expected node, got `" + node3 + "`");
   }
 }
@@ -5983,7 +5983,7 @@ var init_lib5 = __esm({
           } else if (parameters2.length > 0) {
             let [primary, ...rest] = parameters2;
             const currentPrimary = attachers[entryIndex][1];
-            if (isPlainObject6(currentPrimary) && isPlainObject6(primary)) {
+            if (isPlainObject3(currentPrimary) && isPlainObject3(primary)) {
               primary = (0, import_extend.default)(true, currentPrimary, primary);
             }
             attachers[entryIndex] = [plugin, primary, ...rest];
@@ -13585,8 +13585,8 @@ var init_unist_util_visit = __esm({
 });
 
 // src/skills/doc-driven-dev-graph/scripts/route_graph.ts
-var import_node_fs13 = __toESM(require("node:fs"));
-var import_node_path13 = __toESM(require("node:path"));
+var import_node_fs12 = __toESM(require("node:fs"));
+var import_node_path12 = __toESM(require("node:path"));
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_definition.ts
 var import_node_fs = __toESM(require("node:fs"));
@@ -16904,10 +16904,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path13) {
-  if (!path13)
+function getElementAtPath(obj, path12) {
+  if (!path12)
     return obj;
-  return path13.reduce((acc, key) => acc?.[key], obj);
+  return path12.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -17247,11 +17247,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path13, issues) {
+function prefixIssues(path12, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path13);
+    iss.path.unshift(path12);
     return iss;
   });
 }
@@ -17713,16 +17713,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError2(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path13 = []) => {
+  const processError = (error63, path12 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path13, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path12, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path13, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path12, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path13, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path12, ...issue2.path]);
       } else {
-        const fullpath = [...path13, ...issue2.path];
+        const fullpath = [...path12, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -17761,17 +17761,17 @@ function formatError2(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path13 = []) => {
+  const processError = (error63, path12 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path13, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path12, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path13, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path12, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path13, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path12, ...issue2.path]);
       } else {
-        const fullpath = [...path13, ...issue2.path];
+        const fullpath = [...path12, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -17810,8 +17810,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path13 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path13) {
+  const path12 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path12) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -34949,13 +34949,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path13 = ref.slice(1).split("/").filter(Boolean);
-  if (path13.length === 0) {
+  const path12 = ref.slice(1).split("/").filter(Boolean);
+  if (path12.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path13[0] === defsKey) {
-    const key = path13[1] === void 0 ? void 0 : decodeJSONPointerSegment(path13[1]);
+  if (path12[0] === defsKey) {
+    const key = path12[1] === void 0 ? void 0 : decodeJSONPointerSegment(path12[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -35833,7 +35833,7 @@ var graphEdgeSchema = external_exports.object({
   priority: external_exports.number().int()
 }).strict();
 var graphDefinitionSchema = external_exports.object({
-  schemaVersion: external_exports.literal(2),
+  schemaVersion: external_exports.literal(3),
   id: external_exports.string().min(1),
   entry: graphNodeId,
   runtimeSignals: external_exports.array(external_exports.string().min(1)).default([]),
@@ -35919,9 +35919,17 @@ function validateGraphDefinition(value) {
   }
   return value;
 }
+var GRAPH_MIGRATION_GUIDANCE = "Graph Definition schemaVersion 2 is not supported by normal runtime. Run `node .apm/skills/doc-maintenance/scripts/doc_maintenance.js migrate plan --json` to evaluate the repository's legacy artifacts, then `migrate apply --expect <planHash>`";
+function detectLegacySchema(parsed) {
+  if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
+    const version2 = parsed.schemaVersion;
+    if (version2 === 2) throw invalidGraph(GRAPH_MIGRATION_GUIDANCE);
+  }
+}
 function parseGraphDefinition(source) {
   try {
     const parsed = load(source);
+    detectLegacySchema(parsed);
     const result = graphDefinitionSchema.safeParse(parsed);
     if (!result.success) throw invalidGraph(formatIssue(result.error));
     return validateGraphDefinition(result.data);
@@ -35968,17 +35976,34 @@ function resolveGraphPath(explicitGraph, cwd = process.cwd()) {
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_state.ts
-var import_node_fs11 = __toESM(require("node:fs"));
-var import_node_path11 = __toESM(require("node:path"));
+var import_node_fs10 = __toESM(require("node:fs"));
+var import_node_path10 = __toESM(require("node:path"));
 
-// src/skills/doc-driven-dev-graph/scripts/lib/artifact_graph.ts
+// src/skills/lib/doc_repository.ts
 var import_node_fs4 = __toESM(require("node:fs"));
-var import_node_path3 = __toESM(require("node:path"));
+var import_node_path4 = __toESM(require("node:path"));
+
+// src/skills/lib/claim_ids.ts
+var CLAIM_KEY_PATTERN = /^[A-Z][A-Z0-9]*-\d+$/;
+var CLAIM_REFERENCE_PATTERN = /^([^\s:]+)::([A-Z][A-Z0-9]*-\d+)$/;
+var CLAIM_MARKER_PATTERN = /<!--\s*claim\s*:(.*?)-->/g;
+function isClaimKey(value) {
+  return CLAIM_KEY_PATTERN.test(value);
+}
+function parseClaimReference(value) {
+  const match = CLAIM_REFERENCE_PATTERN.exec(value.trim());
+  if (!match) return null;
+  return { docId: match[1], key: match[2] };
+}
+function claimId(docId, key) {
+  return `${docId}::${key}`;
+}
+
+// src/skills/lib/doc_suite_utils.ts
 var import_gray_matter = __toESM(require_gray_matter());
 
-// src/skills/lib/document_utils.ts
-var import_node_fs3 = __toESM(require("node:fs"));
-var import_node_path2 = __toESM(require("node:path"));
+// src/skills/lib/artifact_id.ts
+var import_uuid62 = __toESM(require_uuid62());
 
 // src/skills/lib/doc_types.ts
 var LIFECYCLE_VALUES = ["draft", "current", "superseded", "retired"];
@@ -36507,7 +36532,19 @@ function allowedRelationsFor(type) {
 }
 var PROVENANCE_RELATION_KEYS = ["source"];
 
+// src/skills/lib/doc_lifecycle.ts
+var SETTLED_STATUSES = {
+  ...Object.fromEntries(docTypes.map((type) => [type, new Set(configs[type].settledStatuses)])),
+  ...Object.fromEntries(Object.values(ephemeralConfigs).map((entry) => [entry.type, new Set(entry.settledStatuses)])),
+  ...Object.fromEntries(Object.values(legacyDocTypes).flatMap((entry) => [entry.type, ...entry.aliases].map((name) => [name, new Set(entry.settledStatuses)])))
+};
+var LIFECYCLE_TYPE_ALIASES = Object.fromEntries(
+  Object.values(legacyDocTypes).flatMap((entry) => entry.aliases.map((alias) => [alias, entry.type]))
+);
+
 // src/skills/lib/document_utils.ts
+var import_node_fs3 = __toESM(require("node:fs"));
+var import_node_path2 = __toESM(require("node:path"));
 var nonReferenceRelationKeys = /* @__PURE__ */ new Set([
   "changes",
   "test-spec-skip"
@@ -36522,10 +36559,6 @@ function stripExtendedLengthPrefix(value) {
 }
 function containmentKey(value) {
   const normalized = stripExtendedLengthPrefix(import_node_path2.default.resolve(value));
-  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
-}
-function repoPathKey(value) {
-  const normalized = value.replace(/\\/g, "/");
   return process.platform === "win32" ? normalized.toLowerCase() : normalized;
 }
 function isInside(cwd, candidate) {
@@ -36545,1975 +36578,9 @@ function isInsideCheckout(cwd, candidate) {
   if (!isInside(cwd, resolved)) return false;
   return !import_node_fs3.default.existsSync(resolved) || isInsideRealpath(cwd, resolved);
 }
-function toRepoRelative(cwd, absolute) {
-  return import_node_path2.default.relative(import_node_path2.default.resolve(cwd), absolute).split(import_node_path2.default.sep).join("/");
-}
-function resolveContainedDir(cwd, dir, flag = "--dir") {
-  const resolved = import_node_path2.default.resolve(cwd, dir);
-  if (!isInside(cwd, resolved)) {
-    throw new Error(`${flag} escapes the checkout: ${dir}`);
-  }
-  if (import_node_fs3.default.existsSync(resolved)) {
-    if (!isInsideRealpath(cwd, resolved)) {
-      throw new Error(`${flag} escapes the checkout through a link: ${dir}`);
-    }
-    return toRepoRelative(
-      stripExtendedLengthPrefix(import_node_fs3.default.realpathSync(cwd)),
-      stripExtendedLengthPrefix(import_node_fs3.default.realpathSync(resolved))
-    );
-  }
-  return toRepoRelative(cwd, stripExtendedLengthPrefix(resolved));
-}
-function scanRootKey(cwd, directory) {
-  const absolute = import_node_path2.default.resolve(cwd, directory);
-  try {
-    return containmentKey(stripExtendedLengthPrefix(import_node_fs3.default.realpathSync(absolute)));
-  } catch {
-    return containmentKey(absolute);
-  }
-}
 function isIndexFileName(file2) {
   return /^(readme|index)(\.[a-z0-9_-]+)?\.md$/i.test(file2);
 }
-
-// src/skills/lib/claim_ids.ts
-var CLAIM_KEY_PATTERN = /^[A-Z][A-Z0-9]*-\d+$/;
-var CLAIM_REFERENCE_PATTERN = /^([^\s:]+)::([A-Z][A-Z0-9]*-\d+)$/;
-var CLAIM_MARKER_PATTERN = /<!--\s*claim\s*:(.*?)-->/g;
-function isClaimKey(value) {
-  return CLAIM_KEY_PATTERN.test(value);
-}
-function parseClaimReference(value) {
-  const match = CLAIM_REFERENCE_PATTERN.exec(value.trim());
-  if (!match) return null;
-  return { docId: match[1], key: match[2] };
-}
-function claimId(docId, key) {
-  return `${docId}::${key}`;
-}
-
-// src/skills/doc-driven-dev-graph/scripts/lib/artifact_graph.ts
-function createArtifactScanCollector() {
-  return { scans: 0, filesRead: 0, bytesRead: 0, filePaths: /* @__PURE__ */ new Set() };
-}
-var LINEAGE_RELATIONS = /* @__PURE__ */ new Set([
-  "motivates",
-  "decides-for",
-  "realizes",
-  "supersedes",
-  "implements",
-  "implemented-by",
-  "derives-from",
-  "derived-by",
-  "refines",
-  "refined-by"
-]);
-var TASK_DEPENDENCY_RELATIONS = /* @__PURE__ */ new Set(["depends-on", "blocks"]);
-var EVIDENCE_RELATIONS = /* @__PURE__ */ new Set([
-  "verifies",
-  "verified-by",
-  "references",
-  "evidence",
-  "evidence-refs",
-  "evidenceRefs"
-]);
-var EXTERNAL_REFERENCE = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
-function compareStrings(left, right) {
-  return left.localeCompare(right);
-}
-function sortedUnique(values) {
-  return [...new Set(values)].sort(compareStrings);
-}
-function normalizeArtifactPath(cwd, target) {
-  return import_node_path3.default.relative(import_node_path3.default.resolve(cwd), import_node_path3.default.resolve(cwd, target)).split(import_node_path3.default.sep).join("/");
-}
-function isExternalArtifactReference(value) {
-  const trimmed = value.trim();
-  if (parseClaimReference(trimmed)) return false;
-  return EXTERNAL_REFERENCE.test(trimmed);
-}
-function resolveContainedTaskDir(cwd, taskDir) {
-  return resolveContainedDir(cwd, taskDir ?? "docs/tasks", "--task-dir");
-}
-function markdownFiles(dir) {
-  if (!import_node_fs4.default.existsSync(dir) || !import_node_fs4.default.statSync(dir).isDirectory()) return [];
-  const files = [];
-  const visit3 = (current) => {
-    for (const entry of import_node_fs4.default.readdirSync(current, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name))) {
-      const full = import_node_path3.default.join(current, entry.name);
-      if (entry.isDirectory()) visit3(full);
-      else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md") && !/^(?:readme|index)\.md$/i.test(entry.name)) files.push(full);
-    }
-  };
-  visit3(dir);
-  return files.sort(compareStrings);
-}
-function relationValues(raw, ownerPath) {
-  if (raw === void 0 || raw === null) return { relations: {}, issues: [] };
-  if (typeof raw !== "object" || Array.isArray(raw)) {
-    return { relations: {}, issues: [`invalid-relations:${ownerPath}`] };
-  }
-  const result = {};
-  const issues = [];
-  for (const key of Object.keys(raw).sort(compareStrings)) {
-    const value = raw[key];
-    if (nonReferenceRelationKeys.has(key)) continue;
-    if (typeof value !== "string" && !Array.isArray(value)) {
-      issues.push(`invalid-relation:${ownerPath}:${key}`);
-      result[key] = [];
-      continue;
-    }
-    const values = typeof value === "string" ? [value] : value;
-    const valid = [];
-    for (const item of values) {
-      if (typeof item !== "string" || !item.trim()) {
-        issues.push(`invalid-relation:${ownerPath}:${key}`);
-        continue;
-      }
-      valid.push(item.trim());
-    }
-    result[key] = sortedUnique(valid);
-  }
-  return { relations: result, issues };
-}
-function readRecords(options2, collector) {
-  const cwd = import_node_path3.default.resolve(options2.cwd);
-  const taskDir = resolveContainedTaskDir(cwd, options2.taskDir);
-  const seenRoots = /* @__PURE__ */ new Set();
-  const directories = [];
-  for (const directory of [...CANONICAL_DOC_DIRS, taskDir]) {
-    const key = scanRootKey(cwd, directory);
-    if (seenRoots.has(key)) continue;
-    seenRoots.add(key);
-    const absolute = import_node_path3.default.join(cwd, directory);
-    if (import_node_fs4.default.existsSync(absolute) && !isInsideRealpath(cwd, absolute)) continue;
-    directories.push(directory);
-  }
-  const files = sortedUnique(directories.flatMap((directory) => markdownFiles(import_node_path3.default.join(cwd, directory))));
-  const records = [];
-  for (const absolutePath of files.map((file2) => import_node_path3.default.resolve(cwd, file2))) {
-    try {
-      const raw = import_node_fs4.default.readFileSync(absolutePath, "utf8");
-      if (collector) {
-        collector.filesRead += 1;
-        collector.bytesRead += Buffer.byteLength(raw, "utf8");
-        collector.filePaths.add(normalizeArtifactPath(cwd, absolutePath));
-      }
-      const parsed = (0, import_gray_matter.default)(raw);
-      const data = parsed.data;
-      const recordPath = normalizeArtifactPath(cwd, absolutePath);
-      const relationResult = relationValues(data.relations, recordPath);
-      const id = typeof data.id === "string" && data.id.trim() ? data.id.trim() : null;
-      const type = typeof data.type === "string" && data.type.trim() ? data.type.trim() : null;
-      const status = typeof data.status === "string" && data.status.trim() ? data.status.trim() : null;
-      records.push({
-        path: recordPath,
-        id,
-        type,
-        status,
-        absolutePath,
-        body: parsed.content,
-        relations: relationResult.relations,
-        relationIssues: relationResult.issues
-      });
-    } catch {
-      records.push({
-        path: normalizeArtifactPath(cwd, absolutePath),
-        id: null,
-        type: null,
-        status: null,
-        absolutePath,
-        body: "",
-        relations: {},
-        relationIssues: [`invalid-document:${normalizeArtifactPath(cwd, absolutePath)}`]
-      });
-    }
-  }
-  return records.sort((left, right) => compareStrings(left.path, right.path));
-}
-function classifyArtifactRelation(relation) {
-  if (LINEAGE_RELATIONS.has(relation)) return "lineage";
-  if (TASK_DEPENDENCY_RELATIONS.has(relation)) return "task-dependency";
-  if (EVIDENCE_RELATIONS.has(relation) || /evidence/i.test(relation)) return "evidence";
-  return "contextual";
-}
-function localTarget(cwd, owner, value) {
-  const trimmed = value.trim();
-  const ownerCandidate = import_node_path3.default.resolve(import_node_path3.default.dirname(owner.absolutePath), trimmed);
-  const rootCandidate = import_node_path3.default.resolve(cwd, trimmed);
-  const documentRelative = trimmed.startsWith("./") || trimmed.startsWith("../") || trimmed === "." || trimmed === "..";
-  const preferred = documentRelative ? ownerCandidate : rootCandidate;
-  const fallback = documentRelative ? rootCandidate : ownerCandidate;
-  const chosen = isInside(cwd, preferred) && import_node_fs4.default.existsSync(preferred) ? preferred : fallback;
-  const exists = isInside(cwd, chosen) && import_node_fs4.default.existsSync(chosen) && import_node_fs4.default.statSync(chosen).isFile();
-  return {
-    path: isInside(cwd, chosen) ? normalizeArtifactPath(cwd, chosen) : normalizeArtifactPath(cwd, preferred),
-    exists
-  };
-}
-function resolveArtifactRelation(cwd, source, rawValue, records) {
-  const value = rawValue.trim();
-  if (isExternalArtifactReference(value)) return void 0;
-  const claimRef = parseClaimReference(value);
-  const lookup = claimRef?.docId ?? value;
-  const byId = records.filter((record2) => record2.id === lookup);
-  if (byId.length === 1) return byId[0];
-  if (byId.length > 1) return void 0;
-  if (claimRef) return void 0;
-  const target = localTarget(cwd, source, value);
-  return records.find((record2) => repoPathKey(record2.path) === repoPathKey(target.path));
-}
-function issueCompare(left, right) {
-  return compareStrings(left.code, right.code) || compareStrings(left.message, right.message);
-}
-function edgeCompare(left, right) {
-  const kindOrder = {
-    lineage: 0,
-    "task-dependency": 1,
-    contextual: 2,
-    evidence: 3
-  };
-  return kindOrder[left.kind] - kindOrder[right.kind] || compareStrings(left.from, right.from) || compareStrings(left.relation, right.relation) || compareStrings(left.to ?? "", right.to ?? "") || Number(left.external) - Number(right.external);
-}
-function scanArtifactGraph(options2, collector) {
-  const cwd = import_node_path3.default.resolve(options2.cwd);
-  if (collector) collector.scans += 1;
-  const records = readRecords({ ...options2, cwd }, collector);
-  const nodes = records.map(({ path: recordPath, id, type }) => ({ path: recordPath, id, type }));
-  const byId = /* @__PURE__ */ new Map();
-  for (const record2 of records) {
-    if (!record2.id) continue;
-    const values = byId.get(record2.id) ?? [];
-    values.push(record2);
-    byId.set(record2.id, values);
-  }
-  const edges = [];
-  const issues = [];
-  for (const record2 of records) {
-    for (const relationIssue of record2.relationIssues) {
-      issues.push({
-        code: "broken-relation",
-        message: relationIssue
-      });
-    }
-  }
-  for (const [id, values] of byId.entries()) {
-    if (values.length > 1) {
-      issues.push({
-        code: "duplicate-id",
-        message: `Duplicate artifact ID ${id}: ${values.map((record2) => record2.path).sort(compareStrings).join(", ")}`
-      });
-    }
-  }
-  for (const source of records) {
-    for (const [relation, values] of Object.entries(source.relations)) {
-      const kind = classifyArtifactRelation(relation);
-      for (const value of values) {
-        if (isExternalArtifactReference(value)) {
-          edges.push({ from: source.path, to: null, relation, kind, external: true });
-          continue;
-        }
-        const target = resolveArtifactRelation(cwd, source, value, records);
-        edges.push({ from: source.path, to: target?.path ?? null, relation, kind, external: false });
-        if (!target) {
-          const local = localTarget(cwd, source, value);
-          if (!local.exists) {
-            issues.push({
-              code: "broken-relation",
-              message: `Broken ${relation} relation from ${source.path} to ${value}${local.path ? ` (${local.path})` : ""}`
-            });
-          }
-        }
-      }
-    }
-  }
-  return {
-    records,
-    graph: {
-      nodes: [...nodes].sort((left, right) => compareStrings(left.path, right.path)),
-      edges: edges.sort(edgeCompare),
-      issues: [...new Map(issues.map((issue2) => [`${issue2.code}\0${issue2.message}`, issue2])).values()].sort(issueCompare)
-    }
-  };
-}
-function lineageEdges(graph, pathValue) {
-  return graph.edges.filter((edge) => edge.kind === "lineage" && (edge.from === pathValue || edge.to === pathValue));
-}
-function lineageComponent(graph, starts) {
-  const visited = /* @__PURE__ */ new Set();
-  const queue = [...starts].sort(compareStrings);
-  while (queue.length > 0) {
-    const current = queue.shift();
-    if (visited.has(current)) continue;
-    visited.add(current);
-    for (const edge of lineageEdges(graph, current)) {
-      const next = edge.from === current ? edge.to : edge.from;
-      if (next && !visited.has(next)) queue.push(next);
-    }
-    queue.sort(compareStrings);
-  }
-  return [...visited].sort(compareStrings);
-}
-function artifactRelationTargets(graph, sourcePath, relationNames) {
-  const names = new Set(relationNames);
-  return graph.edges.filter((edge) => edge.kind === "lineage" && edge.from === sourcePath && edge.to !== null && names.has(edge.relation)).map((edge) => edge.to).sort(compareStrings);
-}
-function artifactHasRelation(graph, sourcePath, relationNames, targetPath) {
-  return Boolean(sourcePath && targetPath && artifactRelationTargets(graph, sourcePath, relationNames).includes(targetPath));
-}
-var CHAIN_STATUSES = {
-  spec: /* @__PURE__ */ new Set(["proposed", "approved", "implemented"]),
-  adr: /* @__PURE__ */ new Set(["proposed", "accepted"]),
-  design: /* @__PURE__ */ new Set(["approved"]),
-  plan: /* @__PURE__ */ new Set(["approved", "in-progress", "completed"])
-};
-function isValidChainRecord(record2) {
-  return Boolean(record2.type && CHAIN_STATUSES[record2.type]?.has(record2.status ?? ""));
-}
-function chainKey(chain) {
-  return [chain.spec, chain.adr, chain.design, chain.plan].map((value) => value ?? "").join("\0");
-}
-function chainMembers(chain) {
-  return new Set([chain.spec, chain.adr, chain.design, chain.plan, ...chain.tasks, ...chain.anchors ?? []].filter((value) => Boolean(value)));
-}
-function preDesignAnchors(graph, records, spec, adr) {
-  const direct = graph.edges.some((edge) => edge.kind === "lineage" && ["decides-for", "derives-from", "derived-by", "refines", "refined-by"].includes(edge.relation) && (edge.from === spec.path && edge.to === adr.path || edge.from === adr.path && edge.to === spec.path));
-  const discoveries = records.filter((record2) => (record2.type === "discovery" || record2.type === "brainstorm") && [spec, adr].every((artifact) => graph.edges.some((edge) => edge.from === record2.path && edge.to === artifact.path && (edge.relation === "motivates" || edge.relation === "informs") || edge.from === artifact.path && edge.to === record2.path && edge.relation === "derives-from" || edge.from === record2.path && edge.to === artifact.path && edge.relation === "derived-by")));
-  return direct || discoveries.length > 0 ? discoveries.map((record2) => record2.path) : void 0;
-}
-function designClaimsSpec(graph, designPath, specPath) {
-  return Boolean(specPath) && (artifactHasRelation(graph, designPath, ["realizes"], specPath) || artifactHasRelation(graph, designPath, ["derives-from", "implements"], specPath));
-}
-function designClaimsAdr(graph, designPath, adrPath) {
-  return Boolean(adrPath) && (artifactHasRelation(graph, adrPath, ["decides-for"], designPath) || artifactHasRelation(graph, designPath, ["derives-from", "implements"], adrPath));
-}
-function designAdrDecision(graph, designPath, adrPath) {
-  return Boolean(adrPath) && (artifactHasRelation(graph, adrPath, ["decides-for"], designPath) || artifactHasRelation(graph, designPath, ["derives-from"], adrPath));
-}
-function artifactChainCandidates(graph, records) {
-  const specs = records.filter((record2) => record2.type === "spec" && isValidChainRecord(record2));
-  const adrs = records.filter((record2) => record2.type === "adr" && isValidChainRecord(record2));
-  const designs = records.filter((record2) => record2.type === "design" && isValidChainRecord(record2));
-  const plans = records.filter((record2) => record2.type === "plan" && isValidChainRecord(record2));
-  const tasks = records.filter((record2) => record2.type === "task");
-  const chains = /* @__PURE__ */ new Map();
-  const add = (chain) => {
-    chains.set(chainKey(chain), chain);
-  };
-  const cartesian = (values, fallback) => values.length > 0 ? values : fallback;
-  for (const design of designs) {
-    const relatedSpecs = specs.filter((candidate) => designClaimsSpec(graph, design.path, candidate.path));
-    const relatedAdrs = adrs.filter((candidate) => designClaimsAdr(graph, design.path, candidate.path));
-    const relatedPlans = plans.filter((candidate) => artifactHasRelation(graph, candidate.path, ["derives-from", "design"], design.path));
-    for (const spec of cartesian(relatedSpecs, [void 0])) {
-      for (const adr of cartesian(relatedAdrs, [void 0])) {
-        for (const plan of cartesian(relatedPlans, [void 0])) {
-          add({
-            spec: spec?.path,
-            adr: adr?.path,
-            design: design.path,
-            plan: plan?.path,
-            tasks: plan ? tasks.filter((task) => artifactHasRelation(graph, task.path, ["implements"], plan.path)).map((task) => task.path) : []
-          });
-        }
-      }
-    }
-  }
-  for (const plan of plans) {
-    if (designs.some((design) => artifactHasRelation(graph, plan.path, ["derives-from", "design"], design.path))) continue;
-    add({ plan: plan.path, tasks: tasks.filter((task) => artifactHasRelation(graph, task.path, ["implements"], plan.path)).map((task) => task.path) });
-  }
-  const unassignedSpecs = specs.filter((spec) => !designs.some((design) => designClaimsSpec(graph, design.path, spec.path)));
-  const paired = /* @__PURE__ */ new Set();
-  for (const spec of unassignedSpecs) {
-    for (const adr of adrs) {
-      const anchors = preDesignAnchors(graph, records, spec, adr);
-      if (!anchors) continue;
-      add({ spec: spec.path, adr: adr.path, tasks: [], anchors });
-      paired.add(spec.path);
-      paired.add(adr.path);
-    }
-  }
-  for (const artifact of [...specs, ...adrs]) {
-    if (!paired.has(artifact.path) && !designs.some((design) => artifact.type === "adr" ? designClaimsAdr(graph, design.path, artifact.path) : designClaimsSpec(graph, design.path, artifact.path))) {
-      add(artifact.type === "spec" ? { spec: artifact.path, tasks: [] } : { adr: artifact.path, tasks: [] });
-    }
-  }
-  return [...chains.values()].sort((left, right) => compareStrings(chainKey(left), chainKey(right)));
-}
-function selectArtifactChain(graph, records, focusPaths) {
-  const focus = [...focusPaths];
-  const candidates = artifactChainCandidates(graph, records).filter((chain) => {
-    const members2 = chainMembers(chain);
-    return focus.every((focusPath) => members2.has(focusPath));
-  });
-  return candidates.length === 1 ? candidates[0] : void 0;
-}
-function isArtifactFocusAmbiguous(graph, records, focusPaths) {
-  const focus = [...focusPaths];
-  const relevant = focus.some((focusPath) => {
-    const type = records.find((record2) => record2.path === focusPath)?.type;
-    return ["discovery", "spec", "adr", "design", "plan", "task"].includes(type ?? "");
-  });
-  if (!relevant) return false;
-  const candidates = artifactChainCandidates(graph, records).filter((chain) => {
-    const members2 = chainMembers(chain);
-    return focus.every((focusPath) => members2.has(focusPath));
-  });
-  return candidates.length > 1;
-}
-function resolveArtifactFocus(cwd, graph, records, values) {
-  const rawValues = [...values];
-  if (rawValues.length === 0) {
-    const active = records.filter((record2) => record2.status && ACTIVE_STATUSES_FOR_FOCUS.has(record2.status));
-    return { focus: [], blockers: active.length > 0 ? ["focus-required"] : [] };
-  }
-  let duplicateId = false;
-  const normalized = rawValues.map((value) => {
-    const byId = records.filter((record2) => record2.id === value);
-    if (byId.length > 1) {
-      duplicateId = true;
-      return value;
-    }
-    if (byId.length === 1) return byId[0].path;
-    return normalizeArtifactPath(cwd, value);
-  });
-  const focus = sortedUnique(normalized);
-  if (duplicateId) return { focus, blockers: ["focus-required"] };
-  if (focus.some((focusPath) => !records.some((record2) => record2.path === focusPath))) {
-    return { focus, blockers: ["focus-invalid"] };
-  }
-  if (isArtifactFocusAmbiguous(graph, records, focus)) return { focus, blockers: ["focus-required"] };
-  const chain = selectArtifactChain(graph, records, focus);
-  if (focus.length > 1 && !chain) return { focus, blockers: ["focus-required"] };
-  const rank = { plan: 0, design: 1, spec: 2, adr: 3, task: 4 };
-  const focused = records.filter((record2) => focus.includes(record2.path)).sort((left, right) => (rank[left.type ?? ""] ?? 9) - (rank[right.type ?? ""] ?? 9) || compareStrings(left.path, right.path))[0];
-  if (!chain) {
-    const component = lineageComponent(graph, focus);
-    const plans = records.filter((record2) => component.includes(record2.path) && record2.type === "plan");
-    if (plans.length > 1 && focused?.type !== "plan") return { focus, blockers: ["focus-required"] };
-  }
-  return { focus, focusedPath: focused?.path, blockers: [] };
-}
-var ACTIVE_STATUSES_FOR_FOCUS = /* @__PURE__ */ new Set([
-  "draft",
-  "proposed",
-  "approved",
-  "in-progress",
-  "todo",
-  "blocked",
-  "capturing",
-  "confirmed",
-  "routed",
-  "active"
-]);
-
-// src/skills/lib/execution_store/store.ts
-var import_node_crypto = __toESM(require("node:crypto"));
-var import_node_fs7 = __toESM(require("node:fs"));
-var import_node_path6 = __toESM(require("node:path"));
-
-// src/skills/lib/artifact_id.ts
-var import_uuid62 = __toESM(require_uuid62());
-
-// src/skills/lib/execution_store/atomic.ts
-var import_node_fs5 = __toESM(require("node:fs"));
-var StoreError = class extends Error {
-  code;
-  detail;
-  constructor(code, message, detail) {
-    super(message);
-    this.name = "StoreError";
-    this.code = code;
-    this.detail = detail;
-  }
-};
-function isStoreTmpFile(name) {
-  return /\.tmp-\d+-\d+$/.test(name);
-}
-function readJsonFile(file2) {
-  let raw;
-  try {
-    raw = import_node_fs5.default.readFileSync(file2, "utf8");
-  } catch (error62) {
-    throw new StoreError(
-      "state-unreadable",
-      `cannot read ${file2}: ${error62 instanceof Error ? error62.message : String(error62)}`
-    );
-  }
-  try {
-    return JSON.parse(raw);
-  } catch (error62) {
-    throw new StoreError(
-      "corrupt-state",
-      `${file2} is not valid JSON \u2014 the store never adopts a partial write: ${error62 instanceof Error ? error62.message : String(error62)}`,
-      { path: file2 }
-    );
-  }
-}
-function readLockRecord(lockFile) {
-  try {
-    const parsed = JSON.parse(import_node_fs5.default.readFileSync(lockFile, "utf8"));
-    if (typeof parsed.pid === "number" && typeof parsed.hostname === "string") {
-      return { pid: parsed.pid, hostname: parsed.hostname, acquiredAt: String(parsed.acquiredAt ?? "") };
-    }
-  } catch {
-  }
-  return null;
-}
-
-// src/skills/lib/execution_store/boundary.ts
-var import_node_path5 = __toESM(require("node:path"));
-
-// src/skills/lib/schema_preflight.ts
-var import_node_fs6 = __toESM(require("node:fs"));
-var import_node_path4 = __toESM(require("node:path"));
-var import_gray_matter2 = __toESM(require_gray_matter());
-var DOC_DRIVEN_DEV_DIR = "docs/.doc-driven-dev";
-var SCHEMA_MANIFEST_PATH = `${DOC_DRIVEN_DEV_DIR}/schema.json`;
-var MIGRATION_JOURNAL_PATH = `${DOC_DRIVEN_DEV_DIR}/migration.journal.json`;
-var EXECUTION_STATE_ROOT = ".apm/state/doc-driven-dev";
-var MANIFEST_SCHEMA_VERSION = 1;
-var EVIDENCE_TMP_PATTERN = /\.tmp-\d+-\d+$/;
-var EXPECTED_COMPONENT_VERSIONS = {
-  documentRegistry: 3,
-  knowledgeRelations: 1,
-  verificationDesign: 1,
-  evidenceRecord: 1,
-  graphDefinition: 3
-};
-var EXECUTION_RUN_SCHEMA_VERSION = 1;
-var SCHEMA_PREFLIGHT_EXIT_CODE = 2;
-var EXECUTION_BOUND_TYPES = new Set(executionBoundTypeNames());
-var KNOWLEDGE_RELATIONS_V1 = new Set(knowledgeRelationFields());
-var MANIFEST_DIR_ALLOWED_FILES = /* @__PURE__ */ new Set([
-  "schema.json",
-  "migration.journal.json"
-]);
-function toRepoRelative2(cwd, absolute) {
-  return import_node_path4.default.relative(import_node_path4.default.resolve(cwd), absolute).split(import_node_path4.default.sep).join("/");
-}
-function isUnderDir(relPath, dir) {
-  return relPath === dir || relPath.startsWith(`${dir}/`);
-}
-function isPlainObject3(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function managedRootAliases() {
-  return managedDocDirs().filter((dir) => !dir.startsWith("docs/"));
-}
-function walkTree(cwd, relRoot, visit3, onEscape) {
-  const absRoot = import_node_path4.default.resolve(cwd, relRoot);
-  if (!import_node_fs6.default.existsSync(absRoot) || !import_node_fs6.default.statSync(absRoot).isDirectory()) return false;
-  if (!isInsideCheckout(cwd, absRoot)) return false;
-  const stack = [absRoot];
-  while (stack.length > 0) {
-    const dir = stack.pop();
-    let entries;
-    try {
-      entries = import_node_fs6.default.readdirSync(dir, { withFileTypes: true });
-    } catch {
-      continue;
-    }
-    for (const entry of entries) {
-      const abs = import_node_path4.default.join(dir, entry.name);
-      const rel = toRepoRelative2(cwd, abs);
-      if (entry.isDirectory()) {
-        if (!isInsideCheckout(cwd, abs)) {
-          onEscape?.(rel, "dir");
-          continue;
-        }
-        visit3(rel, true);
-        stack.push(abs);
-      } else if (entry.isFile() || entry.isSymbolicLink()) {
-        if (!isInsideCheckout(cwd, abs)) {
-          onEscape?.(rel, "entry");
-          continue;
-        }
-        visit3(rel, false);
-      }
-    }
-  }
-  return true;
-}
-function relationIssues(relPath, relations) {
-  const scoped = [];
-  if (relations === void 0) return scoped;
-  if (!isPlainObject3(relations)) {
-    scoped.push({
-      reason: "legacy-relations",
-      path: relPath,
-      detail: "relations: is not a map of relation keys to target lists"
-    });
-    return scoped;
-  }
-  for (const [key, value] of Object.entries(relations)) {
-    if (nonReferenceRelationKeys.has(key) || PROVENANCE_RELATION_KEYS.includes(key)) continue;
-    const populated = typeof value === "string" ? value.trim() !== "" : Array.isArray(value) && value.length > 0;
-    const wellFormed = typeof value === "string" || Array.isArray(value) && value.every((item) => typeof item === "string");
-    if (!wellFormed) {
-      scoped.push({
-        reason: "legacy-relations",
-        path: relPath,
-        detail: `relations.${key} is not a string or list of strings`
-      });
-      continue;
-    }
-    if (!populated) continue;
-    if (!KNOWLEDGE_RELATIONS_V1.has(key)) {
-      scoped.push({
-        reason: "legacy-relations",
-        path: relPath,
-        detail: `relations.${key} is outside the Knowledge Relations v1 vocabulary (stored forward set: ${[...KNOWLEDGE_RELATIONS_V1].join(", ")})`
-      });
-    }
-  }
-  return scoped;
-}
-function scanDocuments(cwd) {
-  const scan = {
-    issues: [],
-    manifestScopedIssues: [],
-    canonicalDocs: 0,
-    executionDocs: 0,
-    unmanagedDocs: 0
-  };
-  const visitMarkdown = (rel) => {
-    const abs = import_node_path4.default.resolve(cwd, rel);
-    let raw;
-    try {
-      raw = import_node_fs6.default.readFileSync(abs, "utf8");
-    } catch {
-      return;
-    }
-    let data = {};
-    let parsed = true;
-    try {
-      const result = (0, import_gray_matter2.default)(raw, {});
-      data = isPlainObject3(result.data) ? result.data : {};
-    } catch {
-      parsed = false;
-    }
-    const type = parsed && typeof data.type === "string" ? data.type : null;
-    if (type === null) {
-      scan.unmanagedDocs += 1;
-      return;
-    }
-    scan.canonicalDocs += 1;
-    if (EXECUTION_BOUND_TYPES.has(type)) {
-      scan.executionDocs += 1;
-      scan.manifestScopedIssues.push({
-        reason: "legacy-execution-doc",
-        path: rel,
-        detail: `type: ${type} has no durable Git form under Document Registry 3 (execution/verification artifacts live outside Git)`
-      });
-    }
-    if (parsed) {
-      scan.manifestScopedIssues.push(...relationIssues(rel, data.relations));
-    }
-  };
-  const visitDocsTree = (rel) => {
-    if (isUnderDir(rel, DOC_DRIVEN_DEV_DIR)) return;
-    if (rel.endsWith(".md") && !isIndexFileName(import_node_path4.default.basename(rel))) {
-      visitMarkdown(rel);
-      return;
-    }
-    if (isUnderDir(rel, "docs/impl")) {
-      scan.manifestScopedIssues.push({
-        reason: "legacy-execution-doc",
-        path: rel,
-        detail: `execution artifact under docs/impl has no durable Git form under Document Registry 3`
-      });
-    }
-  };
-  const roots = ["docs", ...managedRootAliases()];
-  const walked = /* @__PURE__ */ new Set();
-  for (const root of roots) {
-    const abs = import_node_path4.default.resolve(cwd, root);
-    let key = abs;
-    try {
-      key = import_node_fs6.default.realpathSync(abs);
-    } catch {
-    }
-    if (walked.has(key)) continue;
-    walked.add(key);
-    walkTree(cwd, root, (rel, isDir) => {
-      if (isDir) return;
-      if (root === "docs") visitDocsTree(rel);
-      else visitMarkdown(rel);
-    });
-  }
-  return scan;
-}
-function scanManifestDir(cwd, issues) {
-  const abs = import_node_path4.default.resolve(cwd, DOC_DRIVEN_DEV_DIR);
-  if (!import_node_fs6.default.existsSync(abs)) return;
-  const walked = walkTree(cwd, DOC_DRIVEN_DEV_DIR, (rel, isDir) => {
-    const name = import_node_path4.default.basename(rel);
-    if (isDir) {
-      if (rel !== DOC_DRIVEN_DEV_DIR) {
-        issues.push({
-          reason: "legacy-state-file",
-          path: rel,
-          detail: `unaccounted-for directory inside ${DOC_DRIVEN_DEV_DIR}`
-        });
-      }
-      return;
-    }
-    if (MANIFEST_DIR_ALLOWED_FILES.has(name)) return;
-    if (/\.ya?ml$/i.test(name)) {
-      let legacy = false;
-      try {
-        const parsed = load(import_node_fs6.default.readFileSync(import_node_path4.default.resolve(cwd, rel), "utf8"));
-        if (isPlainObject3(parsed)) {
-          const version2 = parsed.schemaVersion;
-          legacy = typeof version2 === "number" && version2 < EXPECTED_COMPONENT_VERSIONS.graphDefinition || "nodes" in parsed && "edges" in parsed;
-        }
-      } catch {
-      }
-      issues.push({
-        reason: legacy ? "legacy-graph-state" : "legacy-state-file",
-        path: rel,
-        detail: legacy ? `graph/state YAML inside ${DOC_DRIVEN_DEV_DIR} predates Graph Definition ${EXPECTED_COMPONENT_VERSIONS.graphDefinition}` : `unaccounted-for file inside ${DOC_DRIVEN_DEV_DIR}`
-      });
-      return;
-    }
-    issues.push({
-      reason: "legacy-state-file",
-      path: rel,
-      detail: `unaccounted-for file inside ${DOC_DRIVEN_DEV_DIR}`
-    });
-  }, (rel) => {
-    issues.push({
-      reason: "legacy-state-file",
-      path: rel,
-      detail: `entry inside ${DOC_DRIVEN_DEV_DIR} escapes the checkout through a link`
-    });
-  });
-  if (!walked) {
-    let directory = false;
-    try {
-      directory = import_node_fs6.default.statSync(abs).isDirectory();
-    } catch {
-    }
-    issues.push({
-      reason: "scope-escape",
-      path: DOC_DRIVEN_DEV_DIR,
-      detail: directory ? `${DOC_DRIVEN_DEV_DIR} escapes the checkout through a link; the manifest boundary cannot be trusted` : `${DOC_DRIVEN_DEV_DIR} is not a directory; the manifest boundary cannot be verified`
-    });
-  }
-}
-function scanExecutionState(cwd, issues) {
-  const abs = import_node_path4.default.resolve(cwd, EXECUTION_STATE_ROOT);
-  if (!import_node_fs6.default.existsSync(abs)) return;
-  const marker = (rel, detail) => {
-    issues.push({ reason: "legacy-execution-state", path: rel, detail });
-  };
-  const walked = walkTree(cwd, EXECUTION_STATE_ROOT, (rel, isDir) => {
-    const relUnderRoot = rel.slice(EXECUTION_STATE_ROOT.length).replace(/^\/+/, "");
-    const segments = relUnderRoot.split("/").filter(Boolean);
-    if (isDir) {
-      if (segments.length === 0) return;
-      if (segments[0] === "runs") return;
-      if (segments[0] === "evidence" && (segments.length === 1 || segments.length === 2 && segments[1] === "records")) {
-        return;
-      }
-      marker(rel, `unaccounted-for directory inside ${EXECUTION_STATE_ROOT}`);
-      return;
-    }
-    if (segments[0] === "evidence") {
-      const name2 = segments[segments.length - 1];
-      if (!EVIDENCE_TMP_PATTERN.test(name2)) {
-        const declared = segments.length === 2 && (segments[1] === "manifest.json" || segments[1] === "index.json") || segments.length === 3 && segments[1] === "records" && name2.endsWith(".json");
-        if (!declared) {
-          marker(rel, `content outside the evidence layout inside ${EXECUTION_STATE_ROOT}`);
-          return;
-        }
-      }
-      if (segments.length === 2 && segments[1] === "manifest.json") {
-        let version2;
-        try {
-          version2 = JSON.parse(import_node_fs6.default.readFileSync(import_node_path4.default.resolve(cwd, rel), "utf8")).schemaVersion;
-        } catch {
-          version2 = null;
-        }
-        if (version2 !== 1) {
-          marker(rel, `evidence manifest schemaVersion is ${JSON.stringify(version2)}, expected 1`);
-        }
-      }
-      return;
-    }
-    if (segments[0] !== "runs" || segments.length < 3) {
-      marker(rel, `content outside runs/<run-id>/ inside ${EXECUTION_STATE_ROOT}`);
-      return;
-    }
-    const name = segments[segments.length - 1];
-    if (/^(run|manifest|run\.manifest|run-manifest)\.json$/i.test(name)) {
-      let version2;
-      try {
-        version2 = JSON.parse(import_node_fs6.default.readFileSync(import_node_path4.default.resolve(cwd, rel), "utf8")).schemaVersion;
-      } catch {
-        version2 = null;
-      }
-      if (version2 !== EXECUTION_RUN_SCHEMA_VERSION) {
-        marker(rel, `run manifest schemaVersion is ${JSON.stringify(version2)}, expected ${EXECUTION_RUN_SCHEMA_VERSION}`);
-      }
-    }
-  }, (rel) => {
-    marker(rel, `entry inside ${EXECUTION_STATE_ROOT} escapes the checkout through a link`);
-  });
-  if (!walked) {
-    let directory = false;
-    try {
-      directory = import_node_fs6.default.statSync(abs).isDirectory();
-    } catch {
-    }
-    issues.push({
-      reason: "scope-escape",
-      path: EXECUTION_STATE_ROOT,
-      detail: directory ? `${EXECUTION_STATE_ROOT} escapes the checkout through a link; execution state cannot be assessed` : `${EXECUTION_STATE_ROOT} is not a directory; execution state cannot be assessed`
-    });
-  }
-}
-function readManifest(cwd) {
-  const rel = SCHEMA_MANIFEST_PATH;
-  const abs = import_node_path4.default.resolve(cwd, rel);
-  if (!import_node_fs6.default.existsSync(abs)) return { state: "missing" };
-  if (!isInsideCheckout(cwd, abs)) return { state: "escaped" };
-  let raw;
-  try {
-    raw = import_node_fs6.default.readFileSync(abs, "utf8");
-  } catch (error62) {
-    return { state: "unreadable", detail: error62 instanceof Error ? error62.message : String(error62) };
-  }
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (error62) {
-    return { state: "malformed", detail: `schema.json is not valid JSON: ${error62 instanceof Error ? error62.message : String(error62)}` };
-  }
-  if (!isPlainObject3(parsed)) {
-    return { state: "malformed", detail: "schema.json must be a JSON object" };
-  }
-  const versionIssues = [];
-  const schemaVersion = parsed.schemaVersion;
-  if (!Number.isInteger(schemaVersion) || schemaVersion <= 0) {
-    return { state: "malformed", detail: `schemaVersion must be a positive integer, got ${JSON.stringify(schemaVersion)}` };
-  }
-  if (schemaVersion > MANIFEST_SCHEMA_VERSION) {
-    versionIssues.push({
-      reason: "schema-version-unsupported",
-      path: rel,
-      detail: `manifest schemaVersion ${schemaVersion} is newer than supported ${MANIFEST_SCHEMA_VERSION} \u2014 upgrade the doc-driven-dev toolchain`
-    });
-  }
-  const declared = { schemaVersion };
-  for (const [key, expected] of Object.entries(EXPECTED_COMPONENT_VERSIONS)) {
-    const value = parsed[key];
-    if (value === void 0) {
-      return { state: "malformed", detail: `missing component version: ${key}` };
-    }
-    if (!Number.isInteger(value) || value <= 0) {
-      return { state: "malformed", detail: `${key} must be a positive integer, got ${JSON.stringify(value)}` };
-    }
-    declared[key] = value;
-    if (value > expected) {
-      versionIssues.push({
-        reason: "component-version-unsupported",
-        path: rel,
-        detail: `${key} ${value} is newer than supported ${expected} \u2014 upgrade the doc-driven-dev toolchain`
-      });
-    } else if (value < expected) {
-      versionIssues.push({
-        reason: "component-version-behind",
-        path: rel,
-        detail: `${key} ${value} is behind supported ${expected} \u2014 migration is required`
-      });
-    }
-  }
-  let migrationInProgress = false;
-  if (parsed.migration !== void 0) {
-    if (!isPlainObject3(parsed.migration)) {
-      return { state: "malformed", detail: "migration must be an object when present" };
-    }
-    const status = parsed.migration.status;
-    if (status !== void 0 && status !== "in-progress") {
-      return { state: "malformed", detail: `migration.status must be "in-progress" when present, got ${JSON.stringify(status)}` };
-    }
-    migrationInProgress = status === "in-progress";
-  }
-  return { state: "read", declared, migrationInProgress, versionIssues };
-}
-function journalPresent(cwd) {
-  return import_node_fs6.default.existsSync(import_node_path4.default.resolve(cwd, MIGRATION_JOURNAL_PATH));
-}
-function recommendedCommand(status, docCount) {
-  const maintenance = "node .apm/skills/doc-maintenance/scripts/doc_maintenance.js";
-  switch (status) {
-    case "current":
-      return null;
-    case "uninitialized":
-      return docCount === 0 ? { command: "node .apm/skills/doc-maintenance/scripts/scaffold_docs.js", note: "no manifest and no managed content \u2014 scaffold the doc tree, or declare the current schema via doc_maintenance.js migrate plan/apply" } : { command: `${maintenance} migrate plan --json`, note: "no schema manifest \u2014 run migrate plan to evaluate whether migration is needed, then migrate apply to declare the schema" };
-    case "migration-required":
-      return { command: `${maintenance} migrate plan --json`, note: "legacy artifacts or older declared versions \u2014 plan the migration, then run migrate apply --expect <planHash>" };
-    case "migration-incomplete":
-      return { command: `${maintenance} migrate recovery --json`, note: "a migration journal or in-progress marker is present \u2014 inspect and recover before normal execution resumes" };
-    case "unsupported-version":
-      return { command: null, note: "the manifest declares a newer schema generation than this toolchain supports \u2014 upgrade doc-driven-dev, do not downgrade by hand" };
-    case "invalid":
-      return { command: `${maintenance} migrate plan --json`, note: "manifest or repository state cannot be verified \u2014 run migrate plan for the full diagnostic" };
-  }
-}
-function statusSummary(report) {
-  switch (report.status) {
-    case "current":
-      return "schema manifest and repository content are consistent with the declared versions";
-    case "uninitialized":
-      return "no schema manifest; nothing provably pre-contract found";
-    case "migration-required":
-      return "legacy artifacts or older declared schema versions require migration";
-    case "migration-incomplete":
-      return "a migration journal or in-progress marker indicates a half-applied migration";
-    case "unsupported-version":
-      return "the manifest declares a schema generation newer than this toolchain";
-    case "invalid":
-      return "the manifest or repository state failed boundary validation";
-  }
-}
-function evaluateSchemaPreflight(cwd) {
-  const root = import_node_path4.default.resolve(cwd);
-  const scan = scanDocuments(root);
-  scanManifestDir(root, scan.issues);
-  scanExecutionState(root, scan.issues);
-  const manifest = readManifest(root);
-  const journal = journalPresent(root);
-  const escapes = scan.issues.filter((issue2) => issue2.reason === "scope-escape");
-  const finish = (status, issues, manifestInfo2) => {
-    const legacyMarkers = new Set(
-      [...issues, ...scan.manifestScopedIssues].filter((issue2) => issue2.reason.startsWith("legacy-")).map((issue2) => `${issue2.reason}:${issue2.path}`)
-    ).size;
-    const managedDocs = scan.canonicalDocs + scan.unmanagedDocs;
-    const generation = escapes.length > 0 ? "unknown" : legacyMarkers > 0 ? scan.canonicalDocs > scan.executionDocs ? "mixed" : "legacy" : managedDocs === 0 ? "empty" : "current";
-    const report = {
-      status,
-      issues,
-      manifest: manifestInfo2,
-      detected: {
-        generation,
-        canonicalDocs: scan.canonicalDocs,
-        executionDocs: scan.executionDocs,
-        unmanagedDocs: scan.unmanagedDocs,
-        legacyMarkers,
-        manifestMarkers: scan.manifestScopedIssues
-      },
-      recommended: recommendedCommand(status, managedDocs)
-    };
-    return report;
-  };
-  const readManifestInfo = manifest.state === "read" ? { path: SCHEMA_MANIFEST_PATH, state: "valid", declared: manifest.declared } : { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null };
-  if (escapes.length > 0) {
-    return finish("invalid", escapes, readManifestInfo);
-  }
-  if (manifest.state === "escaped") {
-    return finish("invalid", [{ reason: "manifest-escaped", path: SCHEMA_MANIFEST_PATH, detail: "schema.json resolves outside the checkout" }], { path: SCHEMA_MANIFEST_PATH, state: "escaped", declared: null });
-  }
-  if (manifest.state === "unreadable") {
-    return finish("invalid", [{ reason: "manifest-unreadable", path: SCHEMA_MANIFEST_PATH, detail: manifest.detail }], { path: SCHEMA_MANIFEST_PATH, state: "unreadable", declared: null });
-  }
-  if (manifest.state === "malformed") {
-    return finish("invalid", [{ reason: "manifest-malformed", path: SCHEMA_MANIFEST_PATH, detail: manifest.detail }], { path: SCHEMA_MANIFEST_PATH, state: "malformed", declared: null });
-  }
-  if (manifest.state === "missing") {
-    if (journal) {
-      return finish("migration-incomplete", [{ reason: "migration-journal-present", path: MIGRATION_JOURNAL_PATH, detail: "a migration journal exists without a finalized manifest \u2014 the apply did not complete" }], { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null });
-    }
-    const relevant = scan.issues.filter((issue2) => issue2.reason.startsWith("legacy-"));
-    if (relevant.length > 0) {
-      return finish("migration-required", relevant, { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null });
-    }
-    return finish("uninitialized", [], { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null });
-  }
-  const manifestIssues = manifest.versionIssues;
-  const unsupported = manifestIssues.filter((issue2) => issue2.reason === "schema-version-unsupported" || issue2.reason === "component-version-unsupported");
-  const manifestInfo = { path: SCHEMA_MANIFEST_PATH, state: "valid", declared: manifest.declared };
-  if (unsupported.length > 0) {
-    return finish("unsupported-version", unsupported, { ...manifestInfo, state: "unsupported" });
-  }
-  const inProgress = [];
-  if (manifest.migrationInProgress) {
-    inProgress.push({ reason: "manifest-migration-in-progress", path: SCHEMA_MANIFEST_PATH, detail: "manifest declares migration.status: in-progress" });
-  }
-  if (journal) {
-    inProgress.push({ reason: "migration-journal-present", path: MIGRATION_JOURNAL_PATH, detail: "a migration journal is present \u2014 the apply did not complete" });
-  }
-  if (inProgress.length > 0) {
-    return finish("migration-incomplete", inProgress, manifestInfo);
-  }
-  const behind = manifestIssues.filter((issue2) => issue2.reason === "component-version-behind");
-  const allIssues = [...scan.issues, ...scan.manifestScopedIssues, ...behind];
-  if (allIssues.length > 0) {
-    return finish("migration-required", allIssues, manifestInfo);
-  }
-  return finish("current", [], manifestInfo);
-}
-function normalExecutionAllowed(status) {
-  return status === "current" || status === "uninitialized";
-}
-function entrypointRefusal(report) {
-  return {
-    error: "schema-preflight-blocked",
-    exitCode: SCHEMA_PREFLIGHT_EXIT_CODE,
-    readOnly: true,
-    preflight: report
-  };
-}
-function schemaEntrypointGuard(cwd) {
-  const report = evaluateSchemaPreflight(cwd);
-  if (normalExecutionAllowed(report.status)) return true;
-  console.log(JSON.stringify(entrypointRefusal(report), null, 2));
-  const recommended = report.recommended?.command ?? "inspect docs/.doc-driven-dev/schema.json";
-  console.error(`schema preflight blocked (${report.status}): ${statusSummary(report)} \u2014 run ${recommended}`);
-  process.exitCode = SCHEMA_PREFLIGHT_EXIT_CODE;
-  return false;
-}
-
-// src/skills/lib/execution_store/types.ts
-var RUN_MANIFEST_SCHEMA_VERSION = EXECUTION_RUN_SCHEMA_VERSION;
-var TASK_RECORD_SCHEMA_VERSION = 1;
-var CHECKPOINT_RECORD_SCHEMA_VERSION = 1;
-var RECEIPT_RECORD_SCHEMA_VERSION = 1;
-var RUN_STATUSES = /* @__PURE__ */ new Set(["active", "completed", "aborted"]);
-var TASK_STATUSES = /* @__PURE__ */ new Set([
-  "todo",
-  "in-progress",
-  "blocked",
-  "done",
-  "wont-do"
-]);
-var RECEIPT_STATUSES = /* @__PURE__ */ new Set(["success", "failure", "waived"]);
-var ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
-var WINDOWS_RESERVED_NAMES = /* @__PURE__ */ new Set([
-  "con",
-  "prn",
-  "aux",
-  "nul",
-  "com1",
-  "com2",
-  "com3",
-  "com4",
-  "com5",
-  "com6",
-  "com7",
-  "com8",
-  "com9",
-  "lpt1",
-  "lpt2",
-  "lpt3",
-  "lpt4",
-  "lpt5",
-  "lpt6",
-  "lpt7",
-  "lpt8",
-  "lpt9"
-]);
-function isValidId(value) {
-  if (typeof value !== "string" || !ID_PATTERN.test(value)) return false;
-  if (value.endsWith(".") || value.includes("..")) return false;
-  const stem = value.split(".")[0].toLowerCase();
-  return !WINDOWS_RESERVED_NAMES.has(stem);
-}
-function isPlainObject4(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function isIsoTimestamp(value) {
-  return typeof value === "string" && !Number.isNaN(Date.parse(value));
-}
-function isSha256(value) {
-  return typeof value === "string" && /^[0-9a-f]{64}$/.test(value);
-}
-function optionalString(value) {
-  return value === null || value === void 0 || typeof value === "string";
-}
-function stringArray(value) {
-  return Array.isArray(value) && value.every((item) => typeof item === "string");
-}
-function validateApproval(value) {
-  return isPlainObject4(value) && isSha256(value.planDigest) && typeof value.actor === "string" && value.actor.length > 0 && isIsoTimestamp(value.approvedAt);
-}
-function validateManifest(value) {
-  if (!isPlainObject4(value)) return false;
-  return value.schemaVersion === RUN_MANIFEST_SCHEMA_VERSION && isValidId(value.runId) && Number.isInteger(value.revision) && value.revision >= 1 && RUN_STATUSES.has(value.status) && typeof value.graphId === "string" && value.graphId.length > 0 && (value.baseCommit === null || typeof value.baseCommit === "string") && (value.planDigest === null || isSha256(value.planDigest)) && (value.approval === null || validateApproval(value.approval)) && isIsoTimestamp(value.createdAt) && isIsoTimestamp(value.updatedAt) && (value.finalizedAt === null || isIsoTimestamp(value.finalizedAt));
-}
-function validateTask(value) {
-  if (!isPlainObject4(value)) return false;
-  return value.schemaVersion === TASK_RECORD_SCHEMA_VERSION && isValidId(value.runId) && isValidId(value.taskId) && typeof value.title === "string" && TASK_STATUSES.has(value.status) && stringArray(value.dependsOn) && stringArray(value.checks) && (value.scope === void 0 || stringArray(value.scope)) && Number.isInteger(value.version) && value.version >= 1 && isIsoTimestamp(value.createdAt) && isIsoTimestamp(value.updatedAt);
-}
-function validateCheckpoint(value) {
-  if (!isPlainObject4(value)) return false;
-  return value.schemaVersion === CHECKPOINT_RECORD_SCHEMA_VERSION && isValidId(value.runId) && isValidId(value.checkpointId) && optionalString(value.nodeId) && optionalString(value.edgeId) && optionalString(value.taskId) && isIsoTimestamp(value.at);
-}
-function validateReceipt(value) {
-  if (!isPlainObject4(value)) return false;
-  return value.schemaVersion === RECEIPT_RECORD_SCHEMA_VERSION && isValidId(value.runId) && isValidId(value.receiptId) && typeof value.effect === "string" && value.effect.length > 0 && optionalString(value.taskId) && optionalString(value.idempotencyKey) && optionalString(value.actor) && RECEIPT_STATUSES.has(value.status) && isIsoTimestamp(value.at);
-}
-
-// src/skills/lib/execution_store/boundary.ts
-function toRepoRelative3(cwd, absolute) {
-  return import_node_path5.default.relative(import_node_path5.default.resolve(cwd), absolute).split(import_node_path5.default.sep).join("/");
-}
-function resolveStateRoot(cwd, options2 = {}) {
-  const checkout = import_node_path5.default.resolve(cwd);
-  if (options2.stateRoot === void 0) {
-    return {
-      root: import_node_path5.default.join(checkout, EXECUTION_STATE_ROOT),
-      external: false,
-      repoRelative: EXECUTION_STATE_ROOT
-    };
-  }
-  const root = import_node_path5.default.resolve(checkout, options2.stateRoot);
-  if (isInside(checkout, root)) {
-    return { root, external: false, repoRelative: toRepoRelative3(checkout, root) };
-  }
-  if (options2.allowExternalRoot !== true) {
-    throw new StoreError(
-      "external-root-not-authorized",
-      `state root ${options2.stateRoot} resolves outside the checkout \u2014 a shared/external store requires explicit allowExternalRoot`,
-      { stateRoot: options2.stateRoot }
-    );
-  }
-  return { root, external: true, repoRelative: null };
-}
-function runDirFor(resolved, runId) {
-  if (!isValidId(runId)) {
-    throw new StoreError(
-      "invalid-argument",
-      `invalid run id ${JSON.stringify(runId)} \u2014 ids match [A-Za-z0-9][A-Za-z0-9._-]{0,127} with dots inner and single, and never contain path separators`
-    );
-  }
-  return import_node_path5.default.join(resolved.root, "runs", runId);
-}
-
-// src/skills/lib/execution_store/store.ts
-var STATE_FILE = "manifest.json";
-var PLAN_FILE = "plan.md";
-var RUN_DIR = "runs";
-function sha256(content3) {
-  return import_node_crypto.default.createHash("sha256").update(content3, "utf8").digest("hex");
-}
-function insideResolvedRoot(resolved, candidate) {
-  let real;
-  let realRoot;
-  try {
-    real = import_node_fs7.default.realpathSync(candidate);
-    realRoot = import_node_fs7.default.realpathSync(resolved.root);
-  } catch {
-    return false;
-  }
-  const root = import_node_path6.default.resolve(realRoot);
-  const target = import_node_path6.default.resolve(real);
-  return target === root || target.startsWith(`${root}${import_node_path6.default.sep}`);
-}
-function runDirContained(resolved, runId) {
-  const runDir = runDirFor(resolved, runId);
-  if (!import_node_fs7.default.existsSync(runDir)) {
-    throw new StoreError("run-not-found", `run ${runId} does not exist under ${resolved.repoRelative ?? resolved.root}`);
-  }
-  if (!import_node_fs7.default.statSync(runDir).isDirectory()) {
-    throw new StoreError("corrupt-state", `${runDir} is not a directory`);
-  }
-  if (!insideResolvedRoot(resolved, runDir)) {
-    throw new StoreError("boundary-escape", `run ${runId} resolves outside the state root through a link`);
-  }
-  return runDir;
-}
-function readManifest2(runDir, runId) {
-  const file2 = import_node_path6.default.join(runDir, STATE_FILE);
-  if (!import_node_fs7.default.existsSync(file2)) {
-    throw new StoreError(
-      "corrupt-state",
-      `run ${runId} has no manifest.json \u2014 the run is incomplete or foreign`,
-      { runId }
-    );
-  }
-  const parsed = readJsonFile(file2);
-  if (isPlainObject4(parsed) && parsed.schemaVersion !== RUN_MANIFEST_SCHEMA_VERSION) {
-    throw new StoreError(
-      "unsupported-version",
-      `run ${runId} manifest schemaVersion is ${JSON.stringify(parsed.schemaVersion)}, expected ${RUN_MANIFEST_SCHEMA_VERSION} \u2014 upgrade the toolchain`
-    );
-  }
-  if (!validateManifest(parsed)) {
-    throw new StoreError("corrupt-state", `run ${runId} manifest failed schema validation`, { runId });
-  }
-  if (parsed.runId !== runId) {
-    throw new StoreError(
-      "corrupt-state",
-      `manifest runId ${parsed.runId} does not match its directory ${runId}`
-    );
-  }
-  return parsed;
-}
-function listRecordFiles(runDir, kind) {
-  const dir = import_node_path6.default.join(runDir, kind);
-  if (!import_node_fs7.default.existsSync(dir)) return [];
-  return import_node_fs7.default.readdirSync(dir, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith(".json")).map((entry) => import_node_path6.default.join(runDir, kind, entry.name)).sort();
-}
-function readRecord(file2, validate2, kind) {
-  const parsed = readJsonFile(file2);
-  if (!validate2(parsed)) {
-    throw new StoreError("corrupt-state", `${file2} failed ${kind} record validation`, { path: file2 });
-  }
-  const record2 = parsed;
-  const dirRun = import_node_path6.default.basename(import_node_path6.default.dirname(import_node_path6.default.dirname(file2)));
-  if (record2.runId !== dirRun) {
-    throw new StoreError(
-      "corrupt-state",
-      `${kind} record in ${file2} binds run ${record2.runId}, expected ${dirRun} \u2014 records never cross runs`
-    );
-  }
-  return parsed;
-}
-function scanIncompleteWrites(dir, rel = "") {
-  const found = [];
-  if (!import_node_fs7.default.existsSync(dir)) return found;
-  for (const entry of import_node_fs7.default.readdirSync(dir, { withFileTypes: true })) {
-    const abs = import_node_path6.default.join(dir, entry.name);
-    const relPath = rel === "" ? entry.name : `${rel}/${entry.name}`;
-    if (entry.isDirectory()) {
-      found.push(...scanIncompleteWrites(abs, relPath));
-    } else if (entry.isFile() && isStoreTmpFile(entry.name)) {
-      found.push(relPath);
-    }
-  }
-  return found;
-}
-function loadSnapshot(resolved, runId) {
-  const runDir = runDirContained(resolved, runId);
-  const manifest = readManifest2(runDir, runId);
-  const planFile = import_node_path6.default.join(runDir, PLAN_FILE);
-  let plan = null;
-  if (import_node_fs7.default.existsSync(planFile)) {
-    const content3 = import_node_fs7.default.readFileSync(planFile, "utf8");
-    plan = { content: content3, digest: sha256(content3) };
-  }
-  const tasks = listRecordFiles(runDir, "tasks").map((file2) => readRecord(file2, validateTask, "task")).map((task) => task.scope === void 0 ? { ...task, scope: [] } : task);
-  const checkpoints = listRecordFiles(runDir, "checkpoints").map((file2) => readRecord(file2, validateCheckpoint, "checkpoint"));
-  const receipts = listRecordFiles(runDir, "receipts").map((file2) => readRecord(file2, validateReceipt, "receipt"));
-  const lock = import_node_fs7.default.existsSync(import_node_path6.default.join(runDir, "writer.lock")) ? readLockRecord(import_node_path6.default.join(runDir, "writer.lock")) : null;
-  return {
-    runId,
-    status: manifest.status,
-    manifest,
-    plan,
-    planApproved: manifest.approval !== null && plan !== null && manifest.approval.planDigest === plan.digest,
-    planDigestDrift: manifest.planDigest !== null && (plan === null || plan.digest !== manifest.planDigest),
-    tasks,
-    checkpoints,
-    receipts,
-    recovery: {
-      incompleteWrites: scanIncompleteWrites(runDir),
-      writerLock: lock
-    }
-  };
-}
-function loadRun(cwd, runId, options2 = {}) {
-  const resolved = resolveStateRoot(cwd, options2);
-  return loadSnapshot(resolved, runId);
-}
-function listRuns(cwd, options2 = {}) {
-  const resolved = resolveStateRoot(cwd, options2);
-  const runsDir = import_node_path6.default.join(resolved.root, RUN_DIR);
-  if (!import_node_fs7.default.existsSync(runsDir)) return [];
-  const runs = [];
-  for (const entry of import_node_fs7.default.readdirSync(runsDir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-    if (!entry.isDirectory() || !isValidId(entry.name)) continue;
-    try {
-      const manifest = readManifest2(import_node_path6.default.join(runsDir, entry.name), entry.name);
-      runs.push({ runId: manifest.runId, status: manifest.status, revision: manifest.revision });
-    } catch {
-      runs.push({ runId: entry.name, status: "corrupt", revision: null });
-    }
-  }
-  return runs;
-}
-
-// src/skills/doc-driven-dev-graph/scripts/lib/task_graph.ts
-function compareStrings2(left, right) {
-  return left.localeCompare(right);
-}
-function sortedUnique2(values) {
-  return [...new Set(values)].sort(compareStrings2);
-}
-function taskRecordPath(runId, taskId) {
-  return `runs/${runId}/tasks/${taskId}.json`;
-}
-function runPlanPath(runId) {
-  return `runs/${runId}/plan.md`;
-}
-function findCycles(ids, edges) {
-  const adjacency = /* @__PURE__ */ new Map();
-  for (const id of ids) adjacency.set(id, []);
-  for (const edge of edges) {
-    const successors = adjacency.get(edge.from);
-    if (successors) successors.push(edge.to);
-  }
-  for (const successors of adjacency.values()) successors.sort(compareStrings2);
-  const visiting = /* @__PURE__ */ new Set();
-  const visited = /* @__PURE__ */ new Set();
-  const cycles = /* @__PURE__ */ new Set();
-  const walk = (id, stack) => {
-    visiting.add(id);
-    stack.push(id);
-    for (const next of adjacency.get(id) || []) {
-      if (visiting.has(next)) {
-        const start = stack.indexOf(next);
-        const cycle = stack.slice(start).sort(compareStrings2);
-        cycles.add(cycle.join(" -> "));
-      } else if (!visited.has(next)) {
-        walk(next, stack);
-      }
-    }
-    stack.pop();
-    visiting.delete(id);
-    visited.add(id);
-  };
-  for (const id of ids) if (!visited.has(id)) walk(id, []);
-  return [...cycles].sort(compareStrings2).map((cycle) => ({
-    code: "task-cycle",
-    tasks: cycle.split(" -> "),
-    message: `Task dependency cycle detected: ${cycle}`
-  }));
-}
-function issueCompare2(left, right) {
-  return compareStrings2(left.code, right.code) || compareStrings2(left.tasks.join(","), right.tasks.join(",")) || compareStrings2(left.message, right.message);
-}
-function projectRunTasks(snapshot) {
-  const { runId } = snapshot;
-  const issues = [];
-  let plan = null;
-  if (snapshot.plan === null) {
-    issues.push({
-      code: "plan-missing",
-      tasks: [],
-      message: `run ${runId} has no plan.md \u2014 the plan must exist inside the run before task execution`
-    });
-  } else {
-    plan = { path: runPlanPath(runId), digest: snapshot.plan.digest, approved: snapshot.planApproved };
-    if (!snapshot.planApproved) {
-      issues.push({
-        code: "plan-not-approved",
-        tasks: [],
-        message: `run ${runId} plan.md is not approved (or approval predates the current digest) \u2014 task execution requires a digest-bound approval`
-      });
-    }
-  }
-  if (snapshot.planDigestDrift) {
-    issues.push({
-      code: "plan-digest-drift",
-      tasks: [],
-      message: `run ${runId} plan.md diverges from the digest recorded in manifest.json \u2014 a write outside the Execution Store API was detected`
-    });
-  }
-  const byId = /* @__PURE__ */ new Map();
-  for (const task of [...snapshot.tasks].sort((left, right) => compareStrings2(left.taskId, right.taskId))) {
-    if (byId.has(task.taskId)) {
-      issues.push({
-        code: "duplicate-task-id",
-        tasks: [task.taskId],
-        message: `Duplicate task id ${task.taskId} in run ${runId}`
-      });
-      continue;
-    }
-    byId.set(task.taskId, task);
-  }
-  const tasks = [...byId.values()];
-  const edges = /* @__PURE__ */ new Map();
-  const blocksById = new Map(tasks.map((task) => [task.taskId, /* @__PURE__ */ new Set()]));
-  for (const task of tasks) {
-    for (const dep of task.dependsOn) {
-      if (!byId.has(dep)) {
-        issues.push({
-          code: "missing-task-reference",
-          tasks: [task.taskId],
-          message: `Task ${task.taskId} depends on ${dep}, which does not exist in run ${runId} \u2014 dependencies resolve inside the same run only`
-        });
-        continue;
-      }
-      edges.set(`${dep}${task.taskId}`, { from: dep, to: task.taskId });
-      blocksById.get(dep)?.add(task.taskId);
-    }
-  }
-  const sortedEdges = [...edges.values()].sort((left, right) => compareStrings2(left.from, right.from) || compareStrings2(left.to, right.to));
-  issues.push(...findCycles(tasks.map((task) => task.taskId), sortedEdges));
-  if (tasks.length === 0) {
-    issues.push({
-      code: "plan-has-no-tasks",
-      tasks: [],
-      message: `run ${runId} has no task records \u2014 the plan must materialize at least one task`
-    });
-  }
-  const uniqueIssues = [...new Map(issues.map((issue2) => [
-    `${issue2.code}${issue2.tasks.join(",")}${issue2.message}`,
-    issue2
-  ])).values()].sort(issueCompare2);
-  const statusById = new Map(tasks.map((task) => [task.taskId, task.status]));
-  const predecessorsDone = (taskId) => sortedEdges.filter((edge) => edge.to === taskId).every((edge) => statusById.get(edge.from) === "done");
-  const runnable = uniqueIssues.length > 0 ? [] : tasks.filter((task) => task.status === "todo" && predecessorsDone(task.taskId)).map((task) => task.taskId);
-  const active = tasks.filter((task) => task.status === "in-progress").map((task) => task.taskId);
-  const resumableActive = uniqueIssues.length > 0 ? [] : tasks.filter((task) => task.status === "in-progress" && predecessorsDone(task.taskId)).map((task) => task.taskId);
-  const completed = tasks.filter((task) => task.status === "done").map((task) => task.taskId);
-  const blocked = tasks.filter((task) => task.status === "blocked" || task.status === "wont-do" || task.status === "todo" && !runnable.includes(task.taskId)).map((task) => ({
-    id: task.taskId,
-    reasons: task.status === "blocked" ? ["status:blocked"] : task.status === "wont-do" ? ["status:wont-do"] : sortedEdges.filter((edge) => edge.to === task.taskId && statusById.get(edge.from) !== "done").map((edge) => `depends-on:${edge.from}`)
-  })).filter((entry) => entry.reasons.length > 0);
-  return {
-    schemaVersion: 2,
-    runId,
-    plan,
-    nodes: tasks.map((task) => ({
-      id: task.taskId,
-      path: taskRecordPath(runId, task.taskId),
-      title: task.title,
-      status: task.status,
-      dependsOn: sortedUnique2(task.dependsOn),
-      blocks: sortedUnique2(blocksById.get(task.taskId) ?? []),
-      scope: [...task.scope].sort(compareStrings2),
-      version: task.version
-    })),
-    edges: sortedEdges,
-    runnable: runnable.sort(compareStrings2),
-    active: active.sort(compareStrings2),
-    resumableActive: resumableActive.sort(compareStrings2),
-    completed: completed.sort(compareStrings2),
-    blocked,
-    issues: uniqueIssues
-  };
-}
-
-// src/skills/lib/evidence_store/store.ts
-var import_node_child_process = require("node:child_process");
-var import_node_crypto3 = __toESM(require("node:crypto"));
-var import_node_fs8 = __toESM(require("node:fs"));
-var import_node_path7 = __toESM(require("node:path"));
-
-// src/skills/lib/verification_checks.ts
-var import_node_crypto2 = require("node:crypto");
-var CHECK_KEY_PATTERN = /^CHK-\d+$/;
-var CHECK_MARKER_PATTERN = /<!--\s*check\s*:(.*?)-->/g;
-var VERIFICATION_METHODS = [
-  "unit",
-  "integration",
-  "e2e",
-  "property",
-  "static",
-  "model-checking",
-  "formal-proof",
-  "runtime-monitoring",
-  "manual-review"
-];
-var METHOD_CRITERIA_FIELDS = {
-  unit: "expect",
-  integration: "expect",
-  e2e: "expect",
-  property: "invariant",
-  static: "rule",
-  "model-checking": "property",
-  "formal-proof": "theorem",
-  "runtime-monitoring": "signal",
-  "manual-review": "checklistItem"
-};
-function isPlainObject5(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function nonEmptyString(value) {
-  return typeof value === "string" && value.trim().length > 0;
-}
-function stringList(value) {
-  if (!Array.isArray(value)) return null;
-  const items = value.filter((item) => typeof item === "string");
-  if (items.length !== value.length) return null;
-  return items.map((item) => item.trim()).filter((item) => item.length > 0);
-}
-function checkLabel(index2, id) {
-  return typeof id === "string" && id ? `check ${id}` : `checks[${index2}]`;
-}
-function validateCheckEntry(entry, index2, allowMissingId) {
-  const issues = [];
-  if (!isPlainObject5(entry)) {
-    issues.push({
-      code: "malformed-check-entry",
-      index: index2,
-      target: null,
-      message: `checks[${index2}] is not a verification check object (expected id/target/method/implementation/preconditions/passCriteria/limitations/required)`
-    });
-    return { check: null, issues };
-  }
-  const missing = (field) => {
-    issues.push({
-      code: "missing-check-field",
-      index: index2,
-      target: field,
-      message: `${checkLabel(index2, entry.id)} is missing required check field: ${field}`
-    });
-  };
-  let id = null;
-  if (entry.id === void 0 || entry.id === null) {
-    if (!allowMissingId) missing("id");
-  } else if (!nonEmptyString(entry.id) || !CHECK_KEY_PATTERN.test(entry.id.trim())) {
-    issues.push({
-      code: "invalid-check-id",
-      index: index2,
-      target: String(entry.id),
-      message: `checks[${index2}].id must be a stable check key matching CHK-<digits> (e.g. CHK-01), got ${JSON.stringify(entry.id)}`
-    });
-  } else {
-    id = entry.id.trim();
-  }
-  let target = null;
-  if (!nonEmptyString(entry.target)) {
-    missing("target");
-  } else if (parseClaimReference(entry.target.trim()) === null) {
-    issues.push({
-      code: "invalid-check-target",
-      index: index2,
-      target: entry.target.trim(),
-      message: `checks[${index2}].target must be a qualified claim reference <document-id>::<KEY> (e.g. SPEC-<id>::R-01), got ${JSON.stringify(entry.target)}`
-    });
-  } else {
-    target = entry.target.trim();
-  }
-  let method = null;
-  if (!nonEmptyString(entry.method)) {
-    missing("method");
-  } else if (!VERIFICATION_METHODS.includes(entry.method.trim())) {
-    issues.push({
-      code: "invalid-check-method",
-      index: index2,
-      target: entry.method.trim(),
-      message: `checks[${index2}].method must be one of: ${VERIFICATION_METHODS.join(", ")} \u2014 got ${JSON.stringify(entry.method)}`
-    });
-  } else {
-    method = entry.method.trim();
-  }
-  let implementation = null;
-  if (!nonEmptyString(entry.implementation)) {
-    missing("implementation");
-  } else {
-    implementation = entry.implementation.trim();
-  }
-  let preconditions = null;
-  if (!Array.isArray(entry.preconditions)) {
-    missing("preconditions");
-  } else {
-    preconditions = stringList(entry.preconditions);
-    if (preconditions === null) {
-      issues.push({
-        code: "missing-check-field",
-        index: index2,
-        target: "preconditions",
-        message: `${checkLabel(index2, entry.id)} field preconditions must be a list of strings`
-      });
-    }
-  }
-  let limitations = null;
-  if (!Array.isArray(entry.limitations)) {
-    missing("limitations");
-  } else {
-    limitations = stringList(entry.limitations);
-    if (limitations === null) {
-      issues.push({
-        code: "missing-check-field",
-        index: index2,
-        target: "limitations",
-        message: `${checkLabel(index2, entry.id)} field limitations must be a list of strings`
-      });
-    }
-  }
-  let required2 = null;
-  if (typeof entry.required !== "boolean") {
-    missing("required");
-  } else {
-    required2 = entry.required;
-  }
-  let passCriteria = null;
-  const criteria = entry.passCriteria;
-  if (!isPlainObject5(criteria)) {
-    missing("passCriteria");
-  } else if (typeof criteria.kind !== "string" || !VERIFICATION_METHODS.includes(criteria.kind)) {
-    issues.push({
-      code: "check-criteria-mismatch",
-      index: index2,
-      target: typeof criteria.kind === "string" ? criteria.kind : null,
-      message: `checks[${index2}].passCriteria.kind must be one of: ${VERIFICATION_METHODS.join(", ")}`
-    });
-  } else if (method !== null && criteria.kind !== method) {
-    issues.push({
-      code: "check-criteria-mismatch",
-      index: index2,
-      target: String(criteria.kind),
-      message: `checks[${index2}].passCriteria.kind "${String(criteria.kind)}" contradicts method "${method}" \u2014 the criteria variant must match the declared method`
-    });
-  } else {
-    const kind = criteria.kind;
-    const field = METHOD_CRITERIA_FIELDS[kind];
-    if (!nonEmptyString(criteria[field])) {
-      issues.push({
-        code: "check-criteria-mismatch",
-        index: index2,
-        target: field,
-        message: `checks[${index2}].passCriteria for method ${kind} requires a non-empty "${field}" criterion`
-      });
-    } else {
-      passCriteria = criteria;
-    }
-  }
-  if (required2 === true && preconditions !== null && preconditions.length === 0) {
-    issues.push({
-      code: "incomplete-required-check",
-      index: index2,
-      target: id,
-      message: `${checkLabel(index2, entry.id)} is marked required but declares no preconditions \u2014 a required check must state when it applies so assessment can judge applicability`
-    });
-  }
-  if (issues.length > 0) return { check: null, issues };
-  return {
-    check: {
-      id: id ?? "",
-      target,
-      method,
-      implementation,
-      preconditions,
-      passCriteria,
-      limitations,
-      required: required2
-    },
-    issues
-  };
-}
-function parseVerificationChecks(value) {
-  const issues = [];
-  if (value === void 0 || value === null) return { checks: [], issues };
-  if (!Array.isArray(value)) {
-    issues.push({
-      code: "malformed-checks",
-      index: null,
-      target: null,
-      message: "checks must be a list of VerificationCheckV1 entries"
-    });
-    return { checks: [], issues };
-  }
-  const checks = [];
-  const seen = /* @__PURE__ */ new Map();
-  for (let index2 = 0; index2 < value.length; index2 += 1) {
-    const { check: check2, issues: entryIssues } = validateCheckEntry(value[index2], index2, false);
-    issues.push(...entryIssues);
-    if (!check2) continue;
-    const first = seen.get(check2.id);
-    if (first !== void 0) {
-      issues.push({
-        code: "duplicate-check",
-        index: index2,
-        target: check2.id,
-        message: `Check id ${check2.id} is declared more than once (first at checks[${first}]) \u2014 check ids must be unique and stable within the document`
-      });
-      continue;
-    }
-    seen.set(check2.id, index2);
-    checks.push(check2);
-  }
-  return { checks, issues };
-}
-function canonicalizeValue(value) {
-  if (Array.isArray(value)) return value.map(canonicalizeValue);
-  if (isPlainObject5(value)) {
-    return Object.fromEntries(
-      Object.keys(value).sort().map((key) => [key, canonicalizeValue(value[key])])
-    );
-  }
-  return value;
-}
-function canonicalCheck(check2) {
-  return {
-    id: check2.id,
-    target: check2.target,
-    method: check2.method,
-    implementation: check2.implementation,
-    preconditions: check2.preconditions,
-    passCriteria: canonicalizeValue(check2.passCriteria),
-    limitations: check2.limitations,
-    required: check2.required
-  };
-}
-function checkDesignRevision(check2) {
-  const canonical = JSON.stringify(canonicalCheck(check2));
-  return `sha256:${(0, import_node_crypto2.createHash)("sha256").update(canonical, "utf8").digest("hex")}`;
-}
-function isVerificationMethod(value) {
-  return VERIFICATION_METHODS.includes(value);
-}
-
-// src/skills/lib/evidence_store/types.ts
-var EVIDENCE_RECORD_SCHEMA_VERSION = 1;
-var EVIDENCE_RETENTIONS = /* @__PURE__ */ new Set([
-  "transient",
-  "release",
-  "durable"
-]);
-var EVIDENCE_OUTCOMES = /* @__PURE__ */ new Set([
-  "passed",
-  "failed",
-  "inconclusive",
-  "error",
-  "not-run"
-]);
-var EVIDENCE_PROVIDER_KINDS = /* @__PURE__ */ new Set([
-  "repository",
-  "ci",
-  "external"
-]);
-var ARTIFACT_AVAILABILITIES = /* @__PURE__ */ new Set([
-  "available",
-  "unverified",
-  "unavailable"
-]);
-function isIsoTimestamp2(value) {
-  return typeof value === "string" && !Number.isNaN(Date.parse(value));
-}
-function isRevisionDigest(value) {
-  return typeof value === "string" && /^sha256:[0-9a-f]{64}$/.test(value);
-}
-var ARTIFACT_URI_SCHEMES = /* @__PURE__ */ new Set([
-  "file",
-  "http",
-  "https",
-  "s3",
-  "gs",
-  "az",
-  "artifact",
-  "run"
-]);
-var BLOCKED_URI_SCHEMES = /* @__PURE__ */ new Set(["javascript", "data", "vbscript"]);
-var URI_SCHEME_PATTERN = /^[a-zA-Z][a-zA-Z0-9+.-]*:/;
-function normalizePathSegments(rawPath) {
-  const absolute = rawPath.startsWith("/");
-  const segments = [];
-  for (const segment of rawPath.split("/")) {
-    if (segment === "" || segment === ".") continue;
-    if (segment === "..") {
-      if (segments.length === 0) return null;
-      segments.pop();
-      continue;
-    }
-    segments.push(segment);
-  }
-  return `${absolute ? "/" : ""}${segments.join("/")}`;
-}
-function normalizeArtifactUri(raw) {
-  if (typeof raw !== "string") return null;
-  const uri = raw.trim();
-  if (uri === "" || /[\x00-\x1f\x7f\s]/.test(uri)) return null;
-  if (!URI_SCHEME_PATTERN.test(uri)) {
-    if (uri.startsWith("/") || /^[a-zA-Z]:[\\/]/.test(uri) || uri.includes("\\")) return null;
-    const normalized = normalizePathSegments(uri);
-    if (normalized === null || normalized === "") return null;
-    return normalized;
-  }
-  const scheme = uri.slice(0, uri.indexOf(":")).toLowerCase();
-  if (BLOCKED_URI_SCHEMES.has(scheme)) return null;
-  if (!ARTIFACT_URI_SCHEMES.has(scheme)) return null;
-  if (scheme === "file") {
-    let rest = uri.slice(uri.indexOf(":") + 1);
-    while (rest.startsWith("/")) rest = rest.slice(1);
-    const normalized = normalizePathSegments(`/${rest}`);
-    return normalized === null ? null : `file://${normalized}`;
-  }
-  try {
-    return new URL(uri).toString();
-  } catch {
-    return null;
-  }
-}
-function validateSubject(value) {
-  if (!isPlainObject4(value)) return false;
-  if (value.kind === "commit") {
-    return typeof value.commit === "string" && /^[0-9a-f]{7,64}$/i.test(value.commit);
-  }
-  if (value.kind === "workspace") {
-    return isRevisionDigest(value.snapshotDigest);
-  }
-  return false;
-}
-function validateArtifact(value) {
-  if (!isPlainObject4(value)) return false;
-  if (typeof value.uri !== "string" || normalizeArtifactUri(value.uri) === null) return false;
-  if (!(value.sha256 === null || isRevisionDigest(value.sha256))) return false;
-  if (!ARTIFACT_AVAILABILITIES.has(value.availability)) return false;
-  if (!EVIDENCE_RETENTIONS.has(value.retention)) return false;
-  if (!(value.expiresAt === null || isIsoTimestamp2(value.expiresAt))) return false;
-  if (value.availability === "available" && !isRevisionDigest(value.sha256)) return false;
-  return true;
-}
-function validateProvider(value) {
-  return isPlainObject4(value) && EVIDENCE_PROVIDER_KINDS.has(value.kind) && (value.name === null || value.name === void 0 || typeof value.name === "string");
-}
-function validateEvidenceRecord(value) {
-  if (!isPlainObject4(value)) return false;
-  const claim2 = value.claim;
-  const check2 = value.check;
-  return value.schemaVersion === EVIDENCE_RECORD_SCHEMA_VERSION && isValidId(value.evidenceId) && isPlainObject4(claim2) && typeof claim2.ref === "string" && parseClaimReference(claim2.ref.trim()) !== null && isRevisionDigest(claim2.documentRevision) && isPlainObject4(check2) && typeof check2.ref === "string" && (() => {
-    const parsed = parseClaimReference(check2.ref.trim());
-    return parsed !== null && /^CHK-\d+$/.test(parsed.key);
-  })() && isRevisionDigest(check2.designRevision) && validateSubject(value.subject) && VERIFICATION_METHODS.includes(value.method) && validateProvider(value.provider) && (value.runId === null || isValidId(value.runId)) && EVIDENCE_OUTCOMES.has(value.outcome) && EVIDENCE_RETENTIONS.has(value.retention) && Array.isArray(value.artifacts) && value.artifacts.every(validateArtifact) && (value.derivedFrom === null || isValidId(value.derivedFrom)) && isIsoTimestamp2(value.createdAt);
-}
-
-// src/skills/lib/evidence_store/store.ts
-var EVIDENCE_DIR = "evidence";
-var RECORDS_DIR = "records";
-function sha2562(content3) {
-  return import_node_crypto3.default.createHash("sha256").update(content3, "utf8").digest("hex");
-}
-function documentRevisionOf(content3) {
-  return `sha256:${sha2562(content3)}`;
-}
-var SUBJECT_DIGEST_NAMESPACE = "doc-driven-dev:subject-tree:v1";
-function subjectTreeDigest(treeOid) {
-  return `sha256:${sha2562(`${SUBJECT_DIGEST_NAMESPACE}:${treeOid.toLowerCase()}`)}`;
-}
-function git(args, cwd) {
-  const result = (0, import_node_child_process.spawnSync)("git", args, { cwd, encoding: "utf8" });
-  return {
-    status: result.status,
-    stdout: result.stdout ?? "",
-    stderr: (result.stderr ?? "").trim(),
-    error: result.error
-  };
-}
-function requireCommitTreeOid(cwd, commit) {
-  const asCommit = git(["rev-parse", "--verify", "--quiet", `${commit}^{commit}`], cwd);
-  if (asCommit.error !== void 0) {
-    throw new StoreError(
-      "boundary-git-unavailable",
-      `cannot run git rev-parse (${asCommit.error.message}) \u2014 the commit's content identity cannot be verified`
-    );
-  }
-  const commitOid = asCommit.stdout.trim();
-  if (asCommit.status !== 0 || !/^[0-9a-f]{40,64}$/i.test(commitOid)) {
-    throw new StoreError(
-      "invalid-argument",
-      `commit ${JSON.stringify(commit)} does not resolve to a commit object in this repository \u2014 content identity is unprovable`,
-      { commit }
-    );
-  }
-  const asTree = git(["rev-parse", "--verify", "--quiet", `${commitOid}^{tree}`], cwd);
-  const treeOid = asTree.stdout.trim();
-  if (asTree.error !== void 0 || asTree.status !== 0 || !/^[0-9a-f]{40,64}$/i.test(treeOid)) {
-    throw new StoreError(
-      "boundary-git-unavailable",
-      `git could not read the tree of commit ${commitOid} \u2014 the commit's content identity cannot be verified`
-    );
-  }
-  return { commitOid: commitOid.toLowerCase(), treeOid: treeOid.toLowerCase() };
-}
-function isResolvableRevision(commit) {
-  return /^[A-Za-z0-9][A-Za-z0-9._/~^@-]*$/.test(commit.trim());
-}
-function resolveCommitSubject(cwd, commit) {
-  if (typeof commit !== "string" || !isResolvableRevision(commit)) return null;
-  try {
-    const { commitOid, treeOid } = requireCommitTreeOid(cwd, commit.trim());
-    return { commitOid, subjectDigest: subjectTreeDigest(treeOid) };
-  } catch {
-    return null;
-  }
-}
-function insideResolvedRoot2(resolved, candidate) {
-  let real;
-  let realRoot;
-  try {
-    real = import_node_fs8.default.realpathSync(candidate);
-    realRoot = import_node_fs8.default.realpathSync(resolved.root);
-  } catch {
-    return false;
-  }
-  const root = import_node_path7.default.resolve(realRoot);
-  const target = import_node_path7.default.resolve(real);
-  return target === root || target.startsWith(`${root}${import_node_path7.default.sep}`);
-}
-function evidenceRootFor(resolved) {
-  return import_node_path7.default.join(resolved.root, EVIDENCE_DIR);
-}
-function recordsDirFor(resolved) {
-  return import_node_path7.default.join(evidenceRootFor(resolved), RECORDS_DIR);
-}
-function containedDir(resolved, dir, label) {
-  if (import_node_fs8.default.existsSync(dir)) {
-    if (!import_node_fs8.default.statSync(dir).isDirectory()) {
-      throw new StoreError("corrupt-state", `${dir} is not a directory`);
-    }
-    if (!insideResolvedRoot2(resolved, dir)) {
-      throw new StoreError("boundary-escape", `the ${label} under ${resolved.repoRelative ?? resolved.root} escapes the state root through a link`);
-    }
-  }
-  return dir;
-}
-function listRecordFiles2(recordsDir) {
-  if (!import_node_fs8.default.existsSync(recordsDir)) return [];
-  return import_node_fs8.default.readdirSync(recordsDir, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith(".json")).map((entry) => import_node_path7.default.join(recordsDir, entry.name)).sort();
-}
-function readRecordFile(file2) {
-  const parsed = readJsonFile(file2);
-  if (isPlainObject4(parsed) && parsed.schemaVersion !== void 0 && parsed.schemaVersion !== 1) {
-    throw new StoreError(
-      "unsupported-version",
-      `${file2} carries schemaVersion ${JSON.stringify(parsed.schemaVersion)}, expected 1 \u2014 upgrade the toolchain`
-    );
-  }
-  if (!validateEvidenceRecord(parsed)) {
-    throw new StoreError("corrupt-state", `${file2} failed evidence record validation`, { path: file2 });
-  }
-  const idFromName = import_node_path7.default.basename(file2, ".json");
-  if (parsed.evidenceId !== idFromName) {
-    throw new StoreError(
-      "corrupt-state",
-      `record in ${file2} binds evidence ${parsed.evidenceId}, expected ${idFromName} \u2014 a record file only ever carries its own id`
-    );
-  }
-  return parsed;
-}
-function scanRecords(resolved) {
-  const recordsDir = containedDir(resolved, recordsDirFor(resolved), "records dir");
-  return listRecordFiles2(recordsDir).map(readRecordFile);
-}
-function query(cwd, filter = {}, options2 = {}) {
-  const resolved = resolveStateRoot(cwd, options2);
-  const records = scanRecords(resolved);
-  return records.filter((record2) => {
-    if (filter.check !== void 0 && record2.check.ref !== filter.check) return false;
-    if (filter.claim !== void 0 && record2.claim.ref !== filter.claim) return false;
-    if (filter.outcome !== void 0 && record2.outcome !== filter.outcome) return false;
-    if (filter.retention !== void 0 && record2.retention !== filter.retention) return false;
-    if (filter.subjectKind !== void 0 && record2.subject.kind !== filter.subjectKind) return false;
-    if (filter.runId !== void 0 && record2.runId !== filter.runId) return false;
-    return true;
-  }).sort((a, b) => a.createdAt === b.createdAt ? a.evidenceId.localeCompare(b.evidenceId) : a.createdAt.localeCompare(b.createdAt));
-}
-
-// src/skills/lib/doc_repository.ts
-var import_node_fs9 = __toESM(require("node:fs"));
-var import_node_path9 = __toESM(require("node:path"));
-
-// src/skills/lib/doc_suite_utils.ts
-var import_gray_matter3 = __toESM(require_gray_matter());
-
-// src/skills/lib/doc_lifecycle.ts
-var SETTLED_STATUSES = {
-  ...Object.fromEntries(docTypes.map((type) => [type, new Set(configs[type].settledStatuses)])),
-  ...Object.fromEntries(Object.values(ephemeralConfigs).map((entry) => [entry.type, new Set(entry.settledStatuses)])),
-  ...Object.fromEntries(Object.values(legacyDocTypes).flatMap((entry) => [entry.type, ...entry.aliases].map((name) => [name, new Set(entry.settledStatuses)])))
-};
-var LIFECYCLE_TYPE_ALIASES = Object.fromEntries(
-  Object.values(legacyDocTypes).flatMap((entry) => entry.aliases.map((alias) => [alias, entry.type]))
-);
 
 // src/skills/lib/doc_ownership.ts
 var DOC_SUITE_MUTATORS = ["doc_maintenance", "scaffold_docs", "migrate_docs", "migrate_ids"];
@@ -38647,7 +36714,7 @@ var frontMatterSchema = external_exports.object({
 }).passthrough();
 function parseDoc(content3) {
   try {
-    const parsed = (0, import_gray_matter3.default)(content3);
+    const parsed = (0, import_gray_matter.default)(content3);
     return { data: parsed.data || {}, body: parsed.content, error: null };
   } catch (error62) {
     return { data: {}, body: content3, error: error62 instanceof Error ? error62.message : String(error62) };
@@ -38655,7 +36722,7 @@ function parseDoc(content3) {
 }
 
 // src/skills/lib/doc_repository.ts
-function compareStrings3(left, right) {
+function compareStrings(left, right) {
   return left.localeCompare(right);
 }
 var REQUIRED_FRONT_MATTER_FIELDS = [
@@ -38678,7 +36745,7 @@ function migrationOwnedDirs() {
     for (const dir of entry.formerDirs) dirs.add(normalizeDir(dir));
     for (const dir of entry.scopeDirs) dirs.add(normalizeDir(dir));
   }
-  return [...dirs].sort(compareStrings3);
+  return [...dirs].sort(compareStrings);
 }
 function contractForDocType(entry) {
   return {
@@ -38778,7 +36845,7 @@ async function extractMarkdownStructure(body, lineOffset = 0) {
   return { links, headings };
 }
 var SKIPPED_DIRS = /* @__PURE__ */ new Set([".git", "node_modules", ".pnpm-store"]);
-var EXTERNAL_REFERENCE2 = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
+var EXTERNAL_REFERENCE = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
 var WINDOWS_ABSOLUTE_PATH = /^[a-z]:[\\/]/i;
 var LOCALE_FILE_PATTERN = /^(.+)\.([a-z]{2})\.md$/i;
 function isWindowsAbsolutePath(value) {
@@ -38788,15 +36855,15 @@ function isExternalReference(value) {
   const trimmed = value.trim();
   if (isWindowsAbsolutePath(trimmed)) return false;
   if (parseClaimReference(trimmed)) return false;
-  return EXTERNAL_REFERENCE2.test(trimmed);
+  return EXTERNAL_REFERENCE.test(trimmed);
 }
 function walkMarkdownFiles(root) {
-  if (!import_node_fs9.default.existsSync(root) || !import_node_fs9.default.statSync(root).isDirectory()) return [];
+  if (!import_node_fs4.default.existsSync(root) || !import_node_fs4.default.statSync(root).isDirectory()) return [];
   const files = [];
   const visitDir = (dir) => {
-    const entries = import_node_fs9.default.readdirSync(dir, { withFileTypes: true }).sort((a, b) => compareStrings3(a.name, b.name));
+    const entries = import_node_fs4.default.readdirSync(dir, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name));
     for (const entry of entries) {
-      const full = import_node_path9.default.join(dir, entry.name);
+      const full = import_node_path4.default.join(dir, entry.name);
       if (entry.isDirectory()) {
         if (!SKIPPED_DIRS.has(entry.name)) visitDir(full);
       } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
@@ -38805,19 +36872,19 @@ function walkMarkdownFiles(root) {
     }
   };
   visitDir(root);
-  return files.sort(compareStrings3);
+  return files.sort(compareStrings);
 }
 function toRepoPath(cwd, absolute) {
-  return import_node_path9.default.relative(cwd, absolute).split(import_node_path9.default.sep).join("/");
+  return import_node_path4.default.relative(cwd, absolute).split(import_node_path4.default.sep).join("/");
 }
-function isUnderDir2(child, parent) {
+function isUnderDir(child, parent) {
   const c = normalizeDir(child);
   const p = normalizeDir(parent);
   return c === p || c.startsWith(`${p}/`);
 }
 function artifactKeyOf(repoPath) {
-  const dir = import_node_path9.default.posix.dirname(repoPath);
-  const base = import_node_path9.default.posix.basename(repoPath).replace(/\.md$/i, "");
+  const dir = import_node_path4.default.posix.dirname(repoPath);
+  const base = import_node_path4.default.posix.basename(repoPath).replace(/\.md$/i, "");
   const locale = /^(.+)\.[a-z]{2}$/i.exec(base);
   return `${dir}::${locale ? locale[1] : base}`;
 }
@@ -38833,13 +36900,13 @@ function groupByArtifact(group) {
 }
 function primaryDocumentOf(group) {
   const nonLocalized = group.filter(
-    (document3) => !LOCALE_FILE_PATTERN.test(import_node_path9.default.posix.basename(document3.path))
+    (document3) => !LOCALE_FILE_PATTERN.test(import_node_path4.default.posix.basename(document3.path))
   );
   const pool = nonLocalized.length > 0 ? nonLocalized : group;
-  return [...pool].sort((a, b) => compareStrings3(a.path, b.path))[0];
+  return [...pool].sort((a, b) => compareStrings(a.path, b.path))[0];
 }
 function artifactPrimaries(group) {
-  return [...groupByArtifact(group).values()].map(primaryDocumentOf).sort((a, b) => compareStrings3(a.path, b.path));
+  return [...groupByArtifact(group).values()].map(primaryDocumentOf).sort((a, b) => compareStrings(a.path, b.path));
 }
 function canonicalTypeMap() {
   const byDir = /* @__PURE__ */ new Map();
@@ -38851,11 +36918,11 @@ function canonicalTypeMap() {
       byDir.set(normalized, types);
     }
   }
-  return [...byDir.entries()].map(([dir, types]) => ({ dir, types: [...types].sort(compareStrings3) })).sort((a, b) => b.dir.length - a.dir.length || compareStrings3(a.dir, b.dir));
+  return [...byDir.entries()].map(([dir, types]) => ({ dir, types: [...types].sort(compareStrings) })).sort((a, b) => b.dir.length - a.dir.length || compareStrings(a.dir, b.dir));
 }
 function expectedTypesFor(repoPath, typeMap) {
-  const dir = normalizeDir(import_node_path9.default.posix.dirname(repoPath));
-  const match = typeMap.find((entry) => isUnderDir2(dir, entry.dir));
+  const dir = normalizeDir(import_node_path4.default.posix.dirname(repoPath));
+  const match = typeMap.find((entry) => isUnderDir(dir, entry.dir));
   return match ? match.types : [];
 }
 function extractRelations(data) {
@@ -38866,7 +36933,7 @@ function extractRelations(data) {
     if (nonReferenceRelationKeys.has(key)) continue;
     const items = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
     const values = items.filter((item) => typeof item === "string" && Boolean(item.trim())).map((item) => item.trim());
-    if (values.length > 0) result[key] = [...new Set(values)].sort(compareStrings3);
+    if (values.length > 0) result[key] = [...new Set(values)].sort(compareStrings);
   }
   return result;
 }
@@ -38875,8 +36942,8 @@ function stringField(data, field) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 function localeSiblingsFor(repoPath, siblingsByDir) {
-  const dir = import_node_path9.default.posix.dirname(repoPath);
-  const base = import_node_path9.default.posix.basename(repoPath);
+  const dir = import_node_path4.default.posix.dirname(repoPath);
+  const base = import_node_path4.default.posix.basename(repoPath);
   const peers = siblingsByDir.get(dir);
   if (!peers) return [];
   const localeMatch = LOCALE_FILE_PATTERN.exec(base);
@@ -38885,56 +36952,56 @@ function localeSiblingsFor(repoPath, siblingsByDir) {
     return peers.has(localeMatch[1] + ".md") ? [sibling] : [];
   }
   const stem = base.replace(/\.md$/i, "");
-  return [...peers].filter((peer) => LOCALE_FILE_PATTERN.test(peer) && peer.replace(LOCALE_FILE_PATTERN, "$1") === stem).map((peer) => `${dir === "." ? "" : `${dir}/`}${peer}`).sort(compareStrings3);
+  return [...peers].filter((peer) => LOCALE_FILE_PATTERN.test(peer) && peer.replace(LOCALE_FILE_PATTERN, "$1") === stem).map((peer) => `${dir === "." ? "" : `${dir}/`}${peer}`).sort(compareStrings);
 }
 function defaultScanRoots(cwd) {
   const roots = /* @__PURE__ */ new Set();
-  if (import_node_fs9.default.existsSync(import_node_path9.default.join(cwd, "docs"))) roots.add("docs");
+  if (import_node_fs4.default.existsSync(import_node_path4.default.join(cwd, "docs"))) roots.add("docs");
   for (const dir of managedDocDirs()) {
-    if (import_node_fs9.default.existsSync(import_node_path9.default.join(cwd, dir))) roots.add(dir);
+    if (import_node_fs4.default.existsSync(import_node_path4.default.join(cwd, dir))) roots.add(dir);
   }
-  return [...roots].sort(compareStrings3);
+  return [...roots].sort(compareStrings);
 }
 function pruneNestedRoots(roots) {
-  const sorted = [...new Set(roots.map((root) => normalizeDir(root)))].sort(compareStrings3);
-  return sorted.filter((root) => !sorted.some((other) => other !== root && isUnderDir2(root, other)));
+  const sorted = [...new Set(roots.map((root) => normalizeDir(root)))].sort(compareStrings);
+  return sorted.filter((root) => !sorted.some((other) => other !== root && isUnderDir(root, other)));
 }
 async function scanRepository(options2) {
-  const cwd = import_node_path9.default.resolve(options2.cwd);
-  const roots = pruneNestedRoots(options2.roots?.length ? options2.roots : defaultScanRoots(cwd)).filter((root) => isInsideRealpath(cwd, import_node_path9.default.join(cwd, root)));
+  const cwd = import_node_path4.default.resolve(options2.cwd);
+  const roots = pruneNestedRoots(options2.roots?.length ? options2.roots : defaultScanRoots(cwd)).filter((root) => isInsideRealpath(cwd, import_node_path4.default.join(cwd, root)));
   const typeMap = canonicalTypeMap();
   const absoluteFiles = /* @__PURE__ */ new Set();
   for (const root of roots) {
-    for (const file2 of walkMarkdownFiles(import_node_path9.default.join(cwd, root))) absoluteFiles.add(file2);
+    for (const file2 of walkMarkdownFiles(import_node_path4.default.join(cwd, root))) absoluteFiles.add(file2);
   }
   if (options2.includeTopLevelMarkdown !== false) {
-    for (const entry of import_node_fs9.default.readdirSync(cwd, { withFileTypes: true }).sort((a, b) => compareStrings3(a.name, b.name))) {
+    for (const entry of import_node_fs4.default.readdirSync(cwd, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name))) {
       if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
-        absoluteFiles.add(import_node_path9.default.join(cwd, entry.name));
+        absoluteFiles.add(import_node_path4.default.join(cwd, entry.name));
       }
     }
   }
   const siblingsByDir = /* @__PURE__ */ new Map();
   for (const absolute of absoluteFiles) {
     const repoPath = toRepoPath(cwd, absolute);
-    const dir = import_node_path9.default.posix.dirname(repoPath);
+    const dir = import_node_path4.default.posix.dirname(repoPath);
     const peers = siblingsByDir.get(dir) ?? /* @__PURE__ */ new Set();
-    peers.add(import_node_path9.default.posix.basename(repoPath));
+    peers.add(import_node_path4.default.posix.basename(repoPath));
     siblingsByDir.set(dir, peers);
   }
   const migrationDirs = migrationOwnedDirs();
   const files = [];
-  for (const absolute of [...absoluteFiles].sort(compareStrings3)) {
+  for (const absolute of [...absoluteFiles].sort(compareStrings)) {
     const repoPath = toRepoPath(cwd, absolute);
     const expectedTypes = expectedTypesFor(repoPath, typeMap);
     const canonical = expectedTypes.length > 0;
-    const docDirName = normalizeDir(import_node_path9.default.posix.dirname(repoPath));
-    const indexNamed = isIndexFileName(import_node_path9.default.posix.basename(repoPath));
-    const kind = canonical ? indexNamed ? "index" : "canonical" : migrationDirs.some((dir) => docDirName === dir || isUnderDir2(docDirName, dir)) ? indexNamed ? "index" : "legacy" : "unmanaged";
+    const docDirName = normalizeDir(import_node_path4.default.posix.dirname(repoPath));
+    const indexNamed = isIndexFileName(import_node_path4.default.posix.basename(repoPath));
+    const kind = canonical ? indexNamed ? "index" : "canonical" : migrationDirs.some((dir) => docDirName === dir || isUnderDir(docDirName, dir)) ? indexNamed ? "index" : "legacy" : "unmanaged";
     let content3 = "";
     let readError = null;
     try {
-      content3 = import_node_fs9.default.readFileSync(absolute, "utf8");
+      content3 = import_node_fs4.default.readFileSync(absolute, "utf8");
     } catch (error62) {
       readError = error62 instanceof Error ? error62.message : String(error62);
     }
@@ -38978,7 +37045,7 @@ async function scanRepository(options2) {
   }
   const insideRoot = (absolute) => isInside(cwd, absolute);
   const fileExistsInsideRoot = (absolute) => {
-    return isInsideCheckout(cwd, absolute) && import_node_fs9.default.existsSync(absolute) && import_node_fs9.default.statSync(absolute).isFile();
+    return isInsideCheckout(cwd, absolute) && import_node_fs4.default.existsSync(absolute) && import_node_fs4.default.statSync(absolute).isFile();
   };
   const splitTarget = (raw) => {
     const trimmed = raw.trim();
@@ -39001,10 +37068,10 @@ async function scanRepository(options2) {
       return { status: "resolved", path: self, fragment, document: self ? byPath.get(self) ?? null : null };
     }
     const docRelative = pathname.startsWith("./") || pathname.startsWith("../") || pathname === "." || pathname === "..";
-    const candidates = docRelative ? [from ? import_node_path9.default.resolve(import_node_path9.default.dirname(from.absolutePath), pathname) : null, import_node_path9.default.resolve(cwd, pathname)] : [import_node_path9.default.resolve(cwd, pathname), from ? import_node_path9.default.resolve(import_node_path9.default.dirname(from.absolutePath), pathname) : null];
-    if (import_node_path9.default.isAbsolute(pathname) || isWindowsAbsolutePath(pathname)) {
+    const candidates = docRelative ? [from ? import_node_path4.default.resolve(import_node_path4.default.dirname(from.absolutePath), pathname) : null, import_node_path4.default.resolve(cwd, pathname)] : [import_node_path4.default.resolve(cwd, pathname), from ? import_node_path4.default.resolve(import_node_path4.default.dirname(from.absolutePath), pathname) : null];
+    if (import_node_path4.default.isAbsolute(pathname) || isWindowsAbsolutePath(pathname)) {
       candidates.length = 0;
-      candidates.push(import_node_path9.default.resolve(pathname));
+      candidates.push(import_node_path4.default.resolve(pathname));
     }
     let sawEscaped = false;
     for (const candidate of candidates) {
@@ -39069,7 +37136,7 @@ async function scanRepository(options2) {
     }
   }
   for (const document3 of files) {
-    document3.indexMembership.sort(compareStrings3);
+    document3.indexMembership.sort(compareStrings);
   }
   const repository = {
     root: cwd,
@@ -39097,10 +37164,266 @@ async function scanRepository(options2) {
       return artifactKeyOf(aPath) === artifactKeyOf(bPath);
     },
     duplicateIds() {
-      return [...byId.entries()].filter(([, group]) => groupByArtifact(group).size > 1).map(([id, group]) => ({ id, paths: group.map((document3) => document3.path).sort(compareStrings3) })).sort((a, b) => compareStrings3(a.id, b.id));
+      return [...byId.entries()].filter(([, group]) => groupByArtifact(group).size > 1).map(([id, group]) => ({ id, paths: group.map((document3) => document3.path).sort(compareStrings) })).sort((a, b) => compareStrings(a.id, b.id));
     }
   };
   return repository;
+}
+
+// src/skills/lib/verification_checks.ts
+var import_node_crypto = require("node:crypto");
+var CHECK_KEY_PATTERN = /^CHK-\d+$/;
+var CHECK_MARKER_PATTERN = /<!--\s*check\s*:(.*?)-->/g;
+var VERIFICATION_METHODS = [
+  "unit",
+  "integration",
+  "e2e",
+  "property",
+  "static",
+  "model-checking",
+  "formal-proof",
+  "runtime-monitoring",
+  "manual-review"
+];
+var METHOD_CRITERIA_FIELDS = {
+  unit: "expect",
+  integration: "expect",
+  e2e: "expect",
+  property: "invariant",
+  static: "rule",
+  "model-checking": "property",
+  "formal-proof": "theorem",
+  "runtime-monitoring": "signal",
+  "manual-review": "checklistItem"
+};
+function isPlainObject4(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function nonEmptyString(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+function stringList(value) {
+  if (!Array.isArray(value)) return null;
+  const items = value.filter((item) => typeof item === "string");
+  if (items.length !== value.length) return null;
+  return items.map((item) => item.trim()).filter((item) => item.length > 0);
+}
+function checkLabel(index2, id) {
+  return typeof id === "string" && id ? `check ${id}` : `checks[${index2}]`;
+}
+function validateCheckEntry(entry, index2, allowMissingId) {
+  const issues = [];
+  if (!isPlainObject4(entry)) {
+    issues.push({
+      code: "malformed-check-entry",
+      index: index2,
+      target: null,
+      message: `checks[${index2}] is not a verification check object (expected id/target/method/implementation/preconditions/passCriteria/limitations/required)`
+    });
+    return { check: null, issues };
+  }
+  const missing = (field) => {
+    issues.push({
+      code: "missing-check-field",
+      index: index2,
+      target: field,
+      message: `${checkLabel(index2, entry.id)} is missing required check field: ${field}`
+    });
+  };
+  let id = null;
+  if (entry.id === void 0 || entry.id === null) {
+    if (!allowMissingId) missing("id");
+  } else if (!nonEmptyString(entry.id) || !CHECK_KEY_PATTERN.test(entry.id.trim())) {
+    issues.push({
+      code: "invalid-check-id",
+      index: index2,
+      target: String(entry.id),
+      message: `checks[${index2}].id must be a stable check key matching CHK-<digits> (e.g. CHK-01), got ${JSON.stringify(entry.id)}`
+    });
+  } else {
+    id = entry.id.trim();
+  }
+  let target = null;
+  if (!nonEmptyString(entry.target)) {
+    missing("target");
+  } else if (parseClaimReference(entry.target.trim()) === null) {
+    issues.push({
+      code: "invalid-check-target",
+      index: index2,
+      target: entry.target.trim(),
+      message: `checks[${index2}].target must be a qualified claim reference <document-id>::<KEY> (e.g. SPEC-<id>::R-01), got ${JSON.stringify(entry.target)}`
+    });
+  } else {
+    target = entry.target.trim();
+  }
+  let method = null;
+  if (!nonEmptyString(entry.method)) {
+    missing("method");
+  } else if (!VERIFICATION_METHODS.includes(entry.method.trim())) {
+    issues.push({
+      code: "invalid-check-method",
+      index: index2,
+      target: entry.method.trim(),
+      message: `checks[${index2}].method must be one of: ${VERIFICATION_METHODS.join(", ")} \u2014 got ${JSON.stringify(entry.method)}`
+    });
+  } else {
+    method = entry.method.trim();
+  }
+  let implementation = null;
+  if (!nonEmptyString(entry.implementation)) {
+    missing("implementation");
+  } else {
+    implementation = entry.implementation.trim();
+  }
+  let preconditions = null;
+  if (!Array.isArray(entry.preconditions)) {
+    missing("preconditions");
+  } else {
+    preconditions = stringList(entry.preconditions);
+    if (preconditions === null) {
+      issues.push({
+        code: "missing-check-field",
+        index: index2,
+        target: "preconditions",
+        message: `${checkLabel(index2, entry.id)} field preconditions must be a list of strings`
+      });
+    }
+  }
+  let limitations = null;
+  if (!Array.isArray(entry.limitations)) {
+    missing("limitations");
+  } else {
+    limitations = stringList(entry.limitations);
+    if (limitations === null) {
+      issues.push({
+        code: "missing-check-field",
+        index: index2,
+        target: "limitations",
+        message: `${checkLabel(index2, entry.id)} field limitations must be a list of strings`
+      });
+    }
+  }
+  let required2 = null;
+  if (typeof entry.required !== "boolean") {
+    missing("required");
+  } else {
+    required2 = entry.required;
+  }
+  let passCriteria = null;
+  const criteria = entry.passCriteria;
+  if (!isPlainObject4(criteria)) {
+    missing("passCriteria");
+  } else if (typeof criteria.kind !== "string" || !VERIFICATION_METHODS.includes(criteria.kind)) {
+    issues.push({
+      code: "check-criteria-mismatch",
+      index: index2,
+      target: typeof criteria.kind === "string" ? criteria.kind : null,
+      message: `checks[${index2}].passCriteria.kind must be one of: ${VERIFICATION_METHODS.join(", ")}`
+    });
+  } else if (method !== null && criteria.kind !== method) {
+    issues.push({
+      code: "check-criteria-mismatch",
+      index: index2,
+      target: String(criteria.kind),
+      message: `checks[${index2}].passCriteria.kind "${String(criteria.kind)}" contradicts method "${method}" \u2014 the criteria variant must match the declared method`
+    });
+  } else {
+    const kind = criteria.kind;
+    const field = METHOD_CRITERIA_FIELDS[kind];
+    if (!nonEmptyString(criteria[field])) {
+      issues.push({
+        code: "check-criteria-mismatch",
+        index: index2,
+        target: field,
+        message: `checks[${index2}].passCriteria for method ${kind} requires a non-empty "${field}" criterion`
+      });
+    } else {
+      passCriteria = criteria;
+    }
+  }
+  if (required2 === true && preconditions !== null && preconditions.length === 0) {
+    issues.push({
+      code: "incomplete-required-check",
+      index: index2,
+      target: id,
+      message: `${checkLabel(index2, entry.id)} is marked required but declares no preconditions \u2014 a required check must state when it applies so assessment can judge applicability`
+    });
+  }
+  if (issues.length > 0) return { check: null, issues };
+  return {
+    check: {
+      id: id ?? "",
+      target,
+      method,
+      implementation,
+      preconditions,
+      passCriteria,
+      limitations,
+      required: required2
+    },
+    issues
+  };
+}
+function parseVerificationChecks(value) {
+  const issues = [];
+  if (value === void 0 || value === null) return { checks: [], issues };
+  if (!Array.isArray(value)) {
+    issues.push({
+      code: "malformed-checks",
+      index: null,
+      target: null,
+      message: "checks must be a list of VerificationCheckV1 entries"
+    });
+    return { checks: [], issues };
+  }
+  const checks = [];
+  const seen = /* @__PURE__ */ new Map();
+  for (let index2 = 0; index2 < value.length; index2 += 1) {
+    const { check: check2, issues: entryIssues } = validateCheckEntry(value[index2], index2, false);
+    issues.push(...entryIssues);
+    if (!check2) continue;
+    const first = seen.get(check2.id);
+    if (first !== void 0) {
+      issues.push({
+        code: "duplicate-check",
+        index: index2,
+        target: check2.id,
+        message: `Check id ${check2.id} is declared more than once (first at checks[${first}]) \u2014 check ids must be unique and stable within the document`
+      });
+      continue;
+    }
+    seen.set(check2.id, index2);
+    checks.push(check2);
+  }
+  return { checks, issues };
+}
+function canonicalizeValue(value) {
+  if (Array.isArray(value)) return value.map(canonicalizeValue);
+  if (isPlainObject4(value)) {
+    return Object.fromEntries(
+      Object.keys(value).sort().map((key) => [key, canonicalizeValue(value[key])])
+    );
+  }
+  return value;
+}
+function canonicalCheck(check2) {
+  return {
+    id: check2.id,
+    target: check2.target,
+    method: check2.method,
+    implementation: check2.implementation,
+    preconditions: check2.preconditions,
+    passCriteria: canonicalizeValue(check2.passCriteria),
+    limitations: check2.limitations,
+    required: check2.required
+  };
+}
+function checkDesignRevision(check2) {
+  const canonical = JSON.stringify(canonicalCheck(check2));
+  return `sha256:${(0, import_node_crypto.createHash)("sha256").update(canonical, "utf8").digest("hex")}`;
+}
+function isVerificationMethod(value) {
+  return VERIFICATION_METHODS.includes(value);
 }
 
 // src/skills/lib/knowledge_graph.ts
@@ -39235,17 +37558,17 @@ function unionRelations(documents) {
     }
   }
   return Object.fromEntries(
-    Object.entries(merged).map(([field, values]) => [field, [...values].sort(compareStrings3)])
+    Object.entries(merged).map(([field, values]) => [field, [...values].sort(compareStrings)])
   );
 }
-function issueCompare3(left, right) {
-  return compareStrings3(left.path, right.path) || (left.line ?? 0) - (right.line ?? 0) || compareStrings3(left.code, right.code) || compareStrings3(left.target ?? "", right.target ?? "") || compareStrings3(left.message, right.message);
+function issueCompare(left, right) {
+  return compareStrings(left.path, right.path) || (left.line ?? 0) - (right.line ?? 0) || compareStrings(left.code, right.code) || compareStrings(left.target ?? "", right.target ?? "") || compareStrings(left.message, right.message);
 }
-function edgeCompare2(left, right) {
-  return compareStrings3(left.from.path, right.from.path) || compareStrings3(left.relation, right.relation) || compareStrings3(left.target, right.target);
+function edgeCompare(left, right) {
+  return compareStrings(left.from.path, right.from.path) || compareStrings(left.relation, right.relation) || compareStrings(left.target, right.target);
 }
 function derivedEdgeCompare(left, right) {
-  return compareStrings3(left.from.path, right.from.path) || compareStrings3(left.relation, right.relation) || compareStrings3(left.target, right.target);
+  return compareStrings(left.from.path, right.from.path) || compareStrings(left.relation, right.relation) || compareStrings(left.target, right.target);
 }
 function relationCycles(nodes, edges) {
   const nodePaths = new Set(nodes.map((node3) => node3.path));
@@ -39270,7 +37593,7 @@ function relationCycles(nodes, edges) {
     stack.push(root);
     onStack.add(root);
     const callStack = [
-      { node: root, successors: [...adjacency.get(root) ?? []].sort(compareStrings3), next: 0 }
+      { node: root, successors: [...adjacency.get(root) ?? []].sort(compareStrings), next: 0 }
     ];
     while (callStack.length > 0) {
       const frame = callStack[callStack.length - 1];
@@ -39283,7 +37606,7 @@ function relationCycles(nodes, edges) {
           counter += 1;
           stack.push(w);
           onStack.add(w);
-          callStack.push({ node: w, successors: [...adjacency.get(w) ?? []].sort(compareStrings3), next: 0 });
+          callStack.push({ node: w, successors: [...adjacency.get(w) ?? []].sort(compareStrings), next: 0 });
         } else if (onStack.has(w)) {
           lowLink.set(frame.node, Math.min(lowLink.get(frame.node), indexOf.get(w)));
         }
@@ -39303,14 +37626,14 @@ function relationCycles(nodes, edges) {
           onStack.delete(member);
           component.push(member);
         } while (member !== frame.node);
-        if (component.length > 1) components.push(component.sort(compareStrings3));
+        if (component.length > 1) components.push(component.sort(compareStrings));
       }
     }
   };
-  for (const nodePath of [...nodePaths].sort(compareStrings3)) {
+  for (const nodePath of [...nodePaths].sort(compareStrings)) {
     if (!indexOf.has(nodePath)) strongConnect(nodePath);
   }
-  return components.sort((a, b) => compareStrings3(a[0], b[0]));
+  return components.sort((a, b) => compareStrings(a[0], b[0]));
 }
 function projectKnowledgeGraph(model) {
   const issues = [];
@@ -39318,7 +37641,7 @@ function projectKnowledgeGraph(model) {
   const nodes = [];
   const nodeByKey = /* @__PURE__ */ new Map();
   const claimsByKey = /* @__PURE__ */ new Map();
-  for (const [key, group] of [...groups.entries()].sort((a, b) => compareStrings3(a[0], b[0]))) {
+  for (const [key, group] of [...groups.entries()].sort((a, b) => compareStrings(a[0], b[0]))) {
     const primary = artifactPrimaries(group)[0];
     const nodeClaims = [];
     const claimKeys = /* @__PURE__ */ new Map();
@@ -39487,16 +37810,16 @@ function projectKnowledgeGraph(model) {
       path: primary.path,
       id: primary.id,
       type: primary.type ?? "",
-      paths: group.map((document3) => document3.path).sort(compareStrings3),
-      claims: nodeClaims.sort((a, b) => compareStrings3(a.key, b.key) || a.line - b.line),
-      checks: nodeChecks.sort((a, b) => compareStrings3(a.id, b.id))
+      paths: group.map((document3) => document3.path).sort(compareStrings),
+      claims: nodeClaims.sort((a, b) => compareStrings(a.key, b.key) || a.line - b.line),
+      checks: nodeChecks.sort((a, b) => compareStrings(a.id, b.id))
     };
     nodes.push(node3);
     nodeByKey.set(key, node3);
   }
-  nodes.sort((a, b) => compareStrings3(a.path, b.path));
+  nodes.sort((a, b) => compareStrings(a.path, b.path));
   for (const document3 of model.legacyDocuments) {
-    for (const field of Object.keys(document3.relations).sort(compareStrings3)) {
+    for (const field of Object.keys(document3.relations).sort(compareStrings)) {
       if (PROVENANCE_RELATION_KEYS.includes(field)) continue;
       if (nonReferenceRelationKeys.has(field)) continue;
       issues.push({
@@ -39509,12 +37832,12 @@ function projectKnowledgeGraph(model) {
     }
   }
   const edges = [];
-  for (const [key, group] of [...groups.entries()].sort((a, b) => compareStrings3(a[0], b[0]))) {
+  for (const [key, group] of [...groups.entries()].sort((a, b) => compareStrings(a[0], b[0]))) {
     const node3 = nodeByKey.get(key);
     const primary = artifactPrimaries(group)[0];
     const declared = declaredRelationFields(node3.type);
     const relations = unionRelations(group);
-    for (const [field, targets] of Object.entries(relations).sort((a, b) => compareStrings3(a[0], b[0]))) {
+    for (const [field, targets] of Object.entries(relations).sort((a, b) => compareStrings(a[0], b[0]))) {
       if (PROVENANCE_RELATION_KEYS.includes(field)) continue;
       if (nonReferenceRelationKeys.has(field)) continue;
       if (!V1_FIELDS.has(field)) {
@@ -39523,7 +37846,7 @@ function projectKnowledgeGraph(model) {
           path: node3.path,
           line: null,
           target: field,
-          message: `relations.${field} is outside the Knowledge Relations v1 stored vocabulary (stored forward set: ${[...V1_FIELDS].sort(compareStrings3).join(", ")})`
+          message: `relations.${field} is outside the Knowledge Relations v1 stored vocabulary (stored forward set: ${[...V1_FIELDS].sort(compareStrings).join(", ")})`
         });
         continue;
       }
@@ -39534,7 +37857,7 @@ function projectKnowledgeGraph(model) {
           path: node3.path,
           line: null,
           target: field,
-          message: `relations.${field} is a Knowledge Relations v1 field but is not declared for type ${node3.type || "unknown"} (declared: ${[...declared.keys()].sort(compareStrings3).join(", ") || "none"})`
+          message: `relations.${field} is a Knowledge Relations v1 field but is not declared for type ${node3.type || "unknown"} (declared: ${[...declared.keys()].sort(compareStrings).join(", ") || "none"})`
         });
         continue;
       }
@@ -39864,15 +38187,1246 @@ function projectKnowledgeGraph(model) {
       });
     }
   }
-  edges.sort(edgeCompare2);
+  edges.sort(edgeCompare);
   derivedEdges.sort(derivedEdgeCompare);
-  checkEdges.sort((left, right) => compareStrings3(left.from.path, right.from.path) || compareStrings3(left.check, right.check));
-  issues.sort(issueCompare3);
+  checkEdges.sort((left, right) => compareStrings(left.from.path, right.from.path) || compareStrings(left.check, right.check));
+  issues.sort(issueCompare);
   return { nodes, edges, derivedEdges, checkEdges, issues };
 }
 async function scanKnowledgeGraph(options2) {
   const model = await scanRepository(options2);
   return projectKnowledgeGraph(model);
+}
+
+// src/skills/lib/execution_store/store.ts
+var import_node_crypto2 = __toESM(require("node:crypto"));
+var import_node_fs7 = __toESM(require("node:fs"));
+var import_node_path7 = __toESM(require("node:path"));
+
+// src/skills/lib/execution_store/atomic.ts
+var import_node_fs5 = __toESM(require("node:fs"));
+var StoreError = class extends Error {
+  code;
+  detail;
+  constructor(code, message, detail) {
+    super(message);
+    this.name = "StoreError";
+    this.code = code;
+    this.detail = detail;
+  }
+};
+function isStoreTmpFile(name) {
+  return /\.tmp-\d+-\d+$/.test(name);
+}
+function readJsonFile(file2) {
+  let raw;
+  try {
+    raw = import_node_fs5.default.readFileSync(file2, "utf8");
+  } catch (error62) {
+    throw new StoreError(
+      "state-unreadable",
+      `cannot read ${file2}: ${error62 instanceof Error ? error62.message : String(error62)}`
+    );
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (error62) {
+    throw new StoreError(
+      "corrupt-state",
+      `${file2} is not valid JSON \u2014 the store never adopts a partial write: ${error62 instanceof Error ? error62.message : String(error62)}`,
+      { path: file2 }
+    );
+  }
+}
+function readLockRecord(lockFile) {
+  try {
+    const parsed = JSON.parse(import_node_fs5.default.readFileSync(lockFile, "utf8"));
+    if (typeof parsed.pid === "number" && typeof parsed.hostname === "string") {
+      return { pid: parsed.pid, hostname: parsed.hostname, acquiredAt: String(parsed.acquiredAt ?? "") };
+    }
+  } catch {
+  }
+  return null;
+}
+
+// src/skills/lib/execution_store/boundary.ts
+var import_node_path6 = __toESM(require("node:path"));
+
+// src/skills/lib/schema_preflight.ts
+var import_node_fs6 = __toESM(require("node:fs"));
+var import_node_path5 = __toESM(require("node:path"));
+var import_gray_matter2 = __toESM(require_gray_matter());
+var DOC_DRIVEN_DEV_DIR = "docs/.doc-driven-dev";
+var SCHEMA_MANIFEST_PATH = `${DOC_DRIVEN_DEV_DIR}/schema.json`;
+var MIGRATION_JOURNAL_PATH = `${DOC_DRIVEN_DEV_DIR}/migration.journal.json`;
+var EXECUTION_STATE_ROOT = ".apm/state/doc-driven-dev";
+var MANIFEST_SCHEMA_VERSION = 1;
+var EVIDENCE_TMP_PATTERN = /\.tmp-\d+-\d+$/;
+var EXPECTED_COMPONENT_VERSIONS = {
+  documentRegistry: 3,
+  knowledgeRelations: 1,
+  verificationDesign: 1,
+  evidenceRecord: 1,
+  graphDefinition: 3
+};
+var EXECUTION_RUN_SCHEMA_VERSION = 1;
+var SCHEMA_PREFLIGHT_EXIT_CODE = 2;
+var EXECUTION_BOUND_TYPES = new Set(executionBoundTypeNames());
+var KNOWLEDGE_RELATIONS_V1 = new Set(knowledgeRelationFields());
+var MANIFEST_DIR_ALLOWED_FILES = /* @__PURE__ */ new Set([
+  "schema.json",
+  "migration.journal.json"
+]);
+function toRepoRelative(cwd, absolute) {
+  return import_node_path5.default.relative(import_node_path5.default.resolve(cwd), absolute).split(import_node_path5.default.sep).join("/");
+}
+function isUnderDir2(relPath, dir) {
+  return relPath === dir || relPath.startsWith(`${dir}/`);
+}
+function isPlainObject5(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function managedRootAliases() {
+  return managedDocDirs().filter((dir) => !dir.startsWith("docs/"));
+}
+function walkTree(cwd, relRoot, visit3, onEscape) {
+  const absRoot = import_node_path5.default.resolve(cwd, relRoot);
+  if (!import_node_fs6.default.existsSync(absRoot) || !import_node_fs6.default.statSync(absRoot).isDirectory()) return false;
+  if (!isInsideCheckout(cwd, absRoot)) return false;
+  const stack = [absRoot];
+  while (stack.length > 0) {
+    const dir = stack.pop();
+    let entries;
+    try {
+      entries = import_node_fs6.default.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const abs = import_node_path5.default.join(dir, entry.name);
+      const rel = toRepoRelative(cwd, abs);
+      if (entry.isDirectory()) {
+        if (!isInsideCheckout(cwd, abs)) {
+          onEscape?.(rel, "dir");
+          continue;
+        }
+        visit3(rel, true);
+        stack.push(abs);
+      } else if (entry.isFile() || entry.isSymbolicLink()) {
+        if (!isInsideCheckout(cwd, abs)) {
+          onEscape?.(rel, "entry");
+          continue;
+        }
+        visit3(rel, false);
+      }
+    }
+  }
+  return true;
+}
+function relationIssues(relPath, relations) {
+  const scoped = [];
+  if (relations === void 0) return scoped;
+  if (!isPlainObject5(relations)) {
+    scoped.push({
+      reason: "legacy-relations",
+      path: relPath,
+      detail: "relations: is not a map of relation keys to target lists"
+    });
+    return scoped;
+  }
+  for (const [key, value] of Object.entries(relations)) {
+    if (nonReferenceRelationKeys.has(key) || PROVENANCE_RELATION_KEYS.includes(key)) continue;
+    const populated = typeof value === "string" ? value.trim() !== "" : Array.isArray(value) && value.length > 0;
+    const wellFormed = typeof value === "string" || Array.isArray(value) && value.every((item) => typeof item === "string");
+    if (!wellFormed) {
+      scoped.push({
+        reason: "legacy-relations",
+        path: relPath,
+        detail: `relations.${key} is not a string or list of strings`
+      });
+      continue;
+    }
+    if (!populated) continue;
+    if (!KNOWLEDGE_RELATIONS_V1.has(key)) {
+      scoped.push({
+        reason: "legacy-relations",
+        path: relPath,
+        detail: `relations.${key} is outside the Knowledge Relations v1 vocabulary (stored forward set: ${[...KNOWLEDGE_RELATIONS_V1].join(", ")})`
+      });
+    }
+  }
+  return scoped;
+}
+function scanDocuments(cwd) {
+  const scan = {
+    issues: [],
+    manifestScopedIssues: [],
+    canonicalDocs: 0,
+    executionDocs: 0,
+    unmanagedDocs: 0
+  };
+  const visitMarkdown = (rel) => {
+    const abs = import_node_path5.default.resolve(cwd, rel);
+    let raw;
+    try {
+      raw = import_node_fs6.default.readFileSync(abs, "utf8");
+    } catch {
+      return;
+    }
+    let data = {};
+    let parsed = true;
+    try {
+      const result = (0, import_gray_matter2.default)(raw, {});
+      data = isPlainObject5(result.data) ? result.data : {};
+    } catch {
+      parsed = false;
+    }
+    const type = parsed && typeof data.type === "string" ? data.type : null;
+    if (type === null) {
+      scan.unmanagedDocs += 1;
+      return;
+    }
+    scan.canonicalDocs += 1;
+    if (EXECUTION_BOUND_TYPES.has(type)) {
+      scan.executionDocs += 1;
+      scan.manifestScopedIssues.push({
+        reason: "legacy-execution-doc",
+        path: rel,
+        detail: `type: ${type} has no durable Git form under Document Registry 3 (execution/verification artifacts live outside Git)`
+      });
+    }
+    if (parsed) {
+      scan.manifestScopedIssues.push(...relationIssues(rel, data.relations));
+    }
+  };
+  const visitDocsTree = (rel) => {
+    if (isUnderDir2(rel, DOC_DRIVEN_DEV_DIR)) return;
+    if (rel.endsWith(".md") && !isIndexFileName(import_node_path5.default.basename(rel))) {
+      visitMarkdown(rel);
+      return;
+    }
+    if (isUnderDir2(rel, "docs/impl")) {
+      scan.manifestScopedIssues.push({
+        reason: "legacy-execution-doc",
+        path: rel,
+        detail: `execution artifact under docs/impl has no durable Git form under Document Registry 3`
+      });
+    }
+  };
+  const roots = ["docs", ...managedRootAliases()];
+  const walked = /* @__PURE__ */ new Set();
+  for (const root of roots) {
+    const abs = import_node_path5.default.resolve(cwd, root);
+    let key = abs;
+    try {
+      key = import_node_fs6.default.realpathSync(abs);
+    } catch {
+    }
+    if (walked.has(key)) continue;
+    walked.add(key);
+    walkTree(cwd, root, (rel, isDir) => {
+      if (isDir) return;
+      if (root === "docs") visitDocsTree(rel);
+      else visitMarkdown(rel);
+    });
+  }
+  return scan;
+}
+function scanManifestDir(cwd, issues) {
+  const abs = import_node_path5.default.resolve(cwd, DOC_DRIVEN_DEV_DIR);
+  if (!import_node_fs6.default.existsSync(abs)) return;
+  const walked = walkTree(cwd, DOC_DRIVEN_DEV_DIR, (rel, isDir) => {
+    const name = import_node_path5.default.basename(rel);
+    if (isDir) {
+      if (rel !== DOC_DRIVEN_DEV_DIR) {
+        issues.push({
+          reason: "legacy-state-file",
+          path: rel,
+          detail: `unaccounted-for directory inside ${DOC_DRIVEN_DEV_DIR}`
+        });
+      }
+      return;
+    }
+    if (MANIFEST_DIR_ALLOWED_FILES.has(name)) return;
+    if (/\.ya?ml$/i.test(name)) {
+      let legacy = false;
+      try {
+        const parsed = load(import_node_fs6.default.readFileSync(import_node_path5.default.resolve(cwd, rel), "utf8"));
+        if (isPlainObject5(parsed)) {
+          const version2 = parsed.schemaVersion;
+          legacy = typeof version2 === "number" && version2 < EXPECTED_COMPONENT_VERSIONS.graphDefinition || "nodes" in parsed && "edges" in parsed;
+        }
+      } catch {
+      }
+      issues.push({
+        reason: legacy ? "legacy-graph-state" : "legacy-state-file",
+        path: rel,
+        detail: legacy ? `graph/state YAML inside ${DOC_DRIVEN_DEV_DIR} predates Graph Definition ${EXPECTED_COMPONENT_VERSIONS.graphDefinition}` : `unaccounted-for file inside ${DOC_DRIVEN_DEV_DIR}`
+      });
+      return;
+    }
+    issues.push({
+      reason: "legacy-state-file",
+      path: rel,
+      detail: `unaccounted-for file inside ${DOC_DRIVEN_DEV_DIR}`
+    });
+  }, (rel) => {
+    issues.push({
+      reason: "legacy-state-file",
+      path: rel,
+      detail: `entry inside ${DOC_DRIVEN_DEV_DIR} escapes the checkout through a link`
+    });
+  });
+  if (!walked) {
+    let directory = false;
+    try {
+      directory = import_node_fs6.default.statSync(abs).isDirectory();
+    } catch {
+    }
+    issues.push({
+      reason: "scope-escape",
+      path: DOC_DRIVEN_DEV_DIR,
+      detail: directory ? `${DOC_DRIVEN_DEV_DIR} escapes the checkout through a link; the manifest boundary cannot be trusted` : `${DOC_DRIVEN_DEV_DIR} is not a directory; the manifest boundary cannot be verified`
+    });
+  }
+}
+function scanExecutionState(cwd, issues) {
+  const abs = import_node_path5.default.resolve(cwd, EXECUTION_STATE_ROOT);
+  if (!import_node_fs6.default.existsSync(abs)) return;
+  const marker = (rel, detail) => {
+    issues.push({ reason: "legacy-execution-state", path: rel, detail });
+  };
+  const walked = walkTree(cwd, EXECUTION_STATE_ROOT, (rel, isDir) => {
+    const relUnderRoot = rel.slice(EXECUTION_STATE_ROOT.length).replace(/^\/+/, "");
+    const segments = relUnderRoot.split("/").filter(Boolean);
+    if (isDir) {
+      if (segments.length === 0) return;
+      if (segments[0] === "runs") return;
+      if (segments[0] === "evidence" && (segments.length === 1 || segments.length === 2 && segments[1] === "records")) {
+        return;
+      }
+      marker(rel, `unaccounted-for directory inside ${EXECUTION_STATE_ROOT}`);
+      return;
+    }
+    if (segments[0] === "evidence") {
+      const name2 = segments[segments.length - 1];
+      if (!EVIDENCE_TMP_PATTERN.test(name2)) {
+        const declared = segments.length === 2 && (segments[1] === "manifest.json" || segments[1] === "index.json") || segments.length === 3 && segments[1] === "records" && name2.endsWith(".json");
+        if (!declared) {
+          marker(rel, `content outside the evidence layout inside ${EXECUTION_STATE_ROOT}`);
+          return;
+        }
+      }
+      if (segments.length === 2 && segments[1] === "manifest.json") {
+        let version2;
+        try {
+          version2 = JSON.parse(import_node_fs6.default.readFileSync(import_node_path5.default.resolve(cwd, rel), "utf8")).schemaVersion;
+        } catch {
+          version2 = null;
+        }
+        if (version2 !== 1) {
+          marker(rel, `evidence manifest schemaVersion is ${JSON.stringify(version2)}, expected 1`);
+        }
+      }
+      return;
+    }
+    if (segments[0] !== "runs" || segments.length < 3) {
+      marker(rel, `content outside runs/<run-id>/ inside ${EXECUTION_STATE_ROOT}`);
+      return;
+    }
+    const name = segments[segments.length - 1];
+    if (/^(run|manifest|run\.manifest|run-manifest)\.json$/i.test(name)) {
+      let version2;
+      try {
+        version2 = JSON.parse(import_node_fs6.default.readFileSync(import_node_path5.default.resolve(cwd, rel), "utf8")).schemaVersion;
+      } catch {
+        version2 = null;
+      }
+      if (version2 !== EXECUTION_RUN_SCHEMA_VERSION) {
+        marker(rel, `run manifest schemaVersion is ${JSON.stringify(version2)}, expected ${EXECUTION_RUN_SCHEMA_VERSION}`);
+      }
+    }
+  }, (rel) => {
+    marker(rel, `entry inside ${EXECUTION_STATE_ROOT} escapes the checkout through a link`);
+  });
+  if (!walked) {
+    let directory = false;
+    try {
+      directory = import_node_fs6.default.statSync(abs).isDirectory();
+    } catch {
+    }
+    issues.push({
+      reason: "scope-escape",
+      path: EXECUTION_STATE_ROOT,
+      detail: directory ? `${EXECUTION_STATE_ROOT} escapes the checkout through a link; execution state cannot be assessed` : `${EXECUTION_STATE_ROOT} is not a directory; execution state cannot be assessed`
+    });
+  }
+}
+function readManifest(cwd) {
+  const rel = SCHEMA_MANIFEST_PATH;
+  const abs = import_node_path5.default.resolve(cwd, rel);
+  if (!import_node_fs6.default.existsSync(abs)) return { state: "missing" };
+  if (!isInsideCheckout(cwd, abs)) return { state: "escaped" };
+  let raw;
+  try {
+    raw = import_node_fs6.default.readFileSync(abs, "utf8");
+  } catch (error62) {
+    return { state: "unreadable", detail: error62 instanceof Error ? error62.message : String(error62) };
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error62) {
+    return { state: "malformed", detail: `schema.json is not valid JSON: ${error62 instanceof Error ? error62.message : String(error62)}` };
+  }
+  if (!isPlainObject5(parsed)) {
+    return { state: "malformed", detail: "schema.json must be a JSON object" };
+  }
+  const versionIssues = [];
+  const schemaVersion = parsed.schemaVersion;
+  if (!Number.isInteger(schemaVersion) || schemaVersion <= 0) {
+    return { state: "malformed", detail: `schemaVersion must be a positive integer, got ${JSON.stringify(schemaVersion)}` };
+  }
+  if (schemaVersion > MANIFEST_SCHEMA_VERSION) {
+    versionIssues.push({
+      reason: "schema-version-unsupported",
+      path: rel,
+      detail: `manifest schemaVersion ${schemaVersion} is newer than supported ${MANIFEST_SCHEMA_VERSION} \u2014 upgrade the doc-driven-dev toolchain`
+    });
+  }
+  const declared = { schemaVersion };
+  for (const [key, expected] of Object.entries(EXPECTED_COMPONENT_VERSIONS)) {
+    const value = parsed[key];
+    if (value === void 0) {
+      return { state: "malformed", detail: `missing component version: ${key}` };
+    }
+    if (!Number.isInteger(value) || value <= 0) {
+      return { state: "malformed", detail: `${key} must be a positive integer, got ${JSON.stringify(value)}` };
+    }
+    declared[key] = value;
+    if (value > expected) {
+      versionIssues.push({
+        reason: "component-version-unsupported",
+        path: rel,
+        detail: `${key} ${value} is newer than supported ${expected} \u2014 upgrade the doc-driven-dev toolchain`
+      });
+    } else if (value < expected) {
+      versionIssues.push({
+        reason: "component-version-behind",
+        path: rel,
+        detail: `${key} ${value} is behind supported ${expected} \u2014 migration is required`
+      });
+    }
+  }
+  let migrationInProgress = false;
+  if (parsed.migration !== void 0) {
+    if (!isPlainObject5(parsed.migration)) {
+      return { state: "malformed", detail: "migration must be an object when present" };
+    }
+    const status = parsed.migration.status;
+    if (status !== void 0 && status !== "in-progress") {
+      return { state: "malformed", detail: `migration.status must be "in-progress" when present, got ${JSON.stringify(status)}` };
+    }
+    migrationInProgress = status === "in-progress";
+  }
+  return { state: "read", declared, migrationInProgress, versionIssues };
+}
+function journalPresent(cwd) {
+  return import_node_fs6.default.existsSync(import_node_path5.default.resolve(cwd, MIGRATION_JOURNAL_PATH));
+}
+function recommendedCommand(status, docCount) {
+  const maintenance = "node .apm/skills/doc-maintenance/scripts/doc_maintenance.js";
+  switch (status) {
+    case "current":
+      return null;
+    case "uninitialized":
+      return docCount === 0 ? { command: "node .apm/skills/doc-maintenance/scripts/scaffold_docs.js", note: "no manifest and no managed content \u2014 scaffold the doc tree, or declare the current schema via doc_maintenance.js migrate plan/apply" } : { command: `${maintenance} migrate plan --json`, note: "no schema manifest \u2014 run migrate plan to evaluate whether migration is needed, then migrate apply to declare the schema" };
+    case "migration-required":
+      return { command: `${maintenance} migrate plan --json`, note: "legacy artifacts or older declared versions \u2014 plan the migration, then run migrate apply --expect <planHash>" };
+    case "migration-incomplete":
+      return { command: `${maintenance} migrate recovery --json`, note: "a migration journal or in-progress marker is present \u2014 inspect and recover before normal execution resumes" };
+    case "unsupported-version":
+      return { command: null, note: "the manifest declares a newer schema generation than this toolchain supports \u2014 upgrade doc-driven-dev, do not downgrade by hand" };
+    case "invalid":
+      return { command: `${maintenance} migrate plan --json`, note: "manifest or repository state cannot be verified \u2014 run migrate plan for the full diagnostic" };
+  }
+}
+function statusSummary(report) {
+  switch (report.status) {
+    case "current":
+      return "schema manifest and repository content are consistent with the declared versions";
+    case "uninitialized":
+      return "no schema manifest; nothing provably pre-contract found";
+    case "migration-required":
+      return "legacy artifacts or older declared schema versions require migration";
+    case "migration-incomplete":
+      return "a migration journal or in-progress marker indicates a half-applied migration";
+    case "unsupported-version":
+      return "the manifest declares a schema generation newer than this toolchain";
+    case "invalid":
+      return "the manifest or repository state failed boundary validation";
+  }
+}
+function evaluateSchemaPreflight(cwd) {
+  const root = import_node_path5.default.resolve(cwd);
+  const scan = scanDocuments(root);
+  scanManifestDir(root, scan.issues);
+  scanExecutionState(root, scan.issues);
+  const manifest = readManifest(root);
+  const journal = journalPresent(root);
+  const escapes = scan.issues.filter((issue2) => issue2.reason === "scope-escape");
+  const finish = (status, issues, manifestInfo2) => {
+    const legacyMarkers = new Set(
+      [...issues, ...scan.manifestScopedIssues].filter((issue2) => issue2.reason.startsWith("legacy-")).map((issue2) => `${issue2.reason}:${issue2.path}`)
+    ).size;
+    const managedDocs = scan.canonicalDocs + scan.unmanagedDocs;
+    const generation = escapes.length > 0 ? "unknown" : legacyMarkers > 0 ? scan.canonicalDocs > scan.executionDocs ? "mixed" : "legacy" : managedDocs === 0 ? "empty" : "current";
+    const report = {
+      status,
+      issues,
+      manifest: manifestInfo2,
+      detected: {
+        generation,
+        canonicalDocs: scan.canonicalDocs,
+        executionDocs: scan.executionDocs,
+        unmanagedDocs: scan.unmanagedDocs,
+        legacyMarkers,
+        manifestMarkers: scan.manifestScopedIssues
+      },
+      recommended: recommendedCommand(status, managedDocs)
+    };
+    return report;
+  };
+  const readManifestInfo = manifest.state === "read" ? { path: SCHEMA_MANIFEST_PATH, state: "valid", declared: manifest.declared } : { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null };
+  if (escapes.length > 0) {
+    return finish("invalid", escapes, readManifestInfo);
+  }
+  if (manifest.state === "escaped") {
+    return finish("invalid", [{ reason: "manifest-escaped", path: SCHEMA_MANIFEST_PATH, detail: "schema.json resolves outside the checkout" }], { path: SCHEMA_MANIFEST_PATH, state: "escaped", declared: null });
+  }
+  if (manifest.state === "unreadable") {
+    return finish("invalid", [{ reason: "manifest-unreadable", path: SCHEMA_MANIFEST_PATH, detail: manifest.detail }], { path: SCHEMA_MANIFEST_PATH, state: "unreadable", declared: null });
+  }
+  if (manifest.state === "malformed") {
+    return finish("invalid", [{ reason: "manifest-malformed", path: SCHEMA_MANIFEST_PATH, detail: manifest.detail }], { path: SCHEMA_MANIFEST_PATH, state: "malformed", declared: null });
+  }
+  if (manifest.state === "missing") {
+    if (journal) {
+      return finish("migration-incomplete", [{ reason: "migration-journal-present", path: MIGRATION_JOURNAL_PATH, detail: "a migration journal exists without a finalized manifest \u2014 the apply did not complete" }], { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null });
+    }
+    const relevant = scan.issues.filter((issue2) => issue2.reason.startsWith("legacy-"));
+    if (relevant.length > 0) {
+      return finish("migration-required", relevant, { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null });
+    }
+    return finish("uninitialized", [], { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null });
+  }
+  const manifestIssues = manifest.versionIssues;
+  const unsupported = manifestIssues.filter((issue2) => issue2.reason === "schema-version-unsupported" || issue2.reason === "component-version-unsupported");
+  const manifestInfo = { path: SCHEMA_MANIFEST_PATH, state: "valid", declared: manifest.declared };
+  if (unsupported.length > 0) {
+    return finish("unsupported-version", unsupported, { ...manifestInfo, state: "unsupported" });
+  }
+  const inProgress = [];
+  if (manifest.migrationInProgress) {
+    inProgress.push({ reason: "manifest-migration-in-progress", path: SCHEMA_MANIFEST_PATH, detail: "manifest declares migration.status: in-progress" });
+  }
+  if (journal) {
+    inProgress.push({ reason: "migration-journal-present", path: MIGRATION_JOURNAL_PATH, detail: "a migration journal is present \u2014 the apply did not complete" });
+  }
+  if (inProgress.length > 0) {
+    return finish("migration-incomplete", inProgress, manifestInfo);
+  }
+  const behind = manifestIssues.filter((issue2) => issue2.reason === "component-version-behind");
+  const allIssues = [...scan.issues, ...scan.manifestScopedIssues, ...behind];
+  if (allIssues.length > 0) {
+    return finish("migration-required", allIssues, manifestInfo);
+  }
+  return finish("current", [], manifestInfo);
+}
+function normalExecutionAllowed(status) {
+  return status === "current" || status === "uninitialized";
+}
+function entrypointRefusal(report) {
+  return {
+    error: "schema-preflight-blocked",
+    exitCode: SCHEMA_PREFLIGHT_EXIT_CODE,
+    readOnly: true,
+    preflight: report
+  };
+}
+function schemaEntrypointGuard(cwd) {
+  const report = evaluateSchemaPreflight(cwd);
+  if (normalExecutionAllowed(report.status)) return true;
+  console.log(JSON.stringify(entrypointRefusal(report), null, 2));
+  const recommended = report.recommended?.command ?? "inspect docs/.doc-driven-dev/schema.json";
+  console.error(`schema preflight blocked (${report.status}): ${statusSummary(report)} \u2014 run ${recommended}`);
+  process.exitCode = SCHEMA_PREFLIGHT_EXIT_CODE;
+  return false;
+}
+
+// src/skills/lib/execution_store/types.ts
+var RUN_MANIFEST_SCHEMA_VERSION = EXECUTION_RUN_SCHEMA_VERSION;
+var TASK_RECORD_SCHEMA_VERSION = 1;
+var CHECKPOINT_RECORD_SCHEMA_VERSION = 1;
+var RECEIPT_RECORD_SCHEMA_VERSION = 1;
+var RUN_STATUSES = /* @__PURE__ */ new Set(["active", "completed", "aborted"]);
+var TASK_STATUSES = /* @__PURE__ */ new Set([
+  "todo",
+  "in-progress",
+  "blocked",
+  "done",
+  "wont-do"
+]);
+var RECEIPT_STATUSES = /* @__PURE__ */ new Set(["success", "failure", "waived"]);
+var ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+var WINDOWS_RESERVED_NAMES = /* @__PURE__ */ new Set([
+  "con",
+  "prn",
+  "aux",
+  "nul",
+  "com1",
+  "com2",
+  "com3",
+  "com4",
+  "com5",
+  "com6",
+  "com7",
+  "com8",
+  "com9",
+  "lpt1",
+  "lpt2",
+  "lpt3",
+  "lpt4",
+  "lpt5",
+  "lpt6",
+  "lpt7",
+  "lpt8",
+  "lpt9"
+]);
+function isValidId(value) {
+  if (typeof value !== "string" || !ID_PATTERN.test(value)) return false;
+  if (value.endsWith(".") || value.includes("..")) return false;
+  const stem = value.split(".")[0].toLowerCase();
+  return !WINDOWS_RESERVED_NAMES.has(stem);
+}
+function isPlainObject6(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isIsoTimestamp(value) {
+  return typeof value === "string" && !Number.isNaN(Date.parse(value));
+}
+function isSha256(value) {
+  return typeof value === "string" && /^[0-9a-f]{64}$/.test(value);
+}
+function optionalString(value) {
+  return value === null || value === void 0 || typeof value === "string";
+}
+function stringArray(value) {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+function validateApproval(value) {
+  return isPlainObject6(value) && isSha256(value.planDigest) && typeof value.actor === "string" && value.actor.length > 0 && isIsoTimestamp(value.approvedAt);
+}
+function validateManifest(value) {
+  if (!isPlainObject6(value)) return false;
+  return value.schemaVersion === RUN_MANIFEST_SCHEMA_VERSION && isValidId(value.runId) && Number.isInteger(value.revision) && value.revision >= 1 && RUN_STATUSES.has(value.status) && typeof value.graphId === "string" && value.graphId.length > 0 && (value.baseCommit === null || typeof value.baseCommit === "string") && (value.planDigest === null || isSha256(value.planDigest)) && (value.approval === null || validateApproval(value.approval)) && isIsoTimestamp(value.createdAt) && isIsoTimestamp(value.updatedAt) && (value.finalizedAt === null || isIsoTimestamp(value.finalizedAt));
+}
+function validateTask(value) {
+  if (!isPlainObject6(value)) return false;
+  return value.schemaVersion === TASK_RECORD_SCHEMA_VERSION && isValidId(value.runId) && isValidId(value.taskId) && typeof value.title === "string" && TASK_STATUSES.has(value.status) && stringArray(value.dependsOn) && stringArray(value.checks) && (value.scope === void 0 || stringArray(value.scope)) && Number.isInteger(value.version) && value.version >= 1 && isIsoTimestamp(value.createdAt) && isIsoTimestamp(value.updatedAt);
+}
+function validateCheckpoint(value) {
+  if (!isPlainObject6(value)) return false;
+  return value.schemaVersion === CHECKPOINT_RECORD_SCHEMA_VERSION && isValidId(value.runId) && isValidId(value.checkpointId) && optionalString(value.nodeId) && optionalString(value.edgeId) && optionalString(value.taskId) && isIsoTimestamp(value.at);
+}
+function validateReceipt(value) {
+  if (!isPlainObject6(value)) return false;
+  return value.schemaVersion === RECEIPT_RECORD_SCHEMA_VERSION && isValidId(value.runId) && isValidId(value.receiptId) && typeof value.effect === "string" && value.effect.length > 0 && optionalString(value.taskId) && optionalString(value.idempotencyKey) && optionalString(value.actor) && RECEIPT_STATUSES.has(value.status) && isIsoTimestamp(value.at);
+}
+
+// src/skills/lib/execution_store/boundary.ts
+function toRepoRelative2(cwd, absolute) {
+  return import_node_path6.default.relative(import_node_path6.default.resolve(cwd), absolute).split(import_node_path6.default.sep).join("/");
+}
+function resolveStateRoot(cwd, options2 = {}) {
+  const checkout = import_node_path6.default.resolve(cwd);
+  if (options2.stateRoot === void 0) {
+    return {
+      root: import_node_path6.default.join(checkout, EXECUTION_STATE_ROOT),
+      external: false,
+      repoRelative: EXECUTION_STATE_ROOT
+    };
+  }
+  const root = import_node_path6.default.resolve(checkout, options2.stateRoot);
+  if (isInside(checkout, root)) {
+    return { root, external: false, repoRelative: toRepoRelative2(checkout, root) };
+  }
+  if (options2.allowExternalRoot !== true) {
+    throw new StoreError(
+      "external-root-not-authorized",
+      `state root ${options2.stateRoot} resolves outside the checkout \u2014 a shared/external store requires explicit allowExternalRoot`,
+      { stateRoot: options2.stateRoot }
+    );
+  }
+  return { root, external: true, repoRelative: null };
+}
+function runDirFor(resolved, runId) {
+  if (!isValidId(runId)) {
+    throw new StoreError(
+      "invalid-argument",
+      `invalid run id ${JSON.stringify(runId)} \u2014 ids match [A-Za-z0-9][A-Za-z0-9._-]{0,127} with dots inner and single, and never contain path separators`
+    );
+  }
+  return import_node_path6.default.join(resolved.root, "runs", runId);
+}
+
+// src/skills/lib/execution_store/store.ts
+var STATE_FILE = "manifest.json";
+var PLAN_FILE = "plan.md";
+var RUN_DIR = "runs";
+function sha256(content3) {
+  return import_node_crypto2.default.createHash("sha256").update(content3, "utf8").digest("hex");
+}
+function insideResolvedRoot(resolved, candidate) {
+  let real;
+  let realRoot;
+  try {
+    real = import_node_fs7.default.realpathSync(candidate);
+    realRoot = import_node_fs7.default.realpathSync(resolved.root);
+  } catch {
+    return false;
+  }
+  const root = import_node_path7.default.resolve(realRoot);
+  const target = import_node_path7.default.resolve(real);
+  return target === root || target.startsWith(`${root}${import_node_path7.default.sep}`);
+}
+function runDirContained(resolved, runId) {
+  const runDir = runDirFor(resolved, runId);
+  if (!import_node_fs7.default.existsSync(runDir)) {
+    throw new StoreError("run-not-found", `run ${runId} does not exist under ${resolved.repoRelative ?? resolved.root}`);
+  }
+  if (!import_node_fs7.default.statSync(runDir).isDirectory()) {
+    throw new StoreError("corrupt-state", `${runDir} is not a directory`);
+  }
+  if (!insideResolvedRoot(resolved, runDir)) {
+    throw new StoreError("boundary-escape", `run ${runId} resolves outside the state root through a link`);
+  }
+  return runDir;
+}
+function readManifest2(runDir, runId) {
+  const file2 = import_node_path7.default.join(runDir, STATE_FILE);
+  if (!import_node_fs7.default.existsSync(file2)) {
+    throw new StoreError(
+      "corrupt-state",
+      `run ${runId} has no manifest.json \u2014 the run is incomplete or foreign`,
+      { runId }
+    );
+  }
+  const parsed = readJsonFile(file2);
+  if (isPlainObject6(parsed) && parsed.schemaVersion !== RUN_MANIFEST_SCHEMA_VERSION) {
+    throw new StoreError(
+      "unsupported-version",
+      `run ${runId} manifest schemaVersion is ${JSON.stringify(parsed.schemaVersion)}, expected ${RUN_MANIFEST_SCHEMA_VERSION} \u2014 upgrade the toolchain`
+    );
+  }
+  if (!validateManifest(parsed)) {
+    throw new StoreError("corrupt-state", `run ${runId} manifest failed schema validation`, { runId });
+  }
+  if (parsed.runId !== runId) {
+    throw new StoreError(
+      "corrupt-state",
+      `manifest runId ${parsed.runId} does not match its directory ${runId}`
+    );
+  }
+  return parsed;
+}
+function listRecordFiles(runDir, kind) {
+  const dir = import_node_path7.default.join(runDir, kind);
+  if (!import_node_fs7.default.existsSync(dir)) return [];
+  return import_node_fs7.default.readdirSync(dir, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith(".json")).map((entry) => import_node_path7.default.join(runDir, kind, entry.name)).sort();
+}
+function readRecord(file2, validate2, kind) {
+  const parsed = readJsonFile(file2);
+  if (!validate2(parsed)) {
+    throw new StoreError("corrupt-state", `${file2} failed ${kind} record validation`, { path: file2 });
+  }
+  const record2 = parsed;
+  const dirRun = import_node_path7.default.basename(import_node_path7.default.dirname(import_node_path7.default.dirname(file2)));
+  if (record2.runId !== dirRun) {
+    throw new StoreError(
+      "corrupt-state",
+      `${kind} record in ${file2} binds run ${record2.runId}, expected ${dirRun} \u2014 records never cross runs`
+    );
+  }
+  return parsed;
+}
+function scanIncompleteWrites(dir, rel = "") {
+  const found = [];
+  if (!import_node_fs7.default.existsSync(dir)) return found;
+  for (const entry of import_node_fs7.default.readdirSync(dir, { withFileTypes: true })) {
+    const abs = import_node_path7.default.join(dir, entry.name);
+    const relPath = rel === "" ? entry.name : `${rel}/${entry.name}`;
+    if (entry.isDirectory()) {
+      found.push(...scanIncompleteWrites(abs, relPath));
+    } else if (entry.isFile() && isStoreTmpFile(entry.name)) {
+      found.push(relPath);
+    }
+  }
+  return found;
+}
+function loadSnapshot(resolved, runId) {
+  const runDir = runDirContained(resolved, runId);
+  const manifest = readManifest2(runDir, runId);
+  const planFile = import_node_path7.default.join(runDir, PLAN_FILE);
+  let plan = null;
+  if (import_node_fs7.default.existsSync(planFile)) {
+    const content3 = import_node_fs7.default.readFileSync(planFile, "utf8");
+    plan = { content: content3, digest: sha256(content3) };
+  }
+  const tasks = listRecordFiles(runDir, "tasks").map((file2) => readRecord(file2, validateTask, "task")).map((task) => task.scope === void 0 ? { ...task, scope: [] } : task);
+  const checkpoints = listRecordFiles(runDir, "checkpoints").map((file2) => readRecord(file2, validateCheckpoint, "checkpoint"));
+  const receipts = listRecordFiles(runDir, "receipts").map((file2) => readRecord(file2, validateReceipt, "receipt"));
+  const lock = import_node_fs7.default.existsSync(import_node_path7.default.join(runDir, "writer.lock")) ? readLockRecord(import_node_path7.default.join(runDir, "writer.lock")) : null;
+  return {
+    runId,
+    status: manifest.status,
+    manifest,
+    plan,
+    planApproved: manifest.approval !== null && plan !== null && manifest.approval.planDigest === plan.digest,
+    planDigestDrift: manifest.planDigest !== null && (plan === null || plan.digest !== manifest.planDigest),
+    tasks,
+    checkpoints,
+    receipts,
+    recovery: {
+      incompleteWrites: scanIncompleteWrites(runDir),
+      writerLock: lock
+    }
+  };
+}
+function loadRun(cwd, runId, options2 = {}) {
+  const resolved = resolveStateRoot(cwd, options2);
+  return loadSnapshot(resolved, runId);
+}
+function listRuns(cwd, options2 = {}) {
+  const resolved = resolveStateRoot(cwd, options2);
+  const runsDir = import_node_path7.default.join(resolved.root, RUN_DIR);
+  if (!import_node_fs7.default.existsSync(runsDir)) return [];
+  const runs = [];
+  for (const entry of import_node_fs7.default.readdirSync(runsDir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+    if (!entry.isDirectory() || !isValidId(entry.name)) continue;
+    try {
+      const manifest = readManifest2(import_node_path7.default.join(runsDir, entry.name), entry.name);
+      runs.push({ runId: manifest.runId, status: manifest.status, revision: manifest.revision });
+    } catch {
+      runs.push({ runId: entry.name, status: "corrupt", revision: null });
+    }
+  }
+  return runs;
+}
+
+// src/skills/doc-driven-dev-graph/scripts/lib/task_graph.ts
+function compareStrings2(left, right) {
+  return left.localeCompare(right);
+}
+function sortedUnique(values) {
+  return [...new Set(values)].sort(compareStrings2);
+}
+function taskRecordPath(runId, taskId) {
+  return `runs/${runId}/tasks/${taskId}.json`;
+}
+function runPlanPath(runId) {
+  return `runs/${runId}/plan.md`;
+}
+function findCycles(ids, edges) {
+  const adjacency = /* @__PURE__ */ new Map();
+  for (const id of ids) adjacency.set(id, []);
+  for (const edge of edges) {
+    const successors = adjacency.get(edge.from);
+    if (successors) successors.push(edge.to);
+  }
+  for (const successors of adjacency.values()) successors.sort(compareStrings2);
+  const visiting = /* @__PURE__ */ new Set();
+  const visited = /* @__PURE__ */ new Set();
+  const cycles = /* @__PURE__ */ new Set();
+  const walk = (id, stack) => {
+    visiting.add(id);
+    stack.push(id);
+    for (const next of adjacency.get(id) || []) {
+      if (visiting.has(next)) {
+        const start = stack.indexOf(next);
+        const cycle = stack.slice(start).sort(compareStrings2);
+        cycles.add(cycle.join(" -> "));
+      } else if (!visited.has(next)) {
+        walk(next, stack);
+      }
+    }
+    stack.pop();
+    visiting.delete(id);
+    visited.add(id);
+  };
+  for (const id of ids) if (!visited.has(id)) walk(id, []);
+  return [...cycles].sort(compareStrings2).map((cycle) => ({
+    code: "task-cycle",
+    tasks: cycle.split(" -> "),
+    message: `Task dependency cycle detected: ${cycle}`
+  }));
+}
+function issueCompare2(left, right) {
+  return compareStrings2(left.code, right.code) || compareStrings2(left.tasks.join(","), right.tasks.join(",")) || compareStrings2(left.message, right.message);
+}
+function projectRunTasks(snapshot) {
+  const { runId } = snapshot;
+  const issues = [];
+  let plan = null;
+  if (snapshot.plan === null) {
+    issues.push({
+      code: "plan-missing",
+      tasks: [],
+      message: `run ${runId} has no plan.md \u2014 the plan must exist inside the run before task execution`
+    });
+  } else {
+    plan = { path: runPlanPath(runId), digest: snapshot.plan.digest, approved: snapshot.planApproved };
+    if (!snapshot.planApproved) {
+      issues.push({
+        code: "plan-not-approved",
+        tasks: [],
+        message: `run ${runId} plan.md is not approved (or approval predates the current digest) \u2014 task execution requires a digest-bound approval`
+      });
+    }
+  }
+  if (snapshot.planDigestDrift) {
+    issues.push({
+      code: "plan-digest-drift",
+      tasks: [],
+      message: `run ${runId} plan.md diverges from the digest recorded in manifest.json \u2014 a write outside the Execution Store API was detected`
+    });
+  }
+  const byId = /* @__PURE__ */ new Map();
+  for (const task of [...snapshot.tasks].sort((left, right) => compareStrings2(left.taskId, right.taskId))) {
+    if (byId.has(task.taskId)) {
+      issues.push({
+        code: "duplicate-task-id",
+        tasks: [task.taskId],
+        message: `Duplicate task id ${task.taskId} in run ${runId}`
+      });
+      continue;
+    }
+    byId.set(task.taskId, task);
+  }
+  const tasks = [...byId.values()];
+  const edges = /* @__PURE__ */ new Map();
+  const blocksById = new Map(tasks.map((task) => [task.taskId, /* @__PURE__ */ new Set()]));
+  for (const task of tasks) {
+    for (const dep of task.dependsOn) {
+      if (!byId.has(dep)) {
+        issues.push({
+          code: "missing-task-reference",
+          tasks: [task.taskId],
+          message: `Task ${task.taskId} depends on ${dep}, which does not exist in run ${runId} \u2014 dependencies resolve inside the same run only`
+        });
+        continue;
+      }
+      edges.set(`${dep}${task.taskId}`, { from: dep, to: task.taskId });
+      blocksById.get(dep)?.add(task.taskId);
+    }
+  }
+  const sortedEdges = [...edges.values()].sort((left, right) => compareStrings2(left.from, right.from) || compareStrings2(left.to, right.to));
+  issues.push(...findCycles(tasks.map((task) => task.taskId), sortedEdges));
+  if (tasks.length === 0) {
+    issues.push({
+      code: "plan-has-no-tasks",
+      tasks: [],
+      message: `run ${runId} has no task records \u2014 the plan must materialize at least one task`
+    });
+  }
+  const uniqueIssues = [...new Map(issues.map((issue2) => [
+    `${issue2.code}${issue2.tasks.join(",")}${issue2.message}`,
+    issue2
+  ])).values()].sort(issueCompare2);
+  const statusById = new Map(tasks.map((task) => [task.taskId, task.status]));
+  const predecessorsDone = (taskId) => sortedEdges.filter((edge) => edge.to === taskId).every((edge) => statusById.get(edge.from) === "done");
+  const runnable = uniqueIssues.length > 0 ? [] : tasks.filter((task) => task.status === "todo" && predecessorsDone(task.taskId)).map((task) => task.taskId);
+  const active = tasks.filter((task) => task.status === "in-progress").map((task) => task.taskId);
+  const resumableActive = uniqueIssues.length > 0 ? [] : tasks.filter((task) => task.status === "in-progress" && predecessorsDone(task.taskId)).map((task) => task.taskId);
+  const completed = tasks.filter((task) => task.status === "done").map((task) => task.taskId);
+  const blocked = tasks.filter((task) => task.status === "blocked" || task.status === "wont-do" || task.status === "todo" && !runnable.includes(task.taskId)).map((task) => ({
+    id: task.taskId,
+    reasons: task.status === "blocked" ? ["status:blocked"] : task.status === "wont-do" ? ["status:wont-do"] : sortedEdges.filter((edge) => edge.to === task.taskId && statusById.get(edge.from) !== "done").map((edge) => `depends-on:${edge.from}`)
+  })).filter((entry) => entry.reasons.length > 0);
+  return {
+    schemaVersion: 2,
+    runId,
+    plan,
+    nodes: tasks.map((task) => ({
+      id: task.taskId,
+      path: taskRecordPath(runId, task.taskId),
+      title: task.title,
+      status: task.status,
+      dependsOn: sortedUnique(task.dependsOn),
+      blocks: sortedUnique(blocksById.get(task.taskId) ?? []),
+      scope: [...task.scope].sort(compareStrings2),
+      version: task.version
+    })),
+    edges: sortedEdges,
+    runnable: runnable.sort(compareStrings2),
+    active: active.sort(compareStrings2),
+    resumableActive: resumableActive.sort(compareStrings2),
+    completed: completed.sort(compareStrings2),
+    blocked,
+    issues: uniqueIssues
+  };
+}
+
+// src/skills/lib/evidence_store/store.ts
+var import_node_child_process = require("node:child_process");
+var import_node_crypto3 = __toESM(require("node:crypto"));
+var import_node_fs8 = __toESM(require("node:fs"));
+var import_node_path8 = __toESM(require("node:path"));
+
+// src/skills/lib/evidence_store/types.ts
+var EVIDENCE_RECORD_SCHEMA_VERSION = 1;
+var EVIDENCE_RETENTIONS = /* @__PURE__ */ new Set([
+  "transient",
+  "release",
+  "durable"
+]);
+var EVIDENCE_OUTCOMES = /* @__PURE__ */ new Set([
+  "passed",
+  "failed",
+  "inconclusive",
+  "error",
+  "not-run"
+]);
+var EVIDENCE_PROVIDER_KINDS = /* @__PURE__ */ new Set([
+  "repository",
+  "ci",
+  "external"
+]);
+var ARTIFACT_AVAILABILITIES = /* @__PURE__ */ new Set([
+  "available",
+  "unverified",
+  "unavailable"
+]);
+function isIsoTimestamp2(value) {
+  return typeof value === "string" && !Number.isNaN(Date.parse(value));
+}
+function isRevisionDigest(value) {
+  return typeof value === "string" && /^sha256:[0-9a-f]{64}$/.test(value);
+}
+var ARTIFACT_URI_SCHEMES = /* @__PURE__ */ new Set([
+  "file",
+  "http",
+  "https",
+  "s3",
+  "gs",
+  "az",
+  "artifact",
+  "run"
+]);
+var BLOCKED_URI_SCHEMES = /* @__PURE__ */ new Set(["javascript", "data", "vbscript"]);
+var URI_SCHEME_PATTERN = /^[a-zA-Z][a-zA-Z0-9+.-]*:/;
+function normalizePathSegments(rawPath) {
+  const absolute = rawPath.startsWith("/");
+  const segments = [];
+  for (const segment of rawPath.split("/")) {
+    if (segment === "" || segment === ".") continue;
+    if (segment === "..") {
+      if (segments.length === 0) return null;
+      segments.pop();
+      continue;
+    }
+    segments.push(segment);
+  }
+  return `${absolute ? "/" : ""}${segments.join("/")}`;
+}
+function normalizeArtifactUri(raw) {
+  if (typeof raw !== "string") return null;
+  const uri = raw.trim();
+  if (uri === "" || /[\x00-\x1f\x7f\s]/.test(uri)) return null;
+  if (!URI_SCHEME_PATTERN.test(uri)) {
+    if (uri.startsWith("/") || /^[a-zA-Z]:[\\/]/.test(uri) || uri.includes("\\")) return null;
+    const normalized = normalizePathSegments(uri);
+    if (normalized === null || normalized === "") return null;
+    return normalized;
+  }
+  const scheme = uri.slice(0, uri.indexOf(":")).toLowerCase();
+  if (BLOCKED_URI_SCHEMES.has(scheme)) return null;
+  if (!ARTIFACT_URI_SCHEMES.has(scheme)) return null;
+  if (scheme === "file") {
+    let rest = uri.slice(uri.indexOf(":") + 1);
+    while (rest.startsWith("/")) rest = rest.slice(1);
+    const normalized = normalizePathSegments(`/${rest}`);
+    return normalized === null ? null : `file://${normalized}`;
+  }
+  try {
+    return new URL(uri).toString();
+  } catch {
+    return null;
+  }
+}
+function validateSubject(value) {
+  if (!isPlainObject6(value)) return false;
+  if (value.kind === "commit") {
+    return typeof value.commit === "string" && /^[0-9a-f]{7,64}$/i.test(value.commit);
+  }
+  if (value.kind === "workspace") {
+    return isRevisionDigest(value.snapshotDigest);
+  }
+  return false;
+}
+function validateArtifact(value) {
+  if (!isPlainObject6(value)) return false;
+  if (typeof value.uri !== "string" || normalizeArtifactUri(value.uri) === null) return false;
+  if (!(value.sha256 === null || isRevisionDigest(value.sha256))) return false;
+  if (!ARTIFACT_AVAILABILITIES.has(value.availability)) return false;
+  if (!EVIDENCE_RETENTIONS.has(value.retention)) return false;
+  if (!(value.expiresAt === null || isIsoTimestamp2(value.expiresAt))) return false;
+  if (value.availability === "available" && !isRevisionDigest(value.sha256)) return false;
+  return true;
+}
+function validateProvider(value) {
+  return isPlainObject6(value) && EVIDENCE_PROVIDER_KINDS.has(value.kind) && (value.name === null || value.name === void 0 || typeof value.name === "string");
+}
+function validateEvidenceRecord(value) {
+  if (!isPlainObject6(value)) return false;
+  const claim2 = value.claim;
+  const check2 = value.check;
+  return value.schemaVersion === EVIDENCE_RECORD_SCHEMA_VERSION && isValidId(value.evidenceId) && isPlainObject6(claim2) && typeof claim2.ref === "string" && parseClaimReference(claim2.ref.trim()) !== null && isRevisionDigest(claim2.documentRevision) && isPlainObject6(check2) && typeof check2.ref === "string" && (() => {
+    const parsed = parseClaimReference(check2.ref.trim());
+    return parsed !== null && /^CHK-\d+$/.test(parsed.key);
+  })() && isRevisionDigest(check2.designRevision) && validateSubject(value.subject) && VERIFICATION_METHODS.includes(value.method) && validateProvider(value.provider) && (value.runId === null || isValidId(value.runId)) && EVIDENCE_OUTCOMES.has(value.outcome) && EVIDENCE_RETENTIONS.has(value.retention) && Array.isArray(value.artifacts) && value.artifacts.every(validateArtifact) && (value.derivedFrom === null || isValidId(value.derivedFrom)) && isIsoTimestamp2(value.createdAt);
+}
+
+// src/skills/lib/evidence_store/store.ts
+var EVIDENCE_DIR = "evidence";
+var RECORDS_DIR = "records";
+function sha2562(content3) {
+  return import_node_crypto3.default.createHash("sha256").update(content3, "utf8").digest("hex");
+}
+function documentRevisionOf(content3) {
+  return `sha256:${sha2562(content3)}`;
+}
+var SUBJECT_DIGEST_NAMESPACE = "doc-driven-dev:subject-tree:v1";
+function subjectTreeDigest(treeOid) {
+  return `sha256:${sha2562(`${SUBJECT_DIGEST_NAMESPACE}:${treeOid.toLowerCase()}`)}`;
+}
+function git(args, cwd) {
+  const result = (0, import_node_child_process.spawnSync)("git", args, { cwd, encoding: "utf8" });
+  return {
+    status: result.status,
+    stdout: result.stdout ?? "",
+    stderr: (result.stderr ?? "").trim(),
+    error: result.error
+  };
+}
+function requireCommitTreeOid(cwd, commit) {
+  const asCommit = git(["rev-parse", "--verify", "--quiet", `${commit}^{commit}`], cwd);
+  if (asCommit.error !== void 0) {
+    throw new StoreError(
+      "boundary-git-unavailable",
+      `cannot run git rev-parse (${asCommit.error.message}) \u2014 the commit's content identity cannot be verified`
+    );
+  }
+  const commitOid = asCommit.stdout.trim();
+  if (asCommit.status !== 0 || !/^[0-9a-f]{40,64}$/i.test(commitOid)) {
+    throw new StoreError(
+      "invalid-argument",
+      `commit ${JSON.stringify(commit)} does not resolve to a commit object in this repository \u2014 content identity is unprovable`,
+      { commit }
+    );
+  }
+  const asTree = git(["rev-parse", "--verify", "--quiet", `${commitOid}^{tree}`], cwd);
+  const treeOid = asTree.stdout.trim();
+  if (asTree.error !== void 0 || asTree.status !== 0 || !/^[0-9a-f]{40,64}$/i.test(treeOid)) {
+    throw new StoreError(
+      "boundary-git-unavailable",
+      `git could not read the tree of commit ${commitOid} \u2014 the commit's content identity cannot be verified`
+    );
+  }
+  return { commitOid: commitOid.toLowerCase(), treeOid: treeOid.toLowerCase() };
+}
+function isResolvableRevision(commit) {
+  return /^[A-Za-z0-9][A-Za-z0-9._/~^@-]*$/.test(commit.trim());
+}
+function resolveCommitSubject(cwd, commit) {
+  if (typeof commit !== "string" || !isResolvableRevision(commit)) return null;
+  try {
+    const { commitOid, treeOid } = requireCommitTreeOid(cwd, commit.trim());
+    return { commitOid, subjectDigest: subjectTreeDigest(treeOid) };
+  } catch {
+    return null;
+  }
+}
+function insideResolvedRoot2(resolved, candidate) {
+  let real;
+  let realRoot;
+  try {
+    real = import_node_fs8.default.realpathSync(candidate);
+    realRoot = import_node_fs8.default.realpathSync(resolved.root);
+  } catch {
+    return false;
+  }
+  const root = import_node_path8.default.resolve(realRoot);
+  const target = import_node_path8.default.resolve(real);
+  return target === root || target.startsWith(`${root}${import_node_path8.default.sep}`);
+}
+function evidenceRootFor(resolved) {
+  return import_node_path8.default.join(resolved.root, EVIDENCE_DIR);
+}
+function recordsDirFor(resolved) {
+  return import_node_path8.default.join(evidenceRootFor(resolved), RECORDS_DIR);
+}
+function containedDir(resolved, dir, label) {
+  if (import_node_fs8.default.existsSync(dir)) {
+    if (!import_node_fs8.default.statSync(dir).isDirectory()) {
+      throw new StoreError("corrupt-state", `${dir} is not a directory`);
+    }
+    if (!insideResolvedRoot2(resolved, dir)) {
+      throw new StoreError("boundary-escape", `the ${label} under ${resolved.repoRelative ?? resolved.root} escapes the state root through a link`);
+    }
+  }
+  return dir;
+}
+function listRecordFiles2(recordsDir) {
+  if (!import_node_fs8.default.existsSync(recordsDir)) return [];
+  return import_node_fs8.default.readdirSync(recordsDir, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith(".json")).map((entry) => import_node_path8.default.join(recordsDir, entry.name)).sort();
+}
+function readRecordFile(file2) {
+  const parsed = readJsonFile(file2);
+  if (isPlainObject6(parsed) && parsed.schemaVersion !== void 0 && parsed.schemaVersion !== 1) {
+    throw new StoreError(
+      "unsupported-version",
+      `${file2} carries schemaVersion ${JSON.stringify(parsed.schemaVersion)}, expected 1 \u2014 upgrade the toolchain`
+    );
+  }
+  if (!validateEvidenceRecord(parsed)) {
+    throw new StoreError("corrupt-state", `${file2} failed evidence record validation`, { path: file2 });
+  }
+  const idFromName = import_node_path8.default.basename(file2, ".json");
+  if (parsed.evidenceId !== idFromName) {
+    throw new StoreError(
+      "corrupt-state",
+      `record in ${file2} binds evidence ${parsed.evidenceId}, expected ${idFromName} \u2014 a record file only ever carries its own id`
+    );
+  }
+  return parsed;
+}
+function scanRecords(resolved) {
+  const recordsDir = containedDir(resolved, recordsDirFor(resolved), "records dir");
+  return listRecordFiles2(recordsDir).map(readRecordFile);
+}
+function query(cwd, filter = {}, options2 = {}) {
+  const resolved = resolveStateRoot(cwd, options2);
+  const records = scanRecords(resolved);
+  return records.filter((record2) => {
+    if (filter.check !== void 0 && record2.check.ref !== filter.check) return false;
+    if (filter.claim !== void 0 && record2.claim.ref !== filter.claim) return false;
+    if (filter.outcome !== void 0 && record2.outcome !== filter.outcome) return false;
+    if (filter.retention !== void 0 && record2.retention !== filter.retention) return false;
+    if (filter.subjectKind !== void 0 && record2.subject.kind !== filter.subjectKind) return false;
+    if (filter.runId !== void 0 && record2.runId !== filter.runId) return false;
+    return true;
+  }).sort((a, b) => a.createdAt === b.createdAt ? a.evidenceId.localeCompare(b.evidenceId) : a.createdAt.localeCompare(b.createdAt));
 }
 
 // src/skills/lib/evidence_store/resolve.ts
@@ -40004,7 +39558,7 @@ function isIsoTimestamp3(value) {
   return typeof value === "string" && !Number.isNaN(Date.parse(value));
 }
 function isSubject(value) {
-  if (!isPlainObject4(value)) return false;
+  if (!isPlainObject6(value)) return false;
   if (value.kind === "commit") {
     return typeof value.commit === "string" && /^[0-9a-f]{7,64}$/i.test(value.commit);
   }
@@ -40014,25 +39568,25 @@ function isSubject(value) {
   return false;
 }
 function validateReason(value) {
-  return isPlainObject4(value) && ASSESSMENT_REASON_SET.has(value.code) && (value.detail === null || typeof value.detail === "string");
+  return isPlainObject6(value) && ASSESSMENT_REASON_SET.has(value.code) && (value.detail === null || typeof value.detail === "string");
 }
 function validateAssessment(value) {
-  return isPlainObject4(value) && value.schemaVersion === ASSESSMENT_SCHEMA_VERSION && isValidId(value.evidenceId) && typeof value.claim === "string" && typeof value.check === "string" && EVIDENCE_OUTCOMES.has(value.outcome) && EVIDENCE_APPLICABILITIES.has(value.applicability) && EVIDENCE_AVAILABILITIES_ASSESSMENT.has(value.availability) && EVIDENCE_INTEGRITIES.has(value.integrity) && EVIDENCE_ASSESSMENT_VERDICTS.has(value.assessment) && Array.isArray(value.reasons) && value.reasons.every(validateReason);
+  return isPlainObject6(value) && value.schemaVersion === ASSESSMENT_SCHEMA_VERSION && isValidId(value.evidenceId) && typeof value.claim === "string" && typeof value.check === "string" && EVIDENCE_OUTCOMES.has(value.outcome) && EVIDENCE_APPLICABILITIES.has(value.applicability) && EVIDENCE_AVAILABILITIES_ASSESSMENT.has(value.availability) && EVIDENCE_INTEGRITIES.has(value.integrity) && EVIDENCE_ASSESSMENT_VERDICTS.has(value.assessment) && Array.isArray(value.reasons) && value.reasons.every(validateReason);
 }
 function validateWaiver(value) {
-  if (!isPlainObject4(value)) return false;
-  if (!isPlainObject4(value.scope)) return false;
+  if (!isPlainObject6(value)) return false;
+  if (!isPlainObject6(value.scope)) return false;
   if (value.scope.kind !== "check" && value.scope.kind !== "claim") return false;
   return nonEmptyString2(value.scope.ref) && nonEmptyString2(value.authority) && nonEmptyString2(value.reason) && isIsoTimestamp3(value.grantedAt) && isIsoTimestamp3(value.expiresAt);
 }
 function validateNotApplicableVerdict(value) {
-  return isPlainObject4(value) && nonEmptyString2(value.check) && nonEmptyString2(value.revision) && Array.isArray(value.paths) && value.paths.length > 0 && value.paths.every(nonEmptyString2) && nonEmptyString2(value.rule) && nonEmptyString2(value.judger) && nonEmptyString2(value.method) && nonEmptyString2(value.reason);
+  return isPlainObject6(value) && nonEmptyString2(value.check) && nonEmptyString2(value.revision) && Array.isArray(value.paths) && value.paths.length > 0 && value.paths.every(nonEmptyString2) && nonEmptyString2(value.rule) && nonEmptyString2(value.judger) && nonEmptyString2(value.method) && nonEmptyString2(value.reason);
 }
 function stringArrayField(value) {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
 function validateExemption(value, inner, malformedCode) {
-  if (!isPlainObject4(value)) return false;
+  if (!isPlainObject6(value)) return false;
   if (!("input" in value)) return false;
   if (!stringArrayField(value.reasons)) return false;
   if (value.status === "applied") return inner(value.verdict);
@@ -40041,15 +39595,15 @@ function validateExemption(value, inner, malformedCode) {
   return inner(value.verdict);
 }
 function validateConstraint(value) {
-  return isPlainObject4(value) && (value.kind === "manual-review" || value.kind === "monitoring-continuous") && typeof value.detail === "string";
+  return isPlainObject6(value) && (value.kind === "manual-review" || value.kind === "monitoring-continuous") && typeof value.detail === "string";
 }
 function validateCheckVerification(value) {
-  if (!isPlainObject4(value)) return false;
-  if (!isPlainObject4(value.evidence)) return false;
+  if (!isPlainObject6(value)) return false;
+  if (!isPlainObject6(value.evidence)) return false;
   return typeof value.ref === "string" && (value.claim === null || typeof value.claim === "string") && (value.method === null || VERIFICATION_METHODS.includes(value.method)) && typeof value.required === "boolean" && (value.designRevision === null || typeof value.designRevision === "string") && Array.isArray(value.constraints) && value.constraints.every(validateConstraint) && typeof value.executed === "boolean" && CHECK_STATUS_SET.has(value.status) && stringArrayField(value.evidence.sufficient) && stringArrayField(value.evidence.insufficient) && stringArrayField(value.evidence.indeterminate) && (value.latestConclusiveAt === null || isIsoTimestamp3(value.latestConclusiveAt)) && (value.waiver === null || validateExemption(value.waiver, validateWaiver, "waiver-malformed")) && (value.notApplicable === null || validateExemption(value.notApplicable, validateNotApplicableVerdict, "not-applicable-malformed")) && stringArrayField(value.reasons);
 }
 function validateClaimVerification(value) {
-  return isPlainObject4(value) && typeof value.ref === "string" && CLAIM_STATUS_SET.has(value.status) && stringArrayField(value.checks) && stringArrayField(value.requiredChecks) && stringArrayField(value.reasons);
+  return isPlainObject6(value) && typeof value.ref === "string" && CLAIM_STATUS_SET.has(value.status) && stringArrayField(value.checks) && stringArrayField(value.requiredChecks) && stringArrayField(value.reasons);
 }
 function nonNegativeInt(value) {
   return Number.isInteger(value) && value >= 0;
@@ -40058,29 +39612,29 @@ function validateSummaryCounts(counts) {
   const checkCounts = counts.checks;
   const claimCounts = counts.claims;
   const evidenceCounts = counts.evidence;
-  if (!isPlainObject4(checkCounts) || !isPlainObject4(claimCounts) || !isPlainObject4(evidenceCounts)) return false;
+  if (!isPlainObject6(checkCounts) || !isPlainObject6(claimCounts) || !isPlainObject6(evidenceCounts)) return false;
   return ["total", "required", "advisory", "satisfied", "failed", "waived", "outOfScope", "undetermined", "unresolved"].every((key) => nonNegativeInt(checkCounts[key])) && ["total", "covered", "partial", "uncovered", "failed"].every((key) => nonNegativeInt(claimCounts[key])) && ["total", "sufficient", "insufficient", "indeterminate"].every((key) => nonNegativeInt(evidenceCounts[key]));
 }
 function verificationCoverageGap(summary) {
   return summary.checks.some((check2) => check2.required && (check2.status === "undetermined" || check2.status === "unresolved" || check2.status === "failed")) || summary.claims.some((claim2) => claim2.status !== "covered");
 }
 function validateRejectedEntry(entry, validatedField, inner, malformedCode) {
-  if (!isPlainObject4(entry) || !("input" in entry)) return false;
+  if (!isPlainObject6(entry) || !("input" in entry)) return false;
   if (!stringArrayField(entry.reasons)) return false;
   if (entry[validatedField] === null) return entry.reasons.includes(malformedCode);
   return inner(entry[validatedField]);
 }
 function validateShadowedExemption(entry) {
-  return isPlainObject4(entry) && (entry.kind === "waiver" || entry.kind === "not-applicable") && "input" in entry && isPlainObject4(entry.scope) && (entry.scope.kind === "check" || entry.scope.kind === "claim") && typeof entry.scope.ref === "string";
+  return isPlainObject6(entry) && (entry.kind === "waiver" || entry.kind === "not-applicable") && "input" in entry && isPlainObject6(entry.scope) && (entry.scope.kind === "check" || entry.scope.kind === "claim") && typeof entry.scope.ref === "string";
 }
 function validateVerificationSummary(value) {
-  if (!isPlainObject4(value)) return false;
+  if (!isPlainObject6(value)) return false;
   if (value.schemaVersion !== VERIFICATION_SUMMARY_SCHEMA_VERSION) return false;
   if (value.kind !== "verification-summary") return false;
-  if (!isPlainObject4(value.target) || !isSubject(value.target.subject)) return false;
+  if (!isPlainObject6(value.target) || !isSubject(value.target.subject)) return false;
   if (!(value.target.subjectDigest === null || isRevisionDigest(value.target.subjectDigest))) return false;
   if (!isIsoTimestamp3(value.assessedAt)) return false;
-  if (!isPlainObject4(value.scope)) return false;
+  if (!isPlainObject6(value.scope)) return false;
   if (!stringArrayField(value.scope.claims) || !stringArrayField(value.scope.checks)) return false;
   const claims = value.claims;
   const checks = value.checks;
@@ -40096,7 +39650,7 @@ function validateVerificationSummary(value) {
     if (!validateRejectedEntry(entry, "verdict", validateNotApplicableVerdict, "not-applicable-malformed")) return false;
   }
   if (!Array.isArray(value.shadowedExemptions) || !value.shadowedExemptions.every(validateShadowedExemption)) return false;
-  if (!isPlainObject4(value.counts) || !validateSummaryCounts(value.counts)) return false;
+  if (!isPlainObject6(value.counts) || !validateSummaryCounts(value.counts)) return false;
   if (!VERIFICATION_SUMMARY_VERDICTS.includes(value.verdict)) return false;
   if (value.verdict === "verified" && verificationCoverageGap({ checks, claims })) return false;
   return stringArrayField(value.reasons);
@@ -40213,8 +39767,8 @@ function recordSubjectDigest(cwd, subject) {
 }
 
 // src/skills/lib/verification_assessment/summary.ts
-var import_node_fs10 = __toESM(require("node:fs"));
-var import_node_path10 = __toESM(require("node:path"));
+var import_node_fs9 = __toESM(require("node:fs"));
+var import_node_path9 = __toESM(require("node:path"));
 
 // src/skills/lib/verification_assessment/waivers.ts
 var WAIVER_REASONS = {
@@ -40590,14 +40144,14 @@ function buildVerificationSummaryIn(graph, input2, deps) {
 }
 function candidateScope(verdict, input2) {
   if (verdict !== null) return verdict.scope;
-  if (!isPlainObject4(input2) || !isPlainObject4(input2.scope)) return null;
+  if (!isPlainObject6(input2) || !isPlainObject6(input2.scope)) return null;
   const kind = input2.scope.kind;
   const ref = input2.scope.ref;
   return (kind === "check" || kind === "claim") && typeof ref === "string" && ref.length > 0 ? { kind, ref } : null;
 }
 function candidateCheck(verdict, input2) {
   if (verdict !== null) return verdict.check;
-  return isPlainObject4(input2) && typeof input2.check === "string" && input2.check.length > 0 ? input2.check : null;
+  return isPlainObject6(input2) && typeof input2.check === "string" && input2.check.length > 0 ? input2.check : null;
 }
 function firstWaiverForScope(results, kind, ref) {
   for (const result of results) {
@@ -40623,14 +40177,14 @@ function normalizeTarget(cwd, input2) {
   return { subject: input2.subject, subjectDigest: input2.subject.snapshotDigest };
 }
 async function buildVerificationSummary(cwd, input2, options2 = {}) {
-  const root = import_node_path10.default.resolve(cwd);
+  const root = import_node_path9.default.resolve(cwd);
   const graph = await scanKnowledgeGraph({ cwd: root });
   const records = input2.records ?? query(root, { runId: input2.runId }, options2);
   const target = normalizeTarget(root, input2);
   return buildVerificationSummaryIn(graph, { ...input2, subject: target.subject, records, subjectDigest: target.subjectDigest }, {
     readDocument: (docPath) => {
       try {
-        return import_node_fs10.default.readFileSync(import_node_path10.default.join(root, docPath), "utf8");
+        return import_node_fs9.default.readFileSync(import_node_path9.default.join(root, docPath), "utf8");
       } catch {
         return null;
       }
@@ -40760,23 +40314,18 @@ function subHeadingCount(section, depth = 3) {
   return stripFencedBlocks(section).match(new RegExp(`^#{${depth}}\\s+.+$`, "gm"))?.length ?? 0;
 }
 
-// src/skills/doc-driven-dev-graph/scripts/lib/graph_state.ts
-var FOLLOWUP_SIGNALS = /* @__PURE__ */ new Set([
-  "followup-bug-fix",
-  "followup-decision-briefing",
-  "followup-decision-design",
-  "followup-new-feature",
-  "followup-doc-only",
-  "followup-terminal"
-]);
-function compareStrings4(left, right) {
-  return left.localeCompare(right);
+// src/skills/doc-driven-dev-graph/scripts/lib/artifact_graph.ts
+var import_gray_matter3 = __toESM(require_gray_matter());
+function createArtifactScanCollector() {
+  return { scans: 0, filesRead: 0, bytesRead: 0, filePaths: /* @__PURE__ */ new Set() };
 }
-function sortedUnique3(values) {
-  return [...new Set(values)].sort(compareStrings4);
+
+// src/skills/doc-driven-dev-graph/scripts/lib/graph_state.ts
+function sortedUnique2(values) {
+  return [...new Set(values)].sort(compareStrings);
 }
 function gate(status, reasons = []) {
-  return { status, reasons: sortedUnique3(reasons) };
+  return { status, reasons: sortedUnique2(reasons) };
 }
 function consideredOptionCount(body) {
   const section = sectionBody(body, "Considered Options");
@@ -40788,10 +40337,189 @@ function consideredOptionCount(body) {
 function bootstrapReasons(cwd) {
   const reasons = [];
   for (const directory of DURABLE_DOC_DIRS) {
-    const full = import_node_path11.default.join(cwd, directory);
-    if (!import_node_fs11.default.existsSync(full) || !import_node_fs11.default.statSync(full).isDirectory()) reasons.push(`missing-directory:${directory}`);
+    const full = import_node_path10.default.join(cwd, directory);
+    if (!import_node_fs10.default.existsSync(full) || !import_node_fs10.default.statSync(full).isDirectory()) reasons.push(`missing-directory:${directory}`);
   }
   return reasons;
+}
+var CHAIN_STATUSES = {
+  spec: /* @__PURE__ */ new Set(["proposed", "approved", "implemented"]),
+  adr: /* @__PURE__ */ new Set(["proposed", "accepted"]),
+  design: /* @__PURE__ */ new Set(["approved"])
+};
+function chainKey(chain) {
+  return [chain.spec, chain.adr, chain.design].map((value) => value ?? "").join("\0");
+}
+function chainMembers(chain) {
+  return new Set([chain.spec, chain.adr, chain.design, ...chain.anchors ?? []].filter((value) => Boolean(value)));
+}
+function hasKnowledgeEdge(graph, fromPath, relation, toPath) {
+  return graph.edges.some((edge) => edge.resolution === "resolved" && edge.from.path === fromPath && edge.relation === relation && edge.to?.path === toPath);
+}
+function designClaimsSpec(graph, designPath, specPath) {
+  return Boolean(specPath) && hasKnowledgeEdge(graph, designPath, "realizes", specPath);
+}
+function designClaimsAdr(graph, designPath, adrPath) {
+  return Boolean(adrPath) && hasKnowledgeEdge(graph, adrPath, "decides-for", designPath);
+}
+function preDesignAnchors(graph, records, spec, adr) {
+  const direct = hasKnowledgeEdge(graph, adr.path, "decides-for", spec.path);
+  const discoveries = records.filter((record2) => (record2.type === "discovery" || record2.type === "brainstorm") && [spec, adr].every((artifact) => hasKnowledgeEdge(graph, record2.path, "motivates", artifact.path) || hasKnowledgeEdge(graph, record2.path, "informs", artifact.path)));
+  return direct || discoveries.length > 0 ? discoveries.map((record2) => record2.path) : void 0;
+}
+function artifactChainCandidates(graph, records) {
+  const specs = records.filter((record2) => record2.type === "spec" && CHAIN_STATUSES.spec.has(record2.status ?? ""));
+  const adrs = records.filter((record2) => record2.type === "adr" && CHAIN_STATUSES.adr.has(record2.status ?? ""));
+  const designs = records.filter((record2) => record2.type === "design" && CHAIN_STATUSES.design.has(record2.status ?? ""));
+  const chains = /* @__PURE__ */ new Map();
+  const add = (chain) => {
+    chains.set(chainKey(chain), chain);
+  };
+  const cartesian = (values, fallback) => values.length > 0 ? values : fallback;
+  for (const design of designs) {
+    const relatedSpecs = specs.filter((candidate) => designClaimsSpec(graph, design.path, candidate.path));
+    const relatedAdrs = adrs.filter((candidate) => designClaimsAdr(graph, design.path, candidate.path));
+    for (const spec of cartesian(relatedSpecs, [void 0])) {
+      for (const adr of cartesian(relatedAdrs, [void 0])) {
+        add({ spec: spec?.path, adr: adr?.path, design: design.path });
+      }
+    }
+  }
+  const unassignedSpecs = specs.filter((spec) => !designs.some((design) => designClaimsSpec(graph, design.path, spec.path)));
+  const paired = /* @__PURE__ */ new Set();
+  for (const spec of unassignedSpecs) {
+    for (const adr of adrs) {
+      const anchors = preDesignAnchors(graph, records, spec, adr);
+      if (!anchors) continue;
+      add({ spec: spec.path, adr: adr.path, anchors });
+      paired.add(spec.path);
+      paired.add(adr.path);
+    }
+  }
+  for (const artifact of [...specs, ...adrs]) {
+    if (!paired.has(artifact.path) && !designs.some((design) => artifact.type === "adr" ? designClaimsAdr(graph, design.path, artifact.path) : designClaimsSpec(graph, design.path, artifact.path))) {
+      add(artifact.type === "spec" ? { spec: artifact.path } : { adr: artifact.path });
+    }
+  }
+  return [...chains.values()].sort((left, right) => compareStrings(chainKey(left), chainKey(right)));
+}
+function selectArtifactChain(graph, records, focusPaths) {
+  const focus = [...focusPaths];
+  const candidates = artifactChainCandidates(graph, records).filter((chain) => {
+    const members2 = chainMembers(chain);
+    return focus.every((focusPath) => members2.has(focusPath));
+  });
+  return candidates.length === 1 ? candidates[0] : void 0;
+}
+function isFocusAmbiguous(graph, records, focusPaths) {
+  const focus = [...focusPaths];
+  const relevant = focus.some((focusPath) => {
+    const type = records.find((record2) => record2.path === focusPath)?.type;
+    return ["discovery", "brainstorm", "spec", "adr", "design"].includes(type ?? "");
+  });
+  if (!relevant) return false;
+  const candidates = artifactChainCandidates(graph, records).filter((chain) => {
+    const members2 = chainMembers(chain);
+    return focus.every((focusPath) => members2.has(focusPath));
+  });
+  return candidates.length > 1;
+}
+var FOCUS_RANK = { design: 0, spec: 1, adr: 2, discovery: 3, brainstorm: 4 };
+function primaryPathByArtifactKey(records) {
+  const primaries = /* @__PURE__ */ new Map();
+  for (const [key, group] of groupByArtifact(records)) {
+    const nonLocalized = group.filter((document3) => !/\.[a-z]{2}\.md$/i.test(import_node_path10.default.posix.basename(document3.path)));
+    const pool = nonLocalized.length > 0 ? nonLocalized : group;
+    primaries.set(key, [...pool].sort((a, b) => compareStrings(a.path, b.path))[0].path);
+  }
+  return primaries;
+}
+function resolveFocus(cwd, records, knowledge, options2) {
+  const rawValues = [...options2.focus ?? []];
+  if (rawValues.length === 0) {
+    const active = records.filter((record2) => record2.status && ACTIVE_STATUSES_FOR_FOCUS.has(record2.status));
+    return { focus: [], runId: null, blockers: active.length > 0 ? ["focus-required"] : [] };
+  }
+  const primaries = primaryPathByArtifactKey(records);
+  const byId = /* @__PURE__ */ new Map();
+  for (const record2 of records) {
+    if (!record2.id) continue;
+    const group = byId.get(record2.id) ?? [];
+    group.push(record2);
+    byId.set(record2.id, group);
+  }
+  const primaryFor = (group) => {
+    const keys = new Set(group.map((record2) => artifactKeyOf(record2.path)));
+    return [...keys].map((key) => primaries.get(key)).filter((value) => Boolean(value)).map((key) => records.find((record2) => record2.path === key));
+  };
+  const listed = listRuns(cwd, {
+    stateRoot: options2.stateRoot,
+    allowExternalRoot: options2.allowExternalRoot
+  });
+  const runIds = new Set(listed.map((run2) => run2.runId));
+  const focus = [];
+  const runTokens = /* @__PURE__ */ new Set();
+  const blockers = /* @__PURE__ */ new Set();
+  for (const rawToken of rawValues) {
+    const token = rawToken.trim();
+    if (!token) continue;
+    if (parseClaimReference(token)) {
+      const resolved = resolveClaimReference(knowledge, token);
+      if (resolved.status === "resolved") {
+        focus.push(resolved.node.path);
+        continue;
+      }
+      blockers.add(resolved.status === "ambiguous" ? "focus-required" : "focus-invalid");
+      continue;
+    }
+    const idGroup = byId.get(token);
+    if (idGroup) {
+      const idPrimaries = primaryFor(idGroup);
+      if (idPrimaries.length === 1) {
+        focus.push(idPrimaries[0].path);
+      } else {
+        blockers.add("focus-required");
+      }
+      continue;
+    }
+    if (runIds.has(token)) {
+      if (runTokens.size > 0 && !runTokens.has(token)) blockers.add("focus-invalid");
+      runTokens.add(token);
+      try {
+        const snapshot = loadRun(cwd, token, {
+          stateRoot: options2.stateRoot,
+          allowExternalRoot: options2.allowExternalRoot
+        });
+        const runFocus = runFocusPaths(snapshot.manifest.focus);
+        if (runFocus) focus.push(...runFocus);
+      } catch {
+        blockers.add("task-graph-run-unreadable");
+      }
+      continue;
+    }
+    const normalized = normalizeRepoPath(cwd, token);
+    const primary = primaries.get(artifactKeyOf(normalized));
+    if (primary) {
+      focus.push(primary);
+      continue;
+    }
+    blockers.add("focus-invalid");
+  }
+  const resolvedFocus = sortedUnique2(focus);
+  if (blockers.size > 0) {
+    return { focus: resolvedFocus, runId: null, blockers: sortedUnique2(blockers) };
+  }
+  const runId = runTokens.size === 1 ? [...runTokens][0] : null;
+  if (isFocusAmbiguous(knowledge, records, resolvedFocus)) {
+    return { focus: resolvedFocus, runId, blockers: ["focus-required"] };
+  }
+  const chain = selectArtifactChain(knowledge, records, resolvedFocus);
+  if (resolvedFocus.length > 1 && !chain) return { focus: resolvedFocus, runId, blockers: ["focus-required"] };
+  const focused = records.filter((record2) => resolvedFocus.includes(record2.path)).sort((left, right) => (FOCUS_RANK[left.type ?? ""] ?? 9) - (FOCUS_RANK[right.type ?? ""] ?? 9) || compareStrings(left.path, right.path))[0];
+  return { focus: resolvedFocus, runId, focusedPath: focused?.path, blockers: [] };
+}
+function normalizeRepoPath(cwd, target) {
+  return import_node_path10.default.relative(import_node_path10.default.resolve(cwd), import_node_path10.default.resolve(cwd, target)).split(import_node_path10.default.sep).join("/");
 }
 function findRecord(records, pathValue) {
   return pathValue ? records.find((record2) => record2.path === pathValue) : void 0;
@@ -40805,10 +40533,14 @@ function runMatchesGraph(snapshot, graphId, members2) {
   const focus = runFocusPaths(snapshot.manifest.focus);
   return focus !== null && members2 !== null && focus.every((entry) => members2.has(entry));
 }
-function resolveRunSnapshot(cwd, graphId, chain, options2) {
+function resolveRunSnapshot(cwd, graphId, chain, focusRunId, options2) {
   const store = { stateRoot: options2.stateRoot, allowExternalRoot: options2.allowExternalRoot };
-  if (options2.runId !== void 0) {
-    return { snapshot: loadRun(cwd, options2.runId, store), blocker: null };
+  if (options2.runId !== void 0 && focusRunId !== null && options2.runId !== focusRunId) {
+    return { snapshot: null, blocker: "focus-invalid" };
+  }
+  const selectedId = options2.runId ?? focusRunId;
+  if (selectedId !== void 0 && selectedId !== null) {
+    return { snapshot: loadRun(cwd, selectedId, store), blocker: null };
   }
   const members2 = chain === void 0 ? null : chainMembers(chain);
   const listed = listRuns(cwd, store);
@@ -40834,53 +40566,40 @@ function deriveSignals(input2, blockers, gates, taskGraph) {
   const signals = new Set(input2);
   if (blockers.includes("focus-required")) signals.add("focus-required");
   if (blockers.includes("bootstrap-incomplete")) signals.add("bootstrap-incomplete");
-  const followups = [...signals].filter((signal) => FOLLOWUP_SIGNALS.has(signal));
-  if (followups.length === 0) signals.add("followups-unclassified");
-  if (followups.length > 1) signals.add("followups-conflicting");
   if (blockers.length === 0 && Object.values(gates).length > 0 && Object.values(gates).every((result) => result.status === "pass") && (!taskGraph || taskGraph.issues.length === 0)) signals.add("graph-complete");
-  return sortedUnique3(signals);
+  return sortedUnique2(signals);
 }
-function deriveHardBlockers(blockers, signals, gates) {
-  return sortedUnique3([
-    ...blockers.filter((blocker) => blocker === "focus-required" || blocker === "focus-invalid" || blocker === "duplicate-id" || blocker.startsWith("broken-relation:")),
-    ...signals.includes("followups-conflicting") ? ["followups-conflicting"] : [],
-    ...gates["artifact-graph"]?.status !== "pass" && gates["artifact-graph"] ? ["artifact-graph"] : []
+function deriveHardBlockers(blockers, gates) {
+  return sortedUnique2([
+    ...blockers.filter((blocker) => blocker === "focus-required" || blocker === "focus-invalid" || blocker === "duplicate-id" || blocker.startsWith("knowledge:")),
+    ...gates.knowledge && gates.knowledge.status !== "pass" ? ["knowledge"] : []
   ]);
 }
-function fallbackRecords(cwd, graph) {
-  return graph.nodes.map((node3) => ({
-    ...node3,
-    absolutePath: import_node_path11.default.join(cwd, node3.path),
-    body: "",
-    status: null,
-    relations: {},
-    relationIssues: []
-  }));
-}
-function evaluateGraphGates(state, collector) {
-  const cwd = import_node_path11.default.resolve(state.cwd);
-  const projection = scanArtifactGraph({ cwd, taskDir: state.taskDir }, collector);
-  const records = projection.records.length > 0 ? projection.records : fallbackRecords(cwd, state.artifactGraph);
-  const resolution = resolveArtifactFocus(cwd, state.artifactGraph, records, state.focus);
-  const focused = findRecord(records, resolution.focusedPath);
-  const chain = focused ? selectArtifactChain(state.artifactGraph, records, state.focus) : void 0;
-  const taskGraph = state.taskGraph;
+function evaluateGraphGates(state) {
+  const cwd = import_node_path10.default.resolve(state.cwd);
+  const records = state.knowledge.documents;
+  const focusBlocked = state.blockers.includes("focus-required") || state.blockers.includes("focus-invalid");
+  const focused = focusBlocked ? void 0 : findRecord(records, focusRank(state, records));
+  const chain = focused ? selectArtifactChain(state.knowledge.graph, records, state.focus) : void 0;
+  const taskGraph = state.execution.taskGraph;
   const bootstrap = bootstrapReasons(cwd);
   const gates = {
-    bootstrap: gate(bootstrap.length === 0 ? "pass" : "fail", bootstrap)
+    bootstrap: gate(bootstrap.length === 0 ? "pass" : "fail", bootstrap),
+    // Knowledge integrity (Issue #235): any projection issue — a duplicate
+    // Claim ID, an unresolvable stored relation, a legacy relation field —
+    // blocks routing outright. The durable corpus is the authority, so its
+    // corruption is a hard blocker, never a repairable stage.
+    knowledge: gate(
+      state.knowledge.graph.issues.length === 0 ? "pass" : "blocked",
+      state.knowledge.graph.issues.map((issue2) => `knowledge:${issue2.code}`)
+    )
   };
-  const graphIssues = [...new Map([
-    ...state.artifactGraph.issues,
-    ...projection.graph.issues
-  ].map((issue2) => [`${issue2.code}\0${issue2.message}`, issue2])).values()];
-  if (graphIssues.length > 0) {
-    gates["artifact-graph"] = gate("blocked", graphIssues.map((issue2) => `artifact-graph:${issue2.code}`));
-  }
   if (!focused) {
     gates.briefing = gate(state.blockers.includes("focus-required") ? "blocked" : "fail", [state.blockers.includes("focus-required") ? "focus-required" : "focus-missing"]);
     gates.design = gate("blocked", ["focus-required"]);
     gates.planning = gate("blocked", ["focus-required"]);
     gates.implementation = gate("blocked", ["focus-required"]);
+    gates.verification = gate("blocked", ["focus-required"]);
   } else {
     const spec = findRecord(records, chain?.spec);
     const adr = findRecord(records, chain?.adr);
@@ -40893,13 +40612,13 @@ function evaluateGraphGates(state, collector) {
     gates.briefing = gate(briefingReasons.length === 0 ? "pass" : "fail", briefingReasons);
     const designReasons = [];
     if (!design || design.status !== "approved") designReasons.push("design-status");
-    if (!design || !designClaimsSpec(state.artifactGraph, design.path, spec?.path)) designReasons.push("design-spec-relation");
-    if (!design || !designAdrDecision(state.artifactGraph, design.path, adr?.path)) designReasons.push("design-adr-relation");
+    if (!design || !designClaimsSpec(state.knowledge.graph, design.path, spec?.path)) designReasons.push("design-spec-relation");
+    if (!design || !designClaimsAdr(state.knowledge.graph, design.path, adr?.path)) designReasons.push("design-adr-relation");
     gates.design = gate(designReasons.length === 0 ? "pass" : "fail", designReasons);
     const planningReasons = [];
-    if (state.taskGraph?.plan?.approved !== true) planningReasons.push("plan-status");
+    if (state.execution.taskGraph?.plan?.approved !== true) planningReasons.push("plan-status");
     const members2 = chain === void 0 ? null : chainMembers(chain);
-    const runFocus = state.run?.focus ?? null;
+    const runFocus = state.execution.run?.focus ?? null;
     if (runFocus === null || members2 === null || !runFocus.every((entry) => members2.has(entry))) {
       planningReasons.push("plan-design-relation");
     }
@@ -40912,83 +40631,117 @@ function evaluateGraphGates(state, collector) {
     const implementationReasons = [];
     if (!taskGraph || taskGraph.nodes.length === 0) implementationReasons.push("no-selected-tasks");
     if (taskGraph && taskGraph.nodes.some((node3) => !["done", "wont-do"].includes(node3.status))) implementationReasons.push("tasks-incomplete");
+    gates.implementation = gate(implementationReasons.length === 0 ? "pass" : "fail", implementationReasons);
+    const verificationReasons = [];
     const verification = state.verification;
     if (verification == null) {
-      implementationReasons.push("verification-summary");
+      verificationReasons.push("verification-summary");
     } else if (verification.boundToHead === null) {
-      implementationReasons.push("verification-summary-head-unreadable");
+      verificationReasons.push("verification-summary-head-unreadable");
     } else if (!verification.boundToHead) {
-      implementationReasons.push("verification-summary-target-mismatch");
+      verificationReasons.push("verification-summary-target-mismatch");
     } else if (verification.summary.verdict !== "verified") {
-      implementationReasons.push(`verification-${verification.summary.verdict}`);
-      implementationReasons.push(...verification.summary.reasons);
+      verificationReasons.push(`verification-${verification.summary.verdict}`);
+      verificationReasons.push(...verification.summary.reasons);
     } else if (verificationCoverageGap(verification.summary)) {
-      implementationReasons.push("verification-summary-inconsistent");
+      verificationReasons.push("verification-summary-inconsistent");
     }
-    gates.implementation = gate(implementationReasons.length === 0 ? "pass" : "blocked", implementationReasons);
+    gates.verification = gate(verificationReasons.length === 0 ? "pass" : "blocked", verificationReasons);
   }
-  const followups = state.signals.filter((signal) => FOLLOWUP_SIGNALS.has(signal));
-  gates["followup-triage"] = followups.length === 1 && !state.signals.includes("followups-unclassified") ? gate("pass") : followups.length === 0 ? gate("blocked", ["followups-unclassified"]) : gate("blocked", ["followups-conflicting"]);
+  gates["knowledge-consolidation"] = state.signals.includes("knowledge-consolidated") ? gate("pass") : gate("fail", ["knowledge-consolidation-pending"]);
   gates["exit-audit"] = state.signals.includes("exit-audit-pass") ? gate("pass") : gate("blocked", ["exit-audit-pass"]);
   return gates;
 }
-function projectGraphState(options2, collector) {
-  const cwd = import_node_path11.default.resolve(options2.cwd);
-  const taskDir = resolveContainedTaskDir(cwd, options2.taskDir);
-  const projection = scanArtifactGraph({ cwd, taskDir }, collector);
-  const resolution = resolveArtifactFocus(cwd, projection.graph, projection.records, options2.focus ?? []);
-  const blockers = sortedUnique3([
-    ...resolution.blockers,
-    ...projection.graph.issues.map((issue2) => issue2.code === "duplicate-id" ? "duplicate-id" : `broken-relation:${issue2.message}`),
-    ...projection.graph.issues.some((issue2) => issue2.code === "duplicate-id") ? ["focus-required"] : [],
-    ...bootstrapReasons(cwd).length > 0 ? ["bootstrap-incomplete"] : []
-  ]);
-  const chain = resolution.blockers.length === 0 && !projection.graph.issues.some((issue2) => issue2.code === "duplicate-id") ? selectArtifactChain(projection.graph, projection.records, resolution.focus) : void 0;
+function focusRank(state, records) {
+  return records.filter((record2) => state.focus.includes(record2.path)).sort((left, right) => (FOCUS_RANK[left.type ?? ""] ?? 9) - (FOCUS_RANK[right.type ?? ""] ?? 9) || compareStrings(left.path, right.path))[0]?.path;
+}
+async function projectGraphState(options2, collector) {
+  const cwd = import_node_path10.default.resolve(options2.cwd);
+  if (collector) collector.scans += 1;
+  const model = await scanRepository({ cwd, roots: [...DURABLE_DOC_DIRS], includeTopLevelMarkdown: false });
+  const knowledge = projectKnowledgeGraph(model);
+  const records = model.canonicalDocuments;
+  if (collector) {
+    for (const document3 of model.files) {
+      collector.filesRead += 1;
+      collector.filePaths.add(document3.path);
+      try {
+        collector.bytesRead += import_node_fs10.default.statSync(document3.absolutePath).size;
+      } catch {
+      }
+    }
+  }
+  const graphId = options2.graphId ?? "doc-driven-dev";
+  const resolution = resolveFocus(cwd, records, knowledge, {
+    focus: options2.focus,
+    stateRoot: options2.stateRoot,
+    allowExternalRoot: options2.allowExternalRoot
+  });
+  const chain = resolution.blockers.length === 0 ? selectArtifactChain(knowledge, records, resolution.focus) : void 0;
   const { snapshot: run2, blocker: runBlocker } = resolveRunSnapshot(
     cwd,
-    options2.graphId ?? "doc-driven-dev",
+    graphId,
     chain,
+    resolution.runId,
     options2
   );
   const taskGraph = run2 ? projectRunTasks(run2) : null;
-  if (taskGraph?.issues.length) blockers.push("task-graph-invalid");
-  if (runBlocker !== null) blockers.push(runBlocker);
+  const duplicateIds = model.duplicateIds();
+  const blockers = sortedUnique2([
+    ...resolution.blockers,
+    ...knowledge.issues.map((issue2) => `knowledge:${issue2.code}`),
+    ...duplicateIds.length > 0 ? ["duplicate-id", "focus-required"] : [],
+    ...taskGraph && taskGraph.issues.length > 0 ? ["task-graph-invalid"] : [],
+    ...runBlocker !== null ? [runBlocker] : [],
+    ...bootstrapReasons(cwd).length > 0 ? ["bootstrap-incomplete"] : []
+  ]);
   const verification = options2.verificationSummary === void 0 ? null : (() => {
     const head = resolveCommitSubject(cwd, "HEAD");
     return {
       summary: options2.verificationSummary,
-      boundToHead: head === null ? null : options2.verificationSummary.target.subjectDigest === head.subjectDigest
+      boundToHead: head === null ? null : options2.verificationSummary.target.subjectDigest === head.subjectDigest,
+      documents: knowledge.nodes.filter((node3) => node3.type === "verification").map((node3) => node3.path).sort(compareStrings)
     };
   })();
   const state = {
-    schemaVersion: 2,
-    graphId: options2.graphId ?? "doc-driven-dev",
+    schemaVersion: 3,
+    graphId,
     cwd,
-    taskDir,
-    focus: resolution.focus,
-    artifactGraph: projection.graph,
-    gates: {},
-    signals: sortedUnique3(options2.signals ?? []),
-    blockers: sortedUnique3(blockers),
-    hardBlockers: [],
-    taskGraph,
+    knowledge: { graph: knowledge, documents: records },
+    execution: {
+      run: run2 === null ? null : {
+        runId: run2.runId,
+        status: run2.status,
+        focus: runFocusPaths(run2.manifest.focus)
+      },
+      taskGraph
+    },
     verification,
-    run: run2 === null ? null : {
-      runId: run2.runId,
-      status: run2.status,
-      focus: runFocusPaths(run2.manifest.focus)
-    }
+    focus: resolution.focus,
+    gates: {},
+    signals: sortedUnique2(options2.signals ?? []),
+    blockers,
+    hardBlockers: []
   };
   state.signals = deriveSignals(state.signals, state.blockers, state.gates, taskGraph);
-  state.gates = evaluateGraphGates(state, collector);
-  if (state.gates.planning?.reasons.some((reason) => reason.startsWith("task-graph:"))) {
-    state.blockers = sortedUnique3([...state.blockers, "task-graph-invalid"]);
-    state.gates = evaluateGraphGates(state, collector);
+  state.gates = evaluateGraphGates(state);
+  if (state.gates.verification && state.gates.verification.status !== "pass") {
+    state.blockers = sortedUnique2([...state.blockers, ...state.gates.verification.reasons]);
   }
   state.signals = deriveSignals(state.signals, state.blockers, state.gates, taskGraph);
-  state.hardBlockers = deriveHardBlockers(state.blockers, state.signals, state.gates);
+  state.hardBlockers = deriveHardBlockers(state.blockers, state.gates);
   return state;
 }
+var ACTIVE_STATUSES_FOR_FOCUS = /* @__PURE__ */ new Set([
+  "draft",
+  "proposed",
+  "approved",
+  "in-progress",
+  "capturing",
+  "confirmed",
+  "routed",
+  "active"
+]);
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_conditions.ts
 function evaluateCondition(condition, state) {
@@ -40996,24 +40749,24 @@ function evaluateCondition(condition, state) {
   if (condition.kind === "gate") {
     return condition.status === "pass" ? state.gates[condition.gate]?.status === "pass" : state.gates[condition.gate]?.status !== "pass";
   }
-  if (condition.state === "runnable") return (state.taskGraph?.runnable.length ?? 0) > 0;
+  if (condition.state === "runnable") return (state.execution.taskGraph?.runnable.length ?? 0) > 0;
   if (condition.state === "active") {
-    return (state.taskGraph?.issues.length ?? 0) === 0 && (state.taskGraph?.resumableActive.length ?? 0) > 0;
+    return (state.execution.taskGraph?.issues.length ?? 0) === 0 && (state.execution.taskGraph?.resumableActive.length ?? 0) > 0;
   }
-  if (condition.state === "invalid") return (state.taskGraph?.issues.length ?? 0) > 0;
-  return state.taskGraph !== null && state.taskGraph.completed.length > 0 && state.taskGraph.runnable.length === 0 && state.taskGraph.active.length === 0 && state.taskGraph.blocked.length === 0 && state.taskGraph.issues.length === 0;
+  if (condition.state === "invalid") return (state.execution.taskGraph?.issues.length ?? 0) > 0;
+  return state.execution.taskGraph !== null && state.execution.taskGraph.completed.length > 0 && state.execution.taskGraph.runnable.length === 0 && state.execution.taskGraph.active.length === 0 && state.execution.taskGraph.blocked.length === 0 && state.execution.taskGraph.issues.length === 0;
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_router.ts
 function sortedOutgoing(definition2, current) {
   return definition2.edges.filter((edge) => edge.from === current).sort((left, right) => left.priority - right.priority || left.id.localeCompare(right.id));
 }
-function sortedUnique4(values) {
+function sortedUnique3(values) {
   return [...new Set(values)].sort((left, right) => left.localeCompare(right));
 }
 function routeResult(input2, result, additionalBlockers = []) {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     graphId: input2.definition.id,
     current: input2.current,
     next: result.next,
@@ -41021,9 +40774,9 @@ function routeResult(input2, result, additionalBlockers = []) {
     condition: result.condition,
     status: result.status,
     delegate: result.delegate,
-    requiredAudits: sortedUnique4(result.requiredAudits),
-    blockers: sortedUnique4([...input2.state.blockers, ...additionalBlockers]),
-    taskGraph: input2.state.taskGraph,
+    requiredAudits: sortedUnique3(result.requiredAudits),
+    blockers: sortedUnique3([...input2.state.blockers, ...additionalBlockers]),
+    taskGraph: input2.state.execution.taskGraph,
     commitGate: result.commitGate
   };
 }
@@ -41053,7 +40806,7 @@ function prerequisiteGateExplanations(node3, state) {
   return (node3.requiresGates ?? []).map((gate2) => {
     const result = state.gates[gate2];
     if (!result) return { gate: gate2, status: "missing", reasons: ["missing"] };
-    return { gate: gate2, status: result.status, reasons: sortedUnique4(result.reasons) };
+    return { gate: gate2, status: result.status, reasons: sortedUnique3(result.reasons) };
   });
 }
 function evaluateEdge(edge, definition2, state, evaluationPhase) {
@@ -41091,7 +40844,7 @@ function evaluateRouteDecision(input2) {
   const node3 = input2.definition.nodes[input2.current];
   const prerequisiteGates = prerequisiteGateExplanations(node3, input2.state);
   const evaluatedEdges = [];
-  const hardBlockers = sortedUnique4(input2.state.hardBlockers);
+  const hardBlockers = sortedUnique3(input2.state.hardBlockers);
   if (node3.kind === "terminal") {
     const route2 = routeResult(input2, {
       next: input2.current,
@@ -41154,7 +40907,7 @@ function evaluateRouteDecision(input2) {
           prerequisiteGates,
           evaluatedEdges,
           selectedEdgeId: edge.id,
-          selectedDestinationAudits: sortedUnique4(input2.definition.nodes[edge.to]?.audits ?? []),
+          selectedDestinationAudits: sortedUnique3(input2.definition.nodes[edge.to]?.audits ?? []),
           blockedReasons: []
         }
       };
@@ -41180,7 +40933,7 @@ function evaluateRouteDecision(input2) {
         evaluatedEdges,
         selectedEdgeId: null,
         selectedDestinationAudits: [],
-        blockedReasons: sortedUnique4(prerequisiteFailures)
+        blockedReasons: sortedUnique3(prerequisiteFailures)
       }
     };
   }
@@ -41197,7 +40950,7 @@ function evaluateRouteDecision(input2) {
           prerequisiteGates,
           evaluatedEdges,
           selectedEdgeId: edge.id,
-          selectedDestinationAudits: sortedUnique4(input2.definition.nodes[edge.to]?.audits ?? []),
+          selectedDestinationAudits: sortedUnique3(input2.definition.nodes[edge.to]?.audits ?? []),
           blockedReasons: []
         }
       };
@@ -41228,8 +40981,8 @@ function evaluateRouteDecision(input2) {
 
 // src/skills/doc-driven-dev-graph/scripts/lib/run_trace.ts
 var import_node_crypto4 = __toESM(require("node:crypto"));
-var import_node_fs12 = __toESM(require("node:fs"));
-var import_node_path12 = __toESM(require("node:path"));
+var import_node_fs11 = __toESM(require("node:fs"));
+var import_node_path11 = __toESM(require("node:path"));
 var TRACE_SCHEMA_VERSION = 1;
 var EXECUTION_MODES = ["same-context", "subagent", "tool", "unknown"];
 var DISPATCH_METHODS = [
@@ -41439,17 +41192,17 @@ function requireTasks(value) {
   });
 }
 function appendTraceEvent(filePath, input2) {
-  const resolved = import_node_path12.default.resolve(filePath);
-  const existing = import_node_fs12.default.existsSync(resolved) ? readTraceFile(resolved) : [];
+  const resolved = import_node_path11.default.resolve(filePath);
+  const existing = import_node_fs11.default.existsSync(resolved) ? readTraceFile(resolved) : [];
   const seq = existing.filter((event2) => event2.runId === input2.runId).length + 1;
   const event = normalizeTraceEvent({ ...input2, seq });
-  import_node_fs12.default.mkdirSync(import_node_path12.default.dirname(resolved), { recursive: true });
-  import_node_fs12.default.appendFileSync(resolved, `${JSON.stringify(event)}
+  import_node_fs11.default.mkdirSync(import_node_path11.default.dirname(resolved), { recursive: true });
+  import_node_fs11.default.appendFileSync(resolved, `${JSON.stringify(event)}
 `, "utf8");
   return event;
 }
 function readTraceFile(filePath) {
-  const text3 = import_node_fs12.default.readFileSync(filePath, "utf8");
+  const text3 = import_node_fs11.default.readFileSync(filePath, "utf8");
   const events = [];
   text3.split("\n").forEach((line, index2) => {
     if (line.trim().length === 0) return;
@@ -41483,7 +41236,7 @@ function stableRouteHash(route) {
 
 // src/skills/doc-driven-dev-graph/scripts/route_graph.ts
 function usage() {
-  return "Usage: node route_graph.js [--graph <path>] [--current <node>] [--signal <condition-signal>] [--focus <artifact>] [--task-dir <path>] [--run <run-id> [--state-root <path>] [--allow-external-root]] [--cwd <path>] [--verification-summary <path>] [--trace-file <path> --run-id <id>] [--explain] --json";
+  return "Usage: node route_graph.js [--graph <path>] [--current <node>] [--signal <condition-signal>] [--focus <artifact-or-run>] [--run <run-id> [--state-root <path>] [--allow-external-root]] [--cwd <path>] [--verification-summary <path>] [--trace-file <path> --run-id <id>] [--explain] --json";
 }
 function requiredValue(argv, index2, option) {
   const value = argv[index2 + 1];
@@ -41515,8 +41268,7 @@ function parseArgs(argv) {
       args.focus.push(requiredValue(argv, index2, arg));
       index2 += 1;
     } else if (arg === "--task-dir") {
-      args.taskDir = requiredValue(argv, index2, arg);
-      index2 += 1;
+      throw new Error("--task-dir is not accepted by Graph Route v3 \u2014 plan/task state lives in the Execution Store; select it with --run and --state-root. To migrate a legacy corpus, run doc_maintenance.js migrate plan --json");
     } else if (arg === "--run") {
       args.run = requiredValue(argv, index2, arg);
       index2 += 1;
@@ -41526,7 +41278,7 @@ function parseArgs(argv) {
     } else if (arg === "--allow-external-root") {
       args.allowExternalRoot = true;
     } else if (arg === "--cwd") {
-      args.cwd = import_node_path13.default.resolve(requiredValue(argv, index2, arg));
+      args.cwd = import_node_path12.default.resolve(requiredValue(argv, index2, arg));
       index2 += 1;
     } else if (arg === "--trace-file") {
       args.traceFile = requiredValue(argv, index2, arg);
@@ -41563,10 +41315,10 @@ function validateSignals(definition2, signals) {
 }
 async function verificationSummary(args) {
   if (args.verificationSummary !== void 0) {
-    const file2 = import_node_path13.default.resolve(args.cwd, args.verificationSummary);
+    const file2 = import_node_path12.default.resolve(args.cwd, args.verificationSummary);
     let parsed;
     try {
-      parsed = JSON.parse(import_node_fs13.default.readFileSync(file2, "utf8"));
+      parsed = JSON.parse(import_node_fs12.default.readFileSync(file2, "utf8"));
     } catch (error62) {
       throw new Error(`--verification-summary is not readable JSON: ${error62 instanceof Error ? error62.message : String(error62)}`);
     }
@@ -41593,10 +41345,9 @@ async function run(args) {
   }
   const collector = args.traceFile ? createArtifactScanCollector() : void 0;
   const summary = await verificationSummary(args);
-  const state = projectGraphState({
+  const state = await projectGraphState({
     cwd: args.cwd,
     graphId: definition2.id,
-    taskDir: args.taskDir,
     focus: args.focus,
     signals: args.signals,
     runId: args.run,

@@ -10,7 +10,7 @@ import {
 import { resolveGraphPath } from "./lib/graph_cli";
 import { projectGraphState } from "./lib/graph_state";
 import { evaluateRouteDecision } from "./lib/graph_router";
-import { createArtifactScanCollector } from "./lib/artifact_graph";
+import { createArtifactScanCollector } from "./lib/graph_state";
 import { appendTraceEvent, stableRouteHash } from "./lib/run_trace";
 import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 import {
@@ -24,7 +24,6 @@ type CliArgs = {
   current?: string;
   signals: string[];
   focus: string[];
-  taskDir?: string;
   cwd: string;
   run?: string;
   stateRoot?: string;
@@ -38,7 +37,10 @@ type CliArgs = {
 };
 
 function usage(): string {
-  return "Usage: node route_graph.js [--graph <path>] [--current <node>] [--signal <condition-signal>] [--focus <artifact>] [--task-dir <path>] [--run <run-id> [--state-root <path>] [--allow-external-root]] [--cwd <path>] [--verification-summary <path>] [--trace-file <path> --run-id <id>] [--explain] --json";
+  // Graph Route v3 (Issue #243): execution state comes from the Execution
+  // Store via --run/--state-root; there is no --task-dir — durable plan/task
+  // Markdown is migration-domain input, never a routing selector.
+  return "Usage: node route_graph.js [--graph <path>] [--current <node>] [--signal <condition-signal>] [--focus <artifact-or-run>] [--run <run-id> [--state-root <path>] [--allow-external-root]] [--cwd <path>] [--verification-summary <path>] [--trace-file <path> --run-id <id>] [--explain] --json";
 }
 
 function requiredValue(argv: string[], index: number, option: string): string {
@@ -72,8 +74,11 @@ function parseArgs(argv: string[]): CliArgs {
       args.focus.push(requiredValue(argv, index, arg));
       index += 1;
     } else if (arg === "--task-dir") {
-      args.taskDir = requiredValue(argv, index, arg);
-      index += 1;
+      // Normal v3 routing rejects the legacy task-doc scan root outright
+      // (Issue #243): an adapter still speaking v2 must hit the refusal
+      // here, never a silently-rekeyed projection. Migration tooling owns
+      // any legacy corpus read.
+      throw new Error("--task-dir is not accepted by Graph Route v3 — plan/task state lives in the Execution Store; select it with --run and --state-root. To migrate a legacy corpus, run doc_maintenance.js migrate plan --json");
     } else if (arg === "--run") {
       args.run = requiredValue(argv, index, arg);
       index += 1;
@@ -176,10 +181,9 @@ async function run(args: CliArgs): Promise<void> {
   // loop re-enters this command after delegates record evidence.
   const collector = args.traceFile ? createArtifactScanCollector() : undefined;
   const summary = await verificationSummary(args);
-  const state = projectGraphState({
+  const state = await projectGraphState({
     cwd: args.cwd,
     graphId: definition.id,
-    taskDir: args.taskDir,
     focus: args.focus,
     signals: args.signals,
     runId: args.run,

@@ -166,13 +166,14 @@ generated JavaScript を変更せず、次の declared effect を同じ `EffectO
 | Declared effects | Footer owner |
 | --- | --- |
 | `migrate_docs`, `scaffold_docs`, `build_task_graph` | script delegate 用の caller adapter |
-| `spec`, `adr`, `design`, `plan`, `task`, `test-spec`, `impl-record`, `experiment-log`, `all` | named audit 用の caller adapter |
-| `briefing-flow`, `design-doc`, `planning-flow`, `implementation-flow`, `doc-status` | 呼び出された skill |
+| `spec`, `adr`, `design`, `verification`, `knowledge`, `all` | named audit 用の caller adapter |
+| `briefing-flow`, `design-doc`, `planning-flow`, `implementation-flow`, `knowledge-doc`, `doc-status` | 呼び出された skill |
 
-この行の `plan`、`task`、`test-spec` audit effect は宣言上の名前のみです。
-Document Registry 3 ではこれらの scope は registry ゲートで拒否されるため
-（後述の canonical input セクション参照）、#243 で graph definition が
-rewire されるまで adapter が completed outcome を正規化することはありません。
+Document Registry 3 ではレガシーな `plan`、`task`、`test-spec` audit 名は
+拒否される scope です —— `audit_docs.js --type <name>` は registry
+ゲートで失敗します（`plan`/`task` は execution-bound、`test-spec` は
+migration 専用レガシー形式）—— これらは v3 の `audits:` リストには
+存在しません。
 
 adapter は `completed` または `retry` を返す前に effect 固有の canonical input と output を
 記録します。adapter output が missing または malformed なら
@@ -182,24 +183,19 @@ adapter は `completed` または `retry` を返す前に effect 固有の canon
 
 receipt scope は generic な Task Graph fallback ではなく effect を使います。standard document
 graph では、`spec`、`adr`、`design` audit は対応する canonical document を読み、
-`impl-record` はその Implementation Record、`experiment-log` は `docs/impl/exp` の
-Experiment Log（`.jsonl`）、`all` は
-declared canonical document set を読みます。graph の `audits` リストに残る
-`plan`、`task`、`test-spec` の名前は Document Registry 3 では拒否される
-scope であり（`plan`/`task` は execution-bound、`test-spec` は
-migration 専用レガシー形式のため `audit_docs.js --type <name>` は
-registry ゲートで失敗します）、canonical input を持ちません。宣言済みの
-リストは Graph Definition v3 の rewire（#243）まで superseded とします。
+`verification` は durable な Verification Design 文書を読み、`knowledge` は
+durable な knowledge record を読み、`all` は
+declared durable document set を読みます。
 graph から dispatch される文書型 audit は
 `audit_docs.js --type <name> --profile artifact`、`all` は
-`audit_docs.js --type all --profile artifact` として実行され、`impl-record` は
-`impl-doc/scripts/audit_impl_record.js`、`experiment-log` は
-`impl-doc/scripts/audit_experiment_log.js` として実行されます。`artifact` profile は canonical
+`audit_docs.js --type all --profile artifact` として実行されます。`artifact` profile は canonical
 document の整合性だけを評価するため、missing または stale な index が graph execution を
 gate することはありません。`briefing-flow` は spec と ADR を読み、`design-doc`
 は spec と ADR を読み design evidence を記録し、`planning-flow` は selected approved design を
 読み、選択された run の `plan.md` と生成されたすべての task record を記録します。
-`implementation-flow` は選択された run の task record と design/plan と linked test spec を読み Implementation Record を記録し、
+`implementation-flow` は選択された run の task record と design を読み Implementation Record を記録し、
+`knowledge-doc` は durable な knowledge・verification 文書を読み
+knowledge record を記録し、
 `doc-status` は declared document set を読みます。script-adapter input は
 `migrate_docs`（declared document set）、`scaffold_docs`
 （workspace-root bootstrap input）、`build_task_graph`（選択された run の `plan.md` とその task record）です。store path は run tree 内で state root 相対であり、repo 相対形式の
@@ -216,6 +212,7 @@ reference は使用前に current state と照合して resolve しなければ�
 | `design-doc` | design が approved になる | — | designated reviewer を待つ `approval-required`、upstream user decision がない `input-required` |
 | `planning-flow` | digest 承認済みの run plan と materialize された task record | changed run plan/task repair evidence | plan review が pending の `approval-required`、user-owned planning choice が missing の `input-required`、declared safe repair がない場合の `unrecoverable-blocker` |
 | `implementation-flow` | task slice が verified され Implementation Record が complete になる | declared spec/design/constraint repair | granted authority の範囲で commit できない変更を slice が生成した場合の `commit-required`、permission のない irreversible effect の `authority-required`、declared safe repair がない場合の `unrecoverable-blocker` |
+| `knowledge-doc` | consolidation 判断が記録される（finding の統合、または意図的な no-op） | recoverable な knowledge 文書ギャップ | user が所有する consolidation 選択の `input-required` |
 | `doc-status` | documents が Completable になる | declared repair evidence を伴う Returned | safe repair のない Returned の `unrecoverable-blocker` |
 
 ## 正確な caller evaluation
