@@ -3426,7 +3426,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs5 = require("fs");
+    var fs6 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify = require_stringify();
@@ -3510,7 +3510,7 @@ var require_gray_matter = __commonJS({
       return stringify(file2, data, options2);
     };
     matter4.read = function(filepath, options2) {
-      const str2 = fs5.readFileSync(filepath, "utf8");
+      const str2 = fs6.readFileSync(filepath, "utf8");
       const file2 = matter4(str2, options2);
       file2.path = filepath;
       return file2;
@@ -4858,8 +4858,8 @@ function assertNonEmpty(part, name) {
     throw new Error("`" + name + "` cannot be empty");
   }
 }
-function assertPath(path6, name) {
-  if (!path6) {
+function assertPath(path7, name) {
+  if (!path7) {
     throw new Error("Setting `" + name + "` requires `path` to be set too");
   }
 }
@@ -5044,13 +5044,13 @@ var init_lib4 = __esm({
        * @returns {undefined}
        *   Nothing.
        */
-      set path(path6) {
-        if (isUrl(path6)) {
-          path6 = (0, import_node_url.fileURLToPath)(path6);
+      set path(path7) {
+        if (isUrl(path7)) {
+          path7 = (0, import_node_url.fileURLToPath)(path7);
         }
-        assertNonEmpty(path6, "path");
-        if (this.path !== path6) {
-          this.history.push(path6);
+        assertNonEmpty(path7, "path");
+        if (this.path !== path7) {
+          this.history.push(path7);
         }
       }
       /**
@@ -13585,7 +13585,7 @@ var init_unist_util_visit = __esm({
 });
 
 // src/skills/verification-doc/scripts/new_verification.ts
-var import_node_path6 = __toESM(require("node:path"));
+var import_node_path7 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_suite_utils.ts
 var import_node_fs2 = __toESM(require("node:fs"));
@@ -17565,10 +17565,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path6) {
-  if (!path6)
+function getElementAtPath(obj, path7) {
+  if (!path7)
     return obj;
-  return path6.reduce((acc, key) => acc?.[key], obj);
+  return path7.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -17908,11 +17908,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path6, issues) {
+function prefixIssues(path7, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path6);
+    iss.path.unshift(path7);
     return iss;
   });
 }
@@ -18374,16 +18374,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError2(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path6 = []) => {
+  const processError = (error63, path7 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path6, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path7, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
       } else {
-        const fullpath = [...path6, ...issue2.path];
+        const fullpath = [...path7, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -18422,17 +18422,17 @@ function formatError2(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path6 = []) => {
+  const processError = (error63, path7 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path6, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path7, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path6, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path7, ...issue2.path]);
       } else {
-        const fullpath = [...path6, ...issue2.path];
+        const fullpath = [...path7, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -18471,8 +18471,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path6 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path6) {
+  const path7 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path7) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -35610,13 +35610,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path6 = ref.slice(1).split("/").filter(Boolean);
-  if (path6.length === 0) {
+  const path7 = ref.slice(1).split("/").filter(Boolean);
+  if (path7.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path6[0] === defsKey) {
-    const key = path6[1] === void 0 ? void 0 : decodeJSONPointerSegment(path6[1]);
+  if (path7[0] === defsKey) {
+    const key = path7[1] === void 0 ? void 0 : decodeJSONPointerSegment(path7[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -37362,6 +37362,9 @@ function docDir(cwd, type, explicitDir) {
   assertTypeScope(type, resolved);
   return resolved;
 }
+function docFiles(dir) {
+  return walkMarkdownFiles(dir).map((f) => import_node_path2.default.relative(dir, f).replace(/\\/g, "/"));
+}
 function parseDoc(content3) {
   try {
     const parsed = (0, import_gray_matter.default)(content3);
@@ -37821,6 +37824,19 @@ function ensureDesignOverview(fullDir, date5) {
   if (import_node_fs2.default.existsSync(overviewPath)) return;
   import_node_fs2.default.writeFileSync(overviewPath, overviewDocument(date5), "utf8");
 }
+function isMarkdownSource(file2) {
+  return file2.endsWith(".md") && !isIndexFileName(import_node_path2.default.basename(file2));
+}
+function walkMarkdownFiles(baseDir) {
+  if (!import_node_fs2.default.existsSync(baseDir)) return [];
+  const entries = import_node_fs2.default.readdirSync(baseDir, { withFileTypes: true });
+  return entries.flatMap((entry) => {
+    if (entry.isSymbolicLink()) return [];
+    const fullPath = import_node_path2.default.join(baseDir, entry.name);
+    if (entry.isDirectory()) return walkMarkdownFiles(fullPath);
+    return isMarkdownSource(fullPath) ? [fullPath] : [];
+  }).sort();
+}
 async function createDocument(type, options2) {
   const config2 = configFor(type);
   const lifecycle = parseLifecycleOption(options2.lifecycle);
@@ -37863,6 +37879,30 @@ function logIndexResult(result) {
   } else if (result.indexSkippedReason === "disabled") {
     console.log(`Skipped index update (--no-index): ${result.index}`);
   }
+}
+function resolveDocumentReferenceAll(cwd, target, fromDir) {
+  const trimmed = target.trim();
+  const claimRef = parseClaimReference(trimmed);
+  const idLookup = claimRef?.docId ?? trimmed;
+  if (!claimRef) {
+    for (const base of fromDir ? [fromDir, cwd] : [cwd]) {
+      const candidate = import_node_path2.default.resolve(base, trimmed);
+      if (import_node_fs2.default.existsSync(candidate) && import_node_fs2.default.statSync(candidate).isFile()) return [candidate];
+    }
+  }
+  const matches = /* @__PURE__ */ new Set();
+  for (const type of docTypes) {
+    for (const dirName of configs[type].dirs) {
+      const dir = import_node_path2.default.join(cwd, dirName);
+      if (!import_node_fs2.default.existsSync(dir) || !import_node_fs2.default.statSync(dir).isDirectory()) continue;
+      for (const file2 of docFiles(dir)) {
+        const fullPath = import_node_path2.default.join(dir, file2);
+        const parsed = parseDoc(import_node_fs2.default.readFileSync(fullPath, "utf8"));
+        if (!parsed.error && parsed.data.id === idLookup) matches.add(fullPath);
+      }
+    }
+  }
+  return [...matches];
 }
 
 // src/skills/lib/schema_preflight.ts
@@ -38523,7 +38563,7 @@ function validateCheckEntry(entry, index2, allowMissingId) {
       passCriteria = criteria;
     }
   }
-  if (required2 === true && (preconditions === null || preconditions.length === 0)) {
+  if (required2 === true && preconditions !== null && preconditions.length === 0) {
     issues.push({
       code: "incomplete-required-check",
       index: index2,
@@ -38596,6 +38636,15 @@ function parseCheckInput(raw) {
   }
   return validateCheckEntry(value, 0, true);
 }
+function canonicalizeValue(value) {
+  if (Array.isArray(value)) return value.map(canonicalizeValue);
+  if (isPlainObject5(value)) {
+    return Object.fromEntries(
+      Object.keys(value).sort().map((key) => [key, canonicalizeValue(value[key])])
+    );
+  }
+  return value;
+}
 function canonicalCheck(check2) {
   return {
     id: check2.id,
@@ -38603,7 +38652,7 @@ function canonicalCheck(check2) {
     method: check2.method,
     implementation: check2.implementation,
     preconditions: check2.preconditions,
-    passCriteria: check2.passCriteria,
+    passCriteria: canonicalizeValue(check2.passCriteria),
     limitations: check2.limitations,
     required: check2.required
   };
@@ -38612,17 +38661,14 @@ function checkDesignRevision(check2) {
   const canonical = JSON.stringify(canonicalCheck(check2));
   return `sha256:${(0, import_node_crypto.createHash)("sha256").update(canonical, "utf8").digest("hex")}`;
 }
-function nextCheckId(existingIds) {
-  let highest = 0;
-  for (const id of existingIds) {
-    const match = /^CHK-(\d+)$/.exec(id);
-    if (match) highest = Math.max(highest, Number.parseInt(match[1], 10));
-  }
-  const next = highest + 1;
-  return `CHK-${String(next).padStart(2, "0")}`;
+function checkIdOrdinal(id) {
+  const match = /^CHK-(\d+)$/.exec(id);
+  return match ? Number.parseInt(match[1], 10) : 0;
 }
 
 // src/skills/verification-doc/scripts/lib/verification_doc.ts
+var import_node_fs5 = __toESM(require("node:fs"));
+var import_node_path6 = __toESM(require("node:path"));
 var import_gray_matter3 = __toESM(require_gray_matter());
 
 // src/skills/lib/doc_repository.ts
@@ -38763,7 +38809,7 @@ function isExternalReference(value) {
   if (parseClaimReference(trimmed)) return false;
   return EXTERNAL_REFERENCE.test(trimmed);
 }
-function walkMarkdownFiles(root) {
+function walkMarkdownFiles2(root) {
   if (!import_node_fs4.default.existsSync(root) || !import_node_fs4.default.statSync(root).isDirectory()) return [];
   const files = [];
   const visitDir = (dir) => {
@@ -38878,7 +38924,7 @@ async function scanRepository(options2) {
   const typeMap = canonicalTypeMap();
   const absoluteFiles = /* @__PURE__ */ new Set();
   for (const root of roots) {
-    for (const file2 of walkMarkdownFiles(import_node_path5.default.join(cwd, root))) absoluteFiles.add(file2);
+    for (const file2 of walkMarkdownFiles2(import_node_path5.default.join(cwd, root))) absoluteFiles.add(file2);
   }
   if (options2.includeTopLevelMarkdown !== false) {
     for (const entry of import_node_fs4.default.readdirSync(cwd, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name))) {
@@ -39429,7 +39475,7 @@ function projectKnowledgeGraph(model) {
         });
         continue;
       }
-      const anchorSeenKey = `${anchor2.path}\0${anchorKey}`;
+      const anchorSeenKey = JSON.stringify([anchor2.path, anchorKey]);
       const firstAnchor = seenAnchors.get(anchorSeenKey);
       if (firstAnchor !== void 0) {
         issues.push({
@@ -39718,6 +39764,7 @@ function projectKnowledgeGraph(model) {
     });
   }
   const checkEdges = [];
+  const projectedCheckClaims = /* @__PURE__ */ new Set();
   for (const node3 of nodes) {
     for (const check2 of node3.checks) {
       const claimRef = parseClaimReference(check2.target);
@@ -39765,17 +39812,18 @@ function projectKnowledgeGraph(model) {
       const targetKey = artifactKeyOf(targetDoc.path);
       const targetNode = nodeByKey.get(targetKey);
       const to = targetNode ? { path: targetNode.path, id: targetNode.id } : { path: targetDoc.path, id: targetDoc.id };
+      const targetClaims = claimsByKey.get(targetKey);
+      const claimExists = targetClaims !== void 0 && targetClaims.has(claimRef.key);
       checkEdges.push({
         from: { path: node3.path, id: node3.id },
         check: qualifiedCheckId,
         target: check2.target,
-        to,
+        to: claimExists ? to : null,
         method: check2.method,
         required: check2.required,
-        resolution: "resolved"
+        resolution: claimExists ? "resolved" : "unresolved"
       });
-      const targetClaims = claimsByKey.get(targetKey);
-      if (!targetClaims || !targetClaims.has(claimRef.key)) {
+      if (!claimExists) {
         issues.push({
           code: "unresolved-check-target",
           path: node3.path,
@@ -39785,15 +39833,19 @@ function projectKnowledgeGraph(model) {
         });
         continue;
       }
-      derivedEdges.push({
-        from: { path: node3.path, id: node3.id },
-        relation: "checks",
-        target: check2.target,
-        to,
-        claim: check2.target,
-        via: "checks[].target",
-        derived: true
-      });
+      const forwardKey = JSON.stringify([node3.path, check2.target]);
+      if (!projectedCheckClaims.has(forwardKey)) {
+        projectedCheckClaims.add(forwardKey);
+        derivedEdges.push({
+          from: { path: node3.path, id: node3.id },
+          relation: "checks",
+          target: check2.target,
+          to,
+          claim: check2.target,
+          via: "checks[].target",
+          derived: true
+        });
+      }
       derivedEdges.push({
         from: { path: to.path, id: to.id },
         relation: "checked-by",
@@ -39831,31 +39883,62 @@ async function scanKnowledgeGraph(options2) {
 }
 
 // src/skills/verification-doc/scripts/lib/verification_doc.ts
+function primaryFileOf(candidates) {
+  const nonLocalized = candidates.filter((full) => !LOCALE_FILE_PATTERN.test(import_node_path6.default.basename(full)));
+  const pool = nonLocalized.length > 0 ? nonLocalized : candidates;
+  return [...pool].sort()[0];
+}
+function artifactPrimaryPath(full) {
+  const locale = LOCALE_FILE_PATTERN.exec(import_node_path6.default.basename(full));
+  if (!locale) return full;
+  const sibling = import_node_path6.default.join(import_node_path6.default.dirname(full), `${locale[1]}.md`);
+  return import_node_fs5.default.existsSync(sibling) ? sibling : full;
+}
+function resolveVerificationDocPath(cwd, ref, flag) {
+  const matches = resolveDocumentReferenceAll(cwd, ref);
+  if (matches.length === 0) {
+    throw new Error(`${flag} does not resolve to a document: ${ref}`);
+  }
+  const groups = /* @__PURE__ */ new Map();
+  for (const full of matches) {
+    const key = artifactKeyOf(import_node_path6.default.relative(cwd, full).replace(/\\/g, "/"));
+    const bucket = groups.get(key) ?? [];
+    bucket.push(full);
+    groups.set(key, bucket);
+  }
+  if (groups.size > 1) {
+    const candidates = [...groups.values()].map((group) => import_node_path6.default.relative(cwd, primaryFileOf(group)).replace(/\\/g, "/")).sort();
+    throw new Error(
+      `${flag} id is ambiguous \u2014 it names ${groups.size} distinct documents: ${candidates.join(", ")} (disambiguate by path): ${ref}`
+    );
+  }
+  return artifactPrimaryPath(primaryFileOf([...groups.values()][0]));
+}
 function assembleChecks(rawPayloads, takenIds, options2) {
   const checks = [];
   const taken = new Set(takenIds);
-  const used = new Set(takenIds);
   const batchIds = /* @__PURE__ */ new Set();
+  let highWater = Math.max(options2?.highWater ?? 0, ...takenIds.map(checkIdOrdinal), 0);
   for (const raw of rawPayloads) {
     const { check: check2, issues } = parseCheckInput(raw);
     if (!check2) {
-      return { checks: [], error: issues.map((issue2) => issue2.message).join("\n") };
+      return { checks: [], error: issues.map((issue2) => issue2.message).join("\n"), highWater };
     }
     if (check2.id !== "") {
       const exists = taken.has(check2.id);
       if (batchIds.has(check2.id) || exists && !options2?.allowExistingIds) {
-        return { checks: [], error: `Check id ${check2.id} is already declared \u2014 check ids must be unique within the document` };
+        return { checks: [], error: `Check id ${check2.id} is already declared \u2014 check ids must be unique within the document`, highWater };
       }
-      used.add(check2.id);
       batchIds.add(check2.id);
+      highWater = Math.max(highWater, checkIdOrdinal(check2.id));
     } else {
-      check2.id = nextCheckId([...used]);
-      used.add(check2.id);
+      highWater += 1;
+      check2.id = `CHK-${String(highWater).padStart(2, "0")}`;
       batchIds.add(check2.id);
     }
     checks.push(check2);
   }
-  return { checks, error: null };
+  return { checks, error: null, highWater };
 }
 async function verifyCheckTargets(cwd, checks) {
   const graph = await scanKnowledgeGraph({ cwd });
@@ -39869,6 +39952,19 @@ async function verifyCheckTargets(cwd, checks) {
     };
   }
   return { graph, error: null };
+}
+function assertVerificationSupersedes(cwd, targets) {
+  for (const target of targets) {
+    const resolved = resolveVerificationDocPath(cwd, target, "--supersedes");
+    if (!isInsideCheckout(cwd, resolved)) {
+      throw new Error(`--supersedes target resolves outside the checkout: ${target}`);
+    }
+    const parsed = parseDoc(import_node_fs5.default.readFileSync(resolved, "utf8"));
+    const targetType = !parsed.error && typeof parsed.data.type === "string" ? parsed.data.type : null;
+    if (targetType !== "verification") {
+      throw new Error(`--supersedes target resolves to type ${JSON.stringify(targetType)}, expected verification: ${target}`);
+    }
+  }
 }
 
 // src/skills/verification-doc/scripts/new_verification.ts
@@ -39905,7 +40001,7 @@ async function main() {
       return;
     }
     if (!args.title) throw new Error("Missing required --title");
-    const cwd = import_node_path6.default.resolve(args.cwd);
+    const cwd = import_node_path7.default.resolve(args.cwd);
     if (!schemaEntrypointGuard(cwd)) return;
     const assembled = assembleChecks(args.checks, []);
     if (assembled.error) throw new Error(assembled.error);
@@ -39913,13 +40009,19 @@ async function main() {
       const targets = await verifyCheckTargets(cwd, assembled.checks);
       if (targets.error) throw new Error(targets.error);
     }
+    assertVerificationSupersedes(cwd, args.supersedes);
     const result = await createDocument("verification", {
       cwd,
       date: args.date,
       dir: args.dir,
       // `checks:` is written even when empty — the field's presence keeps
       // the Check contract visible in every new Verification Design.
-      fields: { checks: assembled.checks.map(canonicalCheck) },
+      // `checkHighWater` joins it once ids exist: the persisted mark that
+      // keeps removed CHK ids from ever being reissued.
+      fields: {
+        checks: assembled.checks.map(canonicalCheck),
+        ...assembled.highWater > 0 ? { checkHighWater: assembled.highWater } : {}
+      },
       lifecycle: args.lifecycle,
       name: args.name,
       relations: {

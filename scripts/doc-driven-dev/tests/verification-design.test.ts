@@ -7,6 +7,7 @@ import path from "node:path";
 import test from "node:test";
 
 import { scanRepository } from "../src/skills/lib/doc_repository";
+import { assertTasksCheckRefs } from "../src/skills/lib/execution_store/check_resolution";
 import {
   projectKnowledgeGraph,
   resolveCheckReference,
@@ -778,4 +779,364 @@ test("verification-doc ships synchronized EN/JA skill, conventions, and template
       assert.ok(text.includes(method), `${relative} covers method ${method}`);
     }
   }
+});
+
+// ---------------------------------------------------------------------------
+// Verified-review follow-ups — resolution and write boundaries
+// ---------------------------------------------------------------------------
+
+test("--doc resolves to the artifact primary — a locale sibling is never written", () => {
+  const repo = tempRepo();
+  writeSpecWithClaims(repo, "SPEC-AAA", ["R-01"]);
+  writeVerification(repo, "VD-AAA", [checkFrontMatter()], "docs/verification/design.md");
+  // The .ja.md mirror carries the same id — one logical artifact.
+  writeDoc(repo, "docs/verification/design.ja.md", frontMatter("verification", "VD-AAA", { checks: [checkFrontMatter()] }), "# 設計\n");
+
+  const updated = runScript("verification-doc", "update_verification.js", [
+    "--doc", "VD-AAA", "--status", "proposed",
+  ], { cwd: repo });
+  assert.equal(updated.status, 0, updated.stderr);
+  assert.equal(readFrontMatter(repo, "docs/verification/design.md").status, "proposed");
+  assert.equal(readFrontMatter(repo, "docs/verification/design.ja.md").status, "draft", "mirror file untouched");
+
+  // An explicit sibling path still lands on the canonical file — the
+  // contract fields mirror across the artifact, so the write boundary
+  // refuses to mutate only the mirror.
+  const viaPath = runScript("verification-doc", "update_verification.js", [
+    "--doc", "docs/verification/design.ja.md", "--status", "approved",
+  ], { cwd: repo });
+  assert.equal(viaPath.status, 0, viaPath.stderr);
+  assert.equal(readFrontMatter(repo, "docs/verification/design.md").status, "approved");
+  assert.equal(readFrontMatter(repo, "docs/verification/design.ja.md").status, "draft");
+});
+
+test("--doc refuses an id declared by several distinct artifacts", () => {
+  const repo = tempRepo();
+  writeSpecWithClaims(repo, "SPEC-AAA", ["R-01"]);
+  writeVerification(repo, "VD-DUP", [checkFrontMatter()], "docs/verification/one.md");
+  writeVerification(repo, "VD-DUP", [checkFrontMatter()], "docs/verification/two.md");
+
+  const updated = runScript("verification-doc", "update_verification.js", [
+    "--doc", "VD-DUP", "--status", "proposed",
+  ], { cwd: repo });
+  assert.notEqual(updated.status, 0);
+  assert.match(updated.stderr, /ambiguous/);
+  assert.equal(readFrontMatter(repo, "docs/verification/one.md").status, "draft");
+  assert.equal(readFrontMatter(repo, "docs/verification/two.md").status, "draft");
+
+  // The same wart at the read boundary: --doc never first-matches.
+  const resolved = runScript("verification-doc", "resolve_verification.js", ["--doc", "VD-DUP", "--json"], { cwd: repo });
+  assert.notEqual(resolved.status, 0);
+  const payload = JSON.parse(resolved.stdout);
+  assert.equal(payload.status, "ambiguous");
+  assert.equal(payload.candidates.length, 2);
+
+  // ...but a path disambiguates, and a sibling path resolves the artifact.
+  const byPath = runScript("verification-doc", "resolve_verification.js", ["--doc", "docs/verification/two.md", "--json"], { cwd: repo });
+  assert.equal(byPath.status, 0, byPath.stderr);
+  assert.equal(JSON.parse(byPath.stdout).status, "resolved");
+});
+
+test("resolve_verification --doc resolves a locale sibling path to the artifact", () => {
+  const repo = tempRepo();
+  writeSpecWithClaims(repo, "SPEC-AAA", ["R-01"]);
+  writeVerification(repo, "VD-AAA", [checkFrontMatter()], "docs/verification/design.md");
+  writeDoc(repo, "docs/verification/design.ja.md", frontMatter("verification", "VD-AAA", { checks: [checkFrontMatter()] }), "# 設計\n");
+
+  const result = runScript("verification-doc", "resolve_verification.js", ["--doc", "docs/verification/design.ja.md", "--json"], { cwd: repo });
+  assert.equal(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.status, "resolved");
+  assert.equal(payload.document.path, "docs/verification/design.md");
+});
+
+test("resolveCheckReference fails closed on an ambiguous document id", async () => {
+  const repo = tempRepo();
+  writeSpecWithClaims(repo, "SPEC-AAA", ["R-01"]);
+  writeVerification(repo, "VD-DUP", [checkFrontMatter()], "docs/verification/one.md");
+  writeVerification(repo, "VD-DUP", [checkFrontMatter()], "docs/verification/two.md");
+
+  const graph = await graphFor(repo);
+  assert.equal(resolveCheckReference(graph, "VD-DUP::CHK-01").status, "ambiguous");
+
+  // The same refusal at the CLI boundary...
+  const byRef = runScript("verification-doc", "resolve_verification.js", ["--ref", "VD-DUP::CHK-01", "--json"], { cwd: repo });
+  assert.notEqual(byRef.status, 0);
+  assert.equal(JSON.parse(byRef.stdout).status, "ambiguous");
+
+  // ...and at the execution-store write boundary — ambiguous is a
+  // refusal, not a first-match.
+  assert.equal(runScript("doc-driven-dev-graph", "execution_store.js", ["init"], { cwd: repo }).status, 0);
+  assert.equal(runScript("doc-driven-dev-graph", "execution_store.js", ["create", "--run-id", "RUN-1"], { cwd: repo }).status, 0);
+  fs.writeFileSync(path.join(repo, "task.json"), JSON.stringify({ taskId: "T-01", title: "verify", checks: ["VD-DUP::CHK-01"] }), "utf8");
+  const put = runScript("doc-driven-dev-graph", "execution_store.js", ["put-task", "RUN-1", "--file", "task.json"], { cwd: repo });
+  assert.notEqual(put.status, 0);
+  assert.match(put.stderr + put.stdout, /ambiguous|multiple documents/);
+});
+
+test("check ids are never reissued — checkHighWater survives tail-deletion", () => {
+  const repo = tempRepo();
+  writeSpecWithClaims(repo, "SPEC-AAA", ["R-01", "R-02", "R-03"]);
+  // A pre-field document: two checks, no persisted high-water yet.
+  writeVerification(repo, "VD-AAA", [
+    checkFrontMatter({ id: "CHK-01", target: "SPEC-AAA::R-01" }),
+    checkFrontMatter({ id: "CHK-02", target: "SPEC-AAA::R-02" }),
+  ]);
+
+  // Tail-delete + add in ONE invocation: the new check mints CHK-03, not
+  // a different check reusing CHK-02.
+  const mutated = runScript("verification-doc", "update_verification.js", [
+    "--doc", "VD-AAA",
+    "--remove-check", "CHK-02",
+    "--check", JSON.stringify(checkPayload({ target: "SPEC-AAA::R-03" })),
+  ], { cwd: repo });
+  assert.equal(mutated.status, 0, mutated.stderr);
+  let data = readFrontMatter(repo, "docs/verification/design.md");
+  let checks = data.checks as Record<string, unknown>[];
+  assert.deepEqual(checks.map((check) => check.id), ["CHK-01", "CHK-03"]);
+  assert.equal(data.checkHighWater, 3, "the mark covers the freshly minted id");
+
+  // Removing the tail again keeps climbing — CHK-03 is never reissued
+  // either, even though it is the only hole.
+  const again = runScript("verification-doc", "update_verification.js", [
+    "--doc", "VD-AAA",
+    "--remove-check", "CHK-03",
+    "--check", JSON.stringify(checkPayload({ target: "SPEC-AAA::R-02" })),
+  ], { cwd: repo });
+  assert.equal(again.status, 0, again.stderr);
+  data = readFrontMatter(repo, "docs/verification/design.md");
+  checks = data.checks as Record<string, unknown>[];
+  assert.deepEqual(checks.map((check) => check.id), ["CHK-01", "CHK-04"]);
+  assert.equal(data.checkHighWater, 4);
+});
+
+test("checkHighWater persists on removal-only writes and explicit-id minting", () => {
+  const repo = tempRepo();
+  writeSpecWithClaims(repo, "SPEC-AAA", ["R-01", "R-02"]);
+  writeVerification(repo, "VD-AAA", [
+    checkFrontMatter({ id: "CHK-01", target: "SPEC-AAA::R-01" }),
+    checkFrontMatter({ id: "CHK-02", target: "SPEC-AAA::R-02" }),
+  ]);
+
+  // Removal only: the mark is written so a later allocation cannot
+  // reissue CHK-02.
+  const removed = runScript("verification-doc", "update_verification.js", ["--doc", "VD-AAA", "--remove-check", "CHK-02"], { cwd: repo });
+  assert.equal(removed.status, 0, removed.stderr);
+  let data = readFrontMatter(repo, "docs/verification/design.md");
+  assert.equal(data.checkHighWater, 2);
+
+  const appended = runScript("verification-doc", "update_verification.js", [
+    "--doc", "VD-AAA", "--check", JSON.stringify(checkPayload({ target: "SPEC-AAA::R-01" })),
+  ], { cwd: repo });
+  assert.equal(appended.status, 0, appended.stderr);
+  data = readFrontMatter(repo, "docs/verification/design.md");
+  assert.deepEqual((data.checks as Record<string, unknown>[]).map((check) => check.id), ["CHK-01", "CHK-03"]);
+  assert.equal(data.checkHighWater, 3);
+
+  // An explicitly minted id raises the mark too — removing it later
+  // cannot make CHK-05 reissuable.
+  const explicit = runScript("verification-doc", "update_verification.js", [
+    "--doc", "VD-AAA", "--check", JSON.stringify(checkPayload({ id: "CHK-05", target: "SPEC-AAA::R-02" })),
+  ], { cwd: repo });
+  assert.equal(explicit.status, 0, explicit.stderr);
+  data = readFrontMatter(repo, "docs/verification/design.md");
+  assert.equal(data.checkHighWater, 5);
+  const dropAndAdd = runScript("verification-doc", "update_verification.js", [
+    "--doc", "VD-AAA",
+    "--remove-check", "CHK-05",
+    "--check", JSON.stringify(checkPayload({ target: "SPEC-AAA::R-01" })),
+  ], { cwd: repo });
+  assert.equal(dropAndAdd.status, 0, dropAndAdd.stderr);
+  const finalChecks = readFrontMatter(repo, "docs/verification/design.md").checks as Record<string, unknown>[];
+  assert.ok(finalChecks.every((check) => check.id !== "CHK-05"), "CHK-05 never comes back as a different check");
+  assert.ok(finalChecks.some((check) => check.id === "CHK-06"));
+});
+
+test("new_verification writes the checkHighWater mark once ids exist", () => {
+  const repo = tempRepo();
+  writeSpecWithClaims(repo, "SPEC-AAA", ["R-01"]);
+  const created = runScript("verification-doc", "new_verification.js", [
+    "--title", "Marked design",
+    "--check", JSON.stringify(checkPayload()),
+    "--check", JSON.stringify(checkPayload({ id: "CHK-04", target: "SPEC-AAA::R-01" })),
+  ], { cwd: repo });
+  assert.equal(created.status, 0, created.stderr);
+  const data = readFrontMatter(repo, "docs/verification/marked-design.md");
+  assert.equal(data.checkHighWater, 4, "the mark covers allocated and explicit ids");
+
+  const empty = runScript("verification-doc", "new_verification.js", ["--title", "Empty design"], { cwd: repo });
+  assert.equal(empty.status, 0, empty.stderr);
+  assert.equal(readFrontMatter(repo, "docs/verification/empty-design.md").checkHighWater, undefined, "no mark before ids exist");
+});
+
+test("designRevision is invariant under passCriteria key order", () => {
+  const first = parseCheckInput(JSON.stringify(checkPayload({
+    id: "CHK-01",
+    passCriteria: { kind: "unit", expect: "sum holds", notes: { b: 2, a: 1 }, tags: ["x", "y"] },
+  }))).check as VerificationCheckV1;
+  const second = parseCheckInput(JSON.stringify(checkPayload({
+    id: "CHK-01",
+    passCriteria: { tags: ["x", "y"], notes: { a: 1, b: 2 }, expect: "sum holds", kind: "unit" },
+  }))).check as VerificationCheckV1;
+  // The canonical serialization sorts passCriteria keys recursively, so
+  // an order-only resubmission hashes identically — it is not an edit.
+  assert.deepEqual(canonicalCheck(first), canonicalCheck(second));
+  assert.equal(checkDesignRevision(first), checkDesignRevision(second));
+
+  // A content change still changes the revision.
+  const edited = parseCheckInput(JSON.stringify(checkPayload({
+    id: "CHK-01",
+    passCriteria: { kind: "unit", expect: "sum differs" },
+  }))).check as VerificationCheckV1;
+  assert.notEqual(checkDesignRevision(edited), checkDesignRevision(first));
+});
+
+test("new_verification refuses --supersedes targets that are not verification docs", () => {
+  const repo = tempRepo();
+  writeSpecWithClaims(repo, "SPEC-AAA", ["R-01"]);
+
+  for (const target of ["docs/specs/spec.md", "SPEC-AAA", "VD-MISSING"]) {
+    const result = runScript("verification-doc", "new_verification.js", [
+      "--title", "Bad supersession",
+      "--supersedes", target,
+    ], { cwd: repo });
+    assert.notEqual(result.status, 0, target);
+    assert.match(result.stderr, /does not resolve|expected verification|ambiguous/);
+  }
+  assert.equal(fs.existsSync(path.join(repo, "docs/verification")), false);
+
+  // A real verification design is accepted.
+  writeVerification(repo, "VD-OLD", []);
+  const accepted = runScript("verification-doc", "new_verification.js", [
+    "--title", "Good supersession",
+    "--supersedes", "VD-OLD",
+  ], { cwd: repo });
+  assert.equal(accepted.status, 0, accepted.stderr);
+  const relations = readFrontMatter(repo, "docs/verification/good-supersession.md").relations as Record<string, unknown>;
+  assert.deepEqual(relations.supersedes, ["VD-OLD"]);
+});
+
+test("--for-claim coverage counts only checks that bind a live claim", () => {
+  const repo = tempRepo();
+  writeSpecWithClaims(repo, "SPEC-AAA", ["R-01"]);
+  // A check declaring intent against a claim the spec never declared —
+  // a lint finding, not coverage.
+  writeVerification(repo, "VD-AAA", [
+    checkFrontMatter({ id: "CHK-01", target: "SPEC-AAA::R-99" }),
+    checkFrontMatter({ id: "CHK-02", target: "SPEC-AAA::R-01" }),
+  ]);
+
+  const missing = runScript("verification-doc", "resolve_verification.js", ["--for-claim", "SPEC-AAA::R-99", "--json"], { cwd: repo });
+  assert.equal(missing.status, 0, missing.stderr);
+  const missingPayload = JSON.parse(missing.stdout);
+  assert.equal(missingPayload.claimStatus, "unresolved-claim");
+  assert.equal(missingPayload.coveringChecks.length, 0, "declared intent on a missing claim is not coverage");
+
+  const live = runScript("verification-doc", "resolve_verification.js", ["--for-claim", "SPEC-AAA::R-01", "--json"], { cwd: repo });
+  assert.equal(live.status, 0, live.stderr);
+  const livePayload = JSON.parse(live.stdout);
+  assert.equal(livePayload.claimStatus, "resolved");
+  assert.equal(livePayload.coveringChecks.length, 1);
+  assert.match(livePayload.coveringChecks[0].check, /::CHK-02$/);
+});
+
+test("check mutations preserve malformed checks entries for lint", () => {
+  const repo = tempRepo();
+  writeSpecWithClaims(repo, "SPEC-AAA", ["R-01", "R-02"]);
+  writeVerification(repo, "VD-AAA", [
+    "not-a-check",
+    checkFrontMatter({ id: "CHK-01", target: "SPEC-AAA::R-01" }),
+    checkFrontMatter({ id: "CHK-02", target: "SPEC-AAA::R-02" }),
+  ]);
+
+  const removed = runScript("verification-doc", "update_verification.js", ["--doc", "VD-AAA", "--remove-check", "CHK-02"], { cwd: repo });
+  assert.equal(removed.status, 0, removed.stderr);
+  let checks = readFrontMatter(repo, "docs/verification/design.md").checks as unknown[];
+  assert.equal(checks.length, 2);
+  assert.equal(checks[0], "not-a-check", "malformed entry preserved, not laundered away");
+
+  const upserted = runScript("verification-doc", "update_verification.js", [
+    "--doc", "VD-AAA", "--check", JSON.stringify(checkPayload({ id: "CHK-01", implementation: "cart.test.ts::v2" })),
+  ], { cwd: repo });
+  assert.equal(upserted.status, 0, upserted.stderr);
+  checks = readFrontMatter(repo, "docs/verification/design.md").checks as unknown[];
+  assert.equal(checks.length, 2);
+  assert.equal(checks[0], "not-a-check");
+  assert.equal((checks[1] as Record<string, unknown>).implementation, "cart.test.ts::v2");
+});
+
+test("a required check with malformed preconditions reports once", () => {
+  const { issues } = parseVerificationChecks([
+    checkFrontMatter({ required: true, preconditions: "not-a-list" }),
+  ]);
+  assert.deepEqual(issues.map((issue) => issue.code), ["missing-check-field"]);
+  assert.equal(issues[0].target, "preconditions");
+
+  const withoutPreconditions = checkFrontMatter({ required: true });
+  delete withoutPreconditions.preconditions;
+  const missing = parseVerificationChecks([withoutPreconditions]);
+  assert.deepEqual(missing.issues.map((issue) => issue.code), ["missing-check-field"]);
+
+  // A declared-but-empty list keeps the dedicated finding.
+  const empty = parseVerificationChecks([checkFrontMatter({ required: true, preconditions: [] })]);
+  assert.deepEqual(empty.issues.map((issue) => issue.code), ["incomplete-required-check"]);
+});
+
+test("N checks on one claim project one forward checks edge — per-check granularity stays on checked-by", async () => {
+  const repo = tempRepo();
+  writeSpecWithClaims(repo, "SPEC-AAA", ["R-01"]);
+  writeVerification(repo, "VD-AAA", [
+    checkFrontMatter({ id: "CHK-01", target: "SPEC-AAA::R-01" }),
+    checkFrontMatter({ id: "CHK-02", target: "SPEC-AAA::R-01", method: "e2e", required: false, passCriteria: { kind: "e2e", expect: "flow completes" } }),
+  ]);
+
+  const graph = await graphFor(repo);
+  const forward = graph.derivedEdges.filter((edge) => edge.relation === "checks" && edge.claim === "SPEC-AAA::R-01");
+  assert.equal(forward.length, 1, "document→claim coverage is stated once");
+  const inbound = graph.derivedEdges.filter((edge) => edge.relation === "checked-by" && edge.claim === "SPEC-AAA::R-01");
+  assert.equal(inbound.length, 2, "each check keeps its own checked-by edge");
+  assert.deepEqual(inbound.map((edge) => edge.target).sort(), ["VD-AAA::CHK-01", "VD-AAA::CHK-02"]);
+});
+
+test("create --tasks-file resolves every task's checks against one graph scan", async () => {
+  const repo = tempRepo();
+  writeSpecWithClaims(repo, "SPEC-AAA", ["R-01"]);
+  writeVerification(repo, "VD-AAA", [checkFrontMatter()]);
+
+  // The batched boundary itself: N tasks, one scan.
+  const graph = await graphFor(repo);
+  let scans = 0;
+  const countingScan = async () => { scans += 1; return graph; };
+  await assertTasksCheckRefs(repo, [
+    { owner: "task T-01", checks: ["VD-AAA::CHK-01"] },
+    { owner: "task T-02", checks: ["VD-AAA::CHK-01"] },
+    { owner: "task T-03", checks: [] },
+  ], countingScan);
+  assert.equal(scans, 1, "the whole file resolves against a single projection");
+
+  // The failure path still refuses per-owner — same scan, honest errors.
+  await assert.rejects(
+    assertTasksCheckRefs(repo, [
+      { owner: "task T-01", checks: ["VD-AAA::CHK-01"] },
+      { owner: "task T-02", checks: ["VD-AAA::CHK-99"] },
+    ], countingScan),
+    /task T-02 references a check that cannot resolve/,
+  );
+
+  // End to end: create --tasks-file accepts live refs, refuses bad ones.
+  assert.equal(runScript("doc-driven-dev-graph", "execution_store.js", ["init"], { cwd: repo }).status, 0);
+  fs.writeFileSync(path.join(repo, "tasks.json"), JSON.stringify([
+    { taskId: "T-01", title: "first", checks: ["VD-AAA::CHK-01"] },
+    { taskId: "T-02", title: "second", checks: ["VD-AAA::CHK-01"] },
+  ]), "utf8");
+  const created = runScript("doc-driven-dev-graph", "execution_store.js", ["create", "--run-id", "RUN-T", "--tasks-file", "tasks.json"], { cwd: repo });
+  assert.equal(created.status, 0, created.stderr + created.stdout);
+
+  fs.writeFileSync(path.join(repo, "tasks.json"), JSON.stringify([
+    { taskId: "T-01", title: "first", checks: ["VD-AAA::CHK-01"] },
+    { taskId: "T-02", title: "bad", checks: ["VD-AAA::CHK-77"] },
+  ]), "utf8");
+  const refused = runScript("doc-driven-dev-graph", "execution_store.js", ["create", "--run-id", "RUN-U", "--tasks-file", "tasks.json"], { cwd: repo });
+  assert.notEqual(refused.status, 0);
+  assert.match(refused.stderr + refused.stdout, /task T-02/);
 });

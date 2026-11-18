@@ -37736,7 +37736,7 @@ function validateCheckEntry(entry, index2, allowMissingId) {
       passCriteria = criteria;
     }
   }
-  if (required2 === true && (preconditions === null || preconditions.length === 0)) {
+  if (required2 === true && preconditions !== null && preconditions.length === 0) {
     issues.push({
       code: "incomplete-required-check",
       index: index2,
@@ -37792,6 +37792,15 @@ function parseVerificationChecks(value) {
   }
   return { checks, issues };
 }
+function canonicalizeValue(value) {
+  if (Array.isArray(value)) return value.map(canonicalizeValue);
+  if (isPlainObject5(value)) {
+    return Object.fromEntries(
+      Object.keys(value).sort().map((key) => [key, canonicalizeValue(value[key])])
+    );
+  }
+  return value;
+}
 function canonicalCheck(check2) {
   return {
     id: check2.id,
@@ -37799,7 +37808,7 @@ function canonicalCheck(check2) {
     method: check2.method,
     implementation: check2.implementation,
     preconditions: check2.preconditions,
-    passCriteria: check2.passCriteria,
+    passCriteria: canonicalizeValue(check2.passCriteria),
     limitations: check2.limitations,
     required: check2.required
   };
@@ -37902,8 +37911,10 @@ function extractCheckAnchors(document3) {
 function resolveCheckReference(graph, ref) {
   const parsed = parseClaimReference(ref.trim());
   if (!parsed || !CHECK_KEY_PATTERN.test(parsed.key)) return { status: "invalid" };
-  const node3 = graph.nodes.find((candidate) => candidate.id === parsed.docId);
-  if (!node3) return { status: "unresolved-document" };
+  const matches = graph.nodes.filter((candidate) => candidate.id === parsed.docId);
+  if (matches.length === 0) return { status: "unresolved-document" };
+  if (matches.length > 1) return { status: "ambiguous" };
+  const node3 = matches[0];
   if (node3.type !== "verification") return { status: "not-verification", node: node3 };
   const check2 = node3.checks.find((candidate) => candidate.id === parsed.key);
   if (!check2) return { status: "unresolved-check", node: node3 };
@@ -38161,7 +38172,7 @@ function projectKnowledgeGraph(model) {
         });
         continue;
       }
-      const anchorSeenKey = `${anchor2.path}\0${anchorKey}`;
+      const anchorSeenKey = JSON.stringify([anchor2.path, anchorKey]);
       const firstAnchor = seenAnchors.get(anchorSeenKey);
       if (firstAnchor !== void 0) {
         issues.push({
@@ -38450,6 +38461,7 @@ function projectKnowledgeGraph(model) {
     });
   }
   const checkEdges = [];
+  const projectedCheckClaims = /* @__PURE__ */ new Set();
   for (const node3 of nodes) {
     for (const check2 of node3.checks) {
       const claimRef = parseClaimReference(check2.target);
@@ -38497,17 +38509,18 @@ function projectKnowledgeGraph(model) {
       const targetKey = artifactKeyOf(targetDoc.path);
       const targetNode = nodeByKey.get(targetKey);
       const to = targetNode ? { path: targetNode.path, id: targetNode.id } : { path: targetDoc.path, id: targetDoc.id };
+      const targetClaims = claimsByKey.get(targetKey);
+      const claimExists = targetClaims !== void 0 && targetClaims.has(claimRef.key);
       checkEdges.push({
         from: { path: node3.path, id: node3.id },
         check: qualifiedCheckId,
         target: check2.target,
-        to,
+        to: claimExists ? to : null,
         method: check2.method,
         required: check2.required,
-        resolution: "resolved"
+        resolution: claimExists ? "resolved" : "unresolved"
       });
-      const targetClaims = claimsByKey.get(targetKey);
-      if (!targetClaims || !targetClaims.has(claimRef.key)) {
+      if (!claimExists) {
         issues.push({
           code: "unresolved-check-target",
           path: node3.path,
@@ -38517,15 +38530,19 @@ function projectKnowledgeGraph(model) {
         });
         continue;
       }
-      derivedEdges.push({
-        from: { path: node3.path, id: node3.id },
-        relation: "checks",
-        target: check2.target,
-        to,
-        claim: check2.target,
-        via: "checks[].target",
-        derived: true
-      });
+      const forwardKey = JSON.stringify([node3.path, check2.target]);
+      if (!projectedCheckClaims.has(forwardKey)) {
+        projectedCheckClaims.add(forwardKey);
+        derivedEdges.push({
+          from: { path: node3.path, id: node3.id },
+          relation: "checks",
+          target: check2.target,
+          to,
+          claim: check2.target,
+          via: "checks[].target",
+          derived: true
+        });
+      }
       derivedEdges.push({
         from: { path: to.path, id: to.id },
         relation: "checked-by",
@@ -38565,12 +38582,12 @@ async function scanKnowledgeGraph(options2) {
 // src/skills/lib/execution_store/check_resolution.ts
 var STATUS_REASONS = {
   invalid: "is not a qualified check reference VD-<id>::CHK-NN",
+  ambiguous: "names a document id declared by multiple documents \u2014 the reference cannot pick one",
   "unresolved-document": "names a document that does not exist",
   "not-verification": "names a document that is not a Verification Design",
   "unresolved-check": "names a check the Verification Design does not declare"
 };
-async function resolveTaskCheckRefs(cwd, refs) {
-  const graph = await scanKnowledgeGraph({ cwd });
+function resolveTaskCheckRefsIn(graph, refs) {
   return refs.map((ref) => {
     const resolution = resolveCheckReference(graph, ref);
     if (resolution.status === "resolved") {
@@ -38579,9 +38596,9 @@ async function resolveTaskCheckRefs(cwd, refs) {
     return { ref, status: resolution.status, reason: STATUS_REASONS[resolution.status] ?? "does not resolve" };
   });
 }
-async function assertTaskCheckRefs(cwd, refs, owner) {
+function assertTaskCheckRefsIn(graph, refs, owner) {
   if (refs.length === 0) return;
-  const resolutions = await resolveTaskCheckRefs(cwd, refs);
+  const resolutions = resolveTaskCheckRefsIn(graph, refs);
   const failures = resolutions.filter((resolution) => resolution.status !== "resolved");
   if (failures.length === 0) return;
   const detail = failures.map((failure2) => `  ${failure2.ref} \u2014 ${failure2.reason}`).join("\n");
@@ -38589,6 +38606,15 @@ async function assertTaskCheckRefs(cwd, refs, owner) {
     `${owner} references ${failures.length === 1 ? "a check" : "checks"} that cannot resolve \u2014 task checks must be qualified Verification Check references VD-<id>::CHK-NN declared by a live Verification Design:
 ${detail}`
   );
+}
+async function assertTaskCheckRefs(cwd, refs, owner) {
+  if (refs.length === 0) return;
+  assertTaskCheckRefsIn(await scanKnowledgeGraph({ cwd }), refs, owner);
+}
+async function assertTasksCheckRefs(cwd, inputs, scan = scanKnowledgeGraph) {
+  if (!inputs.some((input2) => input2.checks.length > 0)) return;
+  const graph = await scan({ cwd });
+  for (const input2 of inputs) assertTaskCheckRefsIn(graph, input2.checks, input2.owner);
 }
 
 // src/skills/lib/execution_store/store.ts
@@ -38852,7 +38878,7 @@ function validateManifest(value) {
 }
 function validateTask(value) {
   if (!isPlainObject6(value)) return false;
-  return value.schemaVersion === TASK_RECORD_SCHEMA_VERSION && isValidId(value.runId) && isValidId(value.taskId) && typeof value.title === "string" && TASK_STATUSES.has(value.status) && stringArray(value.dependsOn) && stringArray(value.checks) && Number.isInteger(value.version) && value.version >= 1 && isIsoTimestamp(value.createdAt) && isIsoTimestamp(value.updatedAt);
+  return value.schemaVersion === TASK_RECORD_SCHEMA_VERSION && isValidId(value.runId) && isValidId(value.taskId) && typeof value.title === "string" && TASK_STATUSES.has(value.status) && stringArray(value.dependsOn) && stringArray(value.checks) && (value.scope === void 0 || stringArray(value.scope)) && Number.isInteger(value.version) && value.version >= 1 && isIsoTimestamp(value.createdAt) && isIsoTimestamp(value.updatedAt);
 }
 function validateCheckpoint(value) {
   if (!isPlainObject6(value)) return false;
@@ -39308,7 +39334,7 @@ function loadSnapshot(resolved, runId) {
     const content3 = import_node_fs6.default.readFileSync(planFile, "utf8");
     plan = { content: content3, digest: sha256(content3) };
   }
-  const tasks = listRecordFiles(runDir, "tasks").map((file2) => readRecord(file2, validateTask, "task"));
+  const tasks = listRecordFiles(runDir, "tasks").map((file2) => readRecord(file2, validateTask, "task")).map((task) => task.scope === void 0 ? { ...task, scope: [] } : task);
   const checkpoints = listRecordFiles(runDir, "checkpoints").map((file2) => readRecord(file2, validateCheckpoint, "checkpoint"));
   const receipts = listRecordFiles(runDir, "receipts").map((file2) => readRecord(file2, validateReceipt, "receipt"));
   const lock = import_node_fs6.default.existsSync(import_node_path7.default.join(runDir, "writer.lock")) ? readLockRecord(import_node_path7.default.join(runDir, "writer.lock")) : null;
@@ -39382,6 +39408,9 @@ function validateTaskInputs(inputs, existingIds, batchIds) {
     if (input2.checks !== void 0 && !input2.checks.every((check2) => typeof check2 === "string")) {
       throw new StoreError("invalid-argument", `task ${input2.taskId} checks must be strings`);
     }
+    if (input2.scope !== void 0 && !input2.scope.every((entry) => typeof entry === "string")) {
+      throw new StoreError("invalid-argument", `task ${input2.taskId} scope entries must be strings`);
+    }
   }
 }
 function requireRunsContainer(resolved) {
@@ -39428,6 +39457,7 @@ function createRun(cwd, input2 = {}, options2 = {}) {
         status: task.status ?? "todo",
         dependsOn: [...task.dependsOn ?? []].sort(),
         checks: [...task.checks ?? []].sort(),
+        scope: [...task.scope ?? []].sort(),
         version: 1,
         createdAt: stamp,
         updatedAt: stamp
@@ -39534,7 +39564,8 @@ function updateTask(cwd, runId, taskId, patch, options2 = {}) {
         title: patch.title ?? taskId,
         status: patch.status ?? "todo",
         dependsOn: patch.dependsOn ?? [],
-        checks: patch.checks ?? []
+        checks: patch.checks ?? [],
+        scope: patch.scope ?? []
       }];
       validateTaskInputs([candidate2], existingIds, /* @__PURE__ */ new Set());
       const record3 = {
@@ -39545,6 +39576,7 @@ function updateTask(cwd, runId, taskId, patch, options2 = {}) {
         status: candidate2.status,
         dependsOn: [...candidate2.dependsOn].sort(),
         checks: [...candidate2.checks].sort(),
+        scope: [...candidate2.scope].sort(),
         version: 1,
         createdAt: stamp,
         updatedAt: stamp
@@ -39571,7 +39603,8 @@ function updateTask(cwd, runId, taskId, patch, options2 = {}) {
       title: patch.title ?? current.title,
       status: patch.status ?? current.status,
       dependsOn: patch.dependsOn ?? current.dependsOn,
-      checks: patch.checks ?? current.checks
+      checks: patch.checks ?? current.checks,
+      scope: patch.scope ?? current.scope
     };
     const others = new Set(existingIds);
     others.delete(taskId);
@@ -39582,6 +39615,7 @@ function updateTask(cwd, runId, taskId, patch, options2 = {}) {
       status: candidate.status,
       dependsOn: [...candidate.dependsOn].sort(),
       checks: [...candidate.checks].sort(),
+      scope: [...candidate.scope].sort(),
       version: current.version + 1,
       updatedAt: stamp
     };
@@ -40092,14 +40126,17 @@ function emit(args, payload) {
   }
   console.log(JSON.stringify({ command: args.command, ...payload }));
 }
-async function assertInputTaskChecks(cwd, input2, owner) {
-  if (typeof input2 !== "object" || input2 === null) return;
+function inputCheckRefs(input2, owner) {
+  if (typeof input2 !== "object" || input2 === null) return [];
   const checks = input2.checks;
-  if (checks === void 0) return;
+  if (checks === void 0) return [];
   if (!Array.isArray(checks) || !checks.every((check2) => typeof check2 === "string")) {
     throw new Error(`${owner} checks must be a string array`);
   }
-  await assertTaskCheckRefs(cwd, checks, owner);
+  return checks;
+}
+async function assertInputTaskChecks(cwd, input2, owner) {
+  await assertTaskCheckRefs(cwd, inputCheckRefs(input2, owner), owner);
 }
 async function main() {
   let args = { positional: [], cwd: process.cwd(), allowExternalRoot: false, json: false, force: false };
@@ -40132,10 +40169,11 @@ async function main() {
       if (args.tasksFile !== void 0) {
         const tasks = JSON.parse(readFileArg(cwd, args.tasksFile, "--tasks-file"));
         if (!Array.isArray(tasks)) throw new Error("--tasks-file must be a JSON array");
-        for (const task of tasks) {
+        const declared = tasks.map((task) => {
           const owner = `task ${typeof task === "object" && task !== null && typeof task.taskId === "string" ? task.taskId : "<unknown>"}`;
-          await assertInputTaskChecks(cwd, task, owner);
-        }
+          return { owner, checks: inputCheckRefs(task, owner) };
+        });
+        await assertTasksCheckRefs(cwd, declared);
         input2.tasks = tasks;
       }
       const snapshot = createRun(cwd, input2, options2);

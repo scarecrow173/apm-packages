@@ -43,6 +43,7 @@ checks:
       expect: "…"
     limitations: []
     required: true
+checkHighWater: 1
 owners: []
 relations:
   source: []
@@ -103,6 +104,15 @@ relations:
 | `formal-proof` | `theorem` |
 | `runtime-monitoring` | `signal` |
 | `manual-review` | `checklistItem` |
+
+`checks:` の兄弟フィールドとして `checkHighWater` があります ——
+ドキュメントで宣言・割り当てられたことのある最大の `CHK-<digits>`
+序数です。スクリプトがチェック集合の変更ごとに書き込み、削除された
+チェック ID が二度と再発行されないようにする永続的なハイウォーター
+マークとして機能します (`--remove-check` は id を解放しないため、
+末尾削除後の追加は新しい `CHK-NN` を採番します)。スクリプト管理の
+フィールドとして扱ってください —— 手動で小さく書き換えると id の
+再発行を再び許してしまいます。
 
 `<!-- check:CHK-NN -->` 形式 (あるいは自己修飾の
 `<!-- check:VD-<id>::CHK-NN -->`) の本文アンカーは、チェックの id を

@@ -40,6 +40,7 @@ checks:
       expect: "…"
     limitations: []
     required: true
+checkHighWater: 1
 owners: []
 relations:
   source: []
@@ -98,6 +99,13 @@ Each method carries one required criterion field:
 | `formal-proof` | `theorem` |
 | `runtime-monitoring` | `signal` |
 | `manual-review` | `checklistItem` |
+
+Sibling to `checks:` is `checkHighWater` — the greatest `CHK-<digits>`
+ordinal ever declared or allocated in the document. The scripts write it
+whenever the check set changes: it is the durable high-water mark that
+keeps removed check ids from ever being reissued (`--remove-check` never
+frees an id, so tail-delete then add mints a fresh `CHK-NN`). Treat it as
+script-owned — hand-editing it down reopens id reissue.
 
 Body anchors of the form `<!-- check:CHK-NN -->` (or the self-qualified
 `<!-- check:VD-<id>::CHK-NN -->`) bind a check's id to its prose

@@ -1412,7 +1412,13 @@ function relationValues(value: unknown): string[] {
   return [];
 }
 
-function resolveDocumentReference(cwd: string, target: string, fromDir?: string): string | null {
+// Every file a document reference resolves to — the multi-match form of
+// resolveDocumentReference. A path ref still yields at most one file; an
+// id may name several files (locale siblings, or a duplicated id across
+// distinct artifacts). Callers that must refuse ambiguity or prefer the
+// artifact's primary file consume this; resolveDocumentReference keeps the
+// historical first-match contract.
+function resolveDocumentReferenceAll(cwd: string, target: string, fromDir?: string): string[] {
   const trimmed = target.trim();
   // Claim-qualified references (`DOC-ID::KEY`) address documents by id only —
   // never by path — the same contract the repository/graph boundary uses.
@@ -1421,9 +1427,10 @@ function resolveDocumentReference(cwd: string, target: string, fromDir?: string)
   if (!claimRef) {
     for (const base of fromDir ? [fromDir, cwd] : [cwd]) {
       const candidate = path.resolve(base, trimmed);
-      if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return [candidate];
     }
   }
+  const matches = new Set<string>();
   for (const type of docTypes) {
     for (const dirName of configs[type].dirs) {
       const dir = path.join(cwd, dirName);
@@ -1431,11 +1438,15 @@ function resolveDocumentReference(cwd: string, target: string, fromDir?: string)
       for (const file of docFiles(dir)) {
         const fullPath = path.join(dir, file);
         const parsed = parseDoc(fs.readFileSync(fullPath, "utf8"));
-        if (!parsed.error && parsed.data.id === idLookup) return fullPath;
+        if (!parsed.error && parsed.data.id === idLookup) matches.add(fullPath);
       }
     }
   }
-  return null;
+  return [...matches];
+}
+
+function resolveDocumentReference(cwd: string, target: string, fromDir?: string): string | null {
+  return resolveDocumentReferenceAll(cwd, target, fromDir)[0] ?? null;
 }
 
 export {
@@ -1463,6 +1474,7 @@ export {
   renderIndexBody,
   renderManagedIndex,
   resolveDocumentReference,
+  resolveDocumentReferenceAll,
   sanitizeTitle,
   logIndexResult,
   migrateDocs,

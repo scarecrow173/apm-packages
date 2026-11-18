@@ -5,7 +5,7 @@ import path from "node:path";
 import { createDocument, logIndexResult } from "../../lib/doc_suite_utils";
 import { schemaEntrypointGuard } from "../../lib/schema_preflight";
 import { canonicalCheck } from "../../lib/verification_checks";
-import { assembleChecks, verifyCheckTargets } from "./lib/verification_doc";
+import { assembleChecks, assertVerificationSupersedes, verifyCheckTargets } from "./lib/verification_doc";
 
 type CliArgs = {
   checks: string[];
@@ -71,13 +71,22 @@ async function main(): Promise<void> {
       const targets = await verifyCheckTargets(cwd, assembled.checks);
       if (targets.error) throw new Error(targets.error);
     }
+    // `supersedes` targets must resolve to verification documents — the
+    // same declared targetTypes contract update enforces, applied before
+    // any file is written so a wrong-typed edge is never minted.
+    assertVerificationSupersedes(cwd, args.supersedes);
     const result = await createDocument("verification", {
       cwd,
       date: args.date,
       dir: args.dir,
       // `checks:` is written even when empty — the field's presence keeps
       // the Check contract visible in every new Verification Design.
-      fields: { checks: assembled.checks.map(canonicalCheck) },
+      // `checkHighWater` joins it once ids exist: the persisted mark that
+      // keeps removed CHK ids from ever being reissued.
+      fields: {
+        checks: assembled.checks.map(canonicalCheck),
+        ...(assembled.highWater > 0 ? { checkHighWater: assembled.highWater } : {}),
+      },
       lifecycle: args.lifecycle,
       name: args.name,
       relations: {

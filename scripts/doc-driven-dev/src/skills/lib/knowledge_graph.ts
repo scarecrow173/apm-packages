@@ -210,8 +210,9 @@ type KnowledgeCheck = {
 
 // The projected Check→Claim edge — derived from `checks[].target`, never
 // stored in `relations`. Only emitted for structurally valid checks;
-// `resolution` carries the claim-target resolution state, and `to` the
-// claim-owning document when it resolves.
+// `resolution` carries the claim-level resolution state (`resolved` only
+// when the named claim exists, `ambiguous`/`unresolved` otherwise), and
+// `to` the claim-owning document when the claim resolves.
 type KnowledgeCheckEdge = {
   from: KnowledgeEdgeEndpoint;
   // Fully qualified check id (`VD-<id>::CHK-01`), or the local key when
@@ -382,6 +383,7 @@ function knowledgeNeighbors(graph: KnowledgeGraph, ref: string): { outbound: Kno
 type CheckResolution =
   | { status: "resolved"; node: KnowledgeNode; check: KnowledgeCheck }
   | { status: "invalid" }
+  | { status: "ambiguous" }
   | { status: "unresolved-document" }
   | { status: "not-verification"; node: KnowledgeNode }
   | { status: "unresolved-check"; node: KnowledgeNode };
@@ -389,8 +391,14 @@ type CheckResolution =
 function resolveCheckReference(graph: KnowledgeGraph, ref: string): CheckResolution {
   const parsed = parseClaimReference(ref.trim());
   if (!parsed || !CHECK_KEY_PATTERN.test(parsed.key)) return { status: "invalid" };
-  const node = graph.nodes.find((candidate) => candidate.id === parsed.docId);
-  if (!node) return { status: "unresolved-document" };
+  // The same fail-closed document boundary resolveClaimReference applies:
+  // an id declared by several distinct artifacts is ambiguous — resolving
+  // the path-first candidate would pin a task or Evidence Record to a
+  // check chosen by file order, never by the reference.
+  const matches = graph.nodes.filter((candidate) => candidate.id === parsed.docId);
+  if (matches.length === 0) return { status: "unresolved-document" };
+  if (matches.length > 1) return { status: "ambiguous" };
+  const node = matches[0];
   if (node.type !== "verification") return { status: "not-verification", node };
   const check = node.checks.find((candidate) => candidate.id === parsed.key);
   if (!check) return { status: "unresolved-check", node };
@@ -718,7 +726,7 @@ function projectKnowledgeGraph(model: DocumentRepository): KnowledgeGraph {
         });
         continue;
       }
-      const anchorSeenKey = `${anchor.path} ${anchorKey}`;
+      const anchorSeenKey = JSON.stringify([anchor.path, anchorKey]);
       const firstAnchor = seenAnchors.get(anchorSeenKey);
       if (firstAnchor !== undefined) {
         issues.push({
@@ -1036,6 +1044,7 @@ function projectKnowledgeGraph(model: DocumentRepository): KnowledgeGraph {
   // document-level checkEdges still record the resolution state so a
   // missing claim is a finding, not a silent drop.
   const checkEdges: KnowledgeCheckEdge[] = [];
+  const projectedCheckClaims = new Set<string>();
   for (const node of nodes) {
     for (const check of node.checks) {
       // parseVerificationChecks guarantees the target is DOC::KEY.
@@ -1086,17 +1095,22 @@ function projectKnowledgeGraph(model: DocumentRepository): KnowledgeGraph {
       const to: KnowledgeEdgeEndpoint = targetNode
         ? { path: targetNode.path, id: targetNode.id }
         : { path: targetDoc.path, id: targetDoc.id };
+      // The edge's verdict is claim-level: a document that resolves but
+      // declares no such claim leaves the edge unresolved — coverage
+      // surfaces count only checks that actually bind a live claim, not
+      // declared intent that names a missing one.
+      const targetClaims = claimsByKey.get(targetKey);
+      const claimExists = targetClaims !== undefined && targetClaims.has(claimRef.key);
       checkEdges.push({
         from: { path: node.path, id: node.id },
         check: qualifiedCheckId,
         target: check.target,
-        to,
+        to: claimExists ? to : null,
         method: check.method,
         required: check.required,
-        resolution: "resolved",
+        resolution: claimExists ? "resolved" : "unresolved",
       });
-      const targetClaims = claimsByKey.get(targetKey);
-      if (!targetClaims || !targetClaims.has(claimRef.key)) {
+      if (!claimExists) {
         issues.push({
           code: "unresolved-check-target",
           path: node.path,
@@ -1106,15 +1120,23 @@ function projectKnowledgeGraph(model: DocumentRepository): KnowledgeGraph {
         });
         continue;
       }
-      derivedEdges.push({
-        from: { path: node.path, id: node.id },
-        relation: "checks",
-        target: check.target,
-        to,
-        claim: check.target,
-        via: "checks[].target",
-        derived: true,
-      });
+      // The forward "checks" edge states document→claim coverage — N
+      // checks on one claim state it once (the per-check granularity lives
+      // on `checked-by`, which carries the qualified check id, and on
+      // checkEdges). Emitting N identical edges would be noise, not data.
+      const forwardKey = JSON.stringify([node.path, check.target]);
+      if (!projectedCheckClaims.has(forwardKey)) {
+        projectedCheckClaims.add(forwardKey);
+        derivedEdges.push({
+          from: { path: node.path, id: node.id },
+          relation: "checks",
+          target: check.target,
+          to,
+          claim: check.target,
+          via: "checks[].target",
+          derived: true,
+        });
+      }
       derivedEdges.push({
         from: { path: to.path, id: to.id },
         relation: "checked-by",

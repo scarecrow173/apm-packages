@@ -27408,16 +27408,17 @@ function walkMarkdownFiles(baseDir) {
     return isMarkdownSource(fullPath) ? [fullPath] : [];
   }).sort();
 }
-function resolveDocumentReference(cwd, target, fromDir) {
+function resolveDocumentReferenceAll(cwd, target, fromDir) {
   const trimmed = target.trim();
   const claimRef = parseClaimReference(trimmed);
   const idLookup = claimRef?.docId ?? trimmed;
   if (!claimRef) {
     for (const base of fromDir ? [fromDir, cwd] : [cwd]) {
       const candidate = import_node_path2.default.resolve(base, trimmed);
-      if (import_node_fs2.default.existsSync(candidate) && import_node_fs2.default.statSync(candidate).isFile()) return candidate;
+      if (import_node_fs2.default.existsSync(candidate) && import_node_fs2.default.statSync(candidate).isFile()) return [candidate];
     }
   }
+  const matches = /* @__PURE__ */ new Set();
   for (const type of docTypes) {
     for (const dirName of configs[type].dirs) {
       const dir = import_node_path2.default.join(cwd, dirName);
@@ -27425,11 +27426,14 @@ function resolveDocumentReference(cwd, target, fromDir) {
       for (const file2 of docFiles(dir)) {
         const fullPath = import_node_path2.default.join(dir, file2);
         const parsed = parseDoc(import_node_fs2.default.readFileSync(fullPath, "utf8"));
-        if (!parsed.error && parsed.data.id === idLookup) return fullPath;
+        if (!parsed.error && parsed.data.id === idLookup) matches.add(fullPath);
       }
     }
   }
-  return null;
+  return [...matches];
+}
+function resolveDocumentReference(cwd, target, fromDir) {
+  return resolveDocumentReferenceAll(cwd, target, fromDir)[0] ?? null;
 }
 
 // src/skills/adr-doc/scripts/lib/adr_utils.ts

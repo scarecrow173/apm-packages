@@ -38209,7 +38209,7 @@ function validateCheckEntry(entry, index2, allowMissingId) {
       passCriteria = criteria;
     }
   }
-  if (required2 === true && (preconditions === null || preconditions.length === 0)) {
+  if (required2 === true && preconditions !== null && preconditions.length === 0) {
     issues.push({
       code: "incomplete-required-check",
       index: index2,
@@ -38265,6 +38265,15 @@ function parseVerificationChecks(value) {
   }
   return { checks, issues };
 }
+function canonicalizeValue(value) {
+  if (Array.isArray(value)) return value.map(canonicalizeValue);
+  if (isPlainObject4(value)) {
+    return Object.fromEntries(
+      Object.keys(value).sort().map((key) => [key, canonicalizeValue(value[key])])
+    );
+  }
+  return value;
+}
 function canonicalCheck(check2) {
   return {
     id: check2.id,
@@ -38272,7 +38281,7 @@ function canonicalCheck(check2) {
     method: check2.method,
     implementation: check2.implementation,
     preconditions: check2.preconditions,
-    passCriteria: check2.passCriteria,
+    passCriteria: canonicalizeValue(check2.passCriteria),
     limitations: check2.limitations,
     required: check2.required
   };
@@ -38624,7 +38633,7 @@ function projectKnowledgeGraph(model) {
         });
         continue;
       }
-      const anchorSeenKey = `${anchor2.path}\0${anchorKey}`;
+      const anchorSeenKey = JSON.stringify([anchor2.path, anchorKey]);
       const firstAnchor = seenAnchors.get(anchorSeenKey);
       if (firstAnchor !== void 0) {
         issues.push({
@@ -38913,6 +38922,7 @@ function projectKnowledgeGraph(model) {
     });
   }
   const checkEdges = [];
+  const projectedCheckClaims = /* @__PURE__ */ new Set();
   for (const node3 of nodes) {
     for (const check2 of node3.checks) {
       const claimRef = parseClaimReference(check2.target);
@@ -38960,17 +38970,18 @@ function projectKnowledgeGraph(model) {
       const targetKey = artifactKeyOf(targetDoc.path);
       const targetNode = nodeByKey.get(targetKey);
       const to = targetNode ? { path: targetNode.path, id: targetNode.id } : { path: targetDoc.path, id: targetDoc.id };
+      const targetClaims = claimsByKey.get(targetKey);
+      const claimExists = targetClaims !== void 0 && targetClaims.has(claimRef.key);
       checkEdges.push({
         from: { path: node3.path, id: node3.id },
         check: qualifiedCheckId,
         target: check2.target,
-        to,
+        to: claimExists ? to : null,
         method: check2.method,
         required: check2.required,
-        resolution: "resolved"
+        resolution: claimExists ? "resolved" : "unresolved"
       });
-      const targetClaims = claimsByKey.get(targetKey);
-      if (!targetClaims || !targetClaims.has(claimRef.key)) {
+      if (!claimExists) {
         issues.push({
           code: "unresolved-check-target",
           path: node3.path,
@@ -38980,15 +38991,19 @@ function projectKnowledgeGraph(model) {
         });
         continue;
       }
-      derivedEdges.push({
-        from: { path: node3.path, id: node3.id },
-        relation: "checks",
-        target: check2.target,
-        to,
-        claim: check2.target,
-        via: "checks[].target",
-        derived: true
-      });
+      const forwardKey = JSON.stringify([node3.path, check2.target]);
+      if (!projectedCheckClaims.has(forwardKey)) {
+        projectedCheckClaims.add(forwardKey);
+        derivedEdges.push({
+          from: { path: node3.path, id: node3.id },
+          relation: "checks",
+          target: check2.target,
+          to,
+          claim: check2.target,
+          via: "checks[].target",
+          derived: true
+        });
+      }
       derivedEdges.push({
         from: { path: to.path, id: to.id },
         relation: "checked-by",

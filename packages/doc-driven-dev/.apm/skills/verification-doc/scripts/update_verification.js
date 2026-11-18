@@ -3426,7 +3426,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs7 = require("fs");
+    var fs6 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify = require_stringify();
@@ -3510,7 +3510,7 @@ var require_gray_matter = __commonJS({
       return stringify(file2, data, options2);
     };
     matter4.read = function(filepath, options2) {
-      const str2 = fs7.readFileSync(filepath, "utf8");
+      const str2 = fs6.readFileSync(filepath, "utf8");
       const file2 = matter4(str2, options2);
       file2.path = filepath;
       return file2;
@@ -13585,7 +13585,6 @@ var init_unist_util_visit = __esm({
 });
 
 // src/skills/verification-doc/scripts/update_verification.ts
-var import_node_fs6 = __toESM(require("node:fs"));
 var import_node_path7 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_suite_utils.ts
@@ -36553,16 +36552,17 @@ function walkMarkdownFiles(baseDir) {
     return isMarkdownSource(fullPath) ? [fullPath] : [];
   }).sort();
 }
-function resolveDocumentReference(cwd, target, fromDir) {
+function resolveDocumentReferenceAll(cwd, target, fromDir) {
   const trimmed = target.trim();
   const claimRef = parseClaimReference(trimmed);
   const idLookup = claimRef?.docId ?? trimmed;
   if (!claimRef) {
     for (const base of fromDir ? [fromDir, cwd] : [cwd]) {
       const candidate = import_node_path2.default.resolve(base, trimmed);
-      if (import_node_fs2.default.existsSync(candidate) && import_node_fs2.default.statSync(candidate).isFile()) return candidate;
+      if (import_node_fs2.default.existsSync(candidate) && import_node_fs2.default.statSync(candidate).isFile()) return [candidate];
     }
   }
+  const matches = /* @__PURE__ */ new Set();
   for (const type of docTypes) {
     for (const dirName of configs[type].dirs) {
       const dir = import_node_path2.default.join(cwd, dirName);
@@ -36570,11 +36570,11 @@ function resolveDocumentReference(cwd, target, fromDir) {
       for (const file2 of docFiles(dir)) {
         const fullPath = import_node_path2.default.join(dir, file2);
         const parsed = parseDoc(import_node_fs2.default.readFileSync(fullPath, "utf8"));
-        if (!parsed.error && parsed.data.id === idLookup) return fullPath;
+        if (!parsed.error && parsed.data.id === idLookup) matches.add(fullPath);
       }
     }
   }
-  return null;
+  return [...matches];
 }
 
 // src/skills/lib/schema_preflight.ts
@@ -37235,7 +37235,7 @@ function validateCheckEntry(entry, index2, allowMissingId) {
       passCriteria = criteria;
     }
   }
-  if (required2 === true && (preconditions === null || preconditions.length === 0)) {
+  if (required2 === true && preconditions !== null && preconditions.length === 0) {
     issues.push({
       code: "incomplete-required-check",
       index: index2,
@@ -37308,6 +37308,15 @@ function parseCheckInput(raw) {
   }
   return validateCheckEntry(value, 0, true);
 }
+function canonicalizeValue(value) {
+  if (Array.isArray(value)) return value.map(canonicalizeValue);
+  if (isPlainObject4(value)) {
+    return Object.fromEntries(
+      Object.keys(value).sort().map((key) => [key, canonicalizeValue(value[key])])
+    );
+  }
+  return value;
+}
 function canonicalCheck(check2) {
   return {
     id: check2.id,
@@ -37315,7 +37324,7 @@ function canonicalCheck(check2) {
     method: check2.method,
     implementation: check2.implementation,
     preconditions: check2.preconditions,
-    passCriteria: check2.passCriteria,
+    passCriteria: canonicalizeValue(check2.passCriteria),
     limitations: check2.limitations,
     required: check2.required
   };
@@ -37324,14 +37333,9 @@ function checkDesignRevision(check2) {
   const canonical = JSON.stringify(canonicalCheck(check2));
   return `sha256:${(0, import_node_crypto.createHash)("sha256").update(canonical, "utf8").digest("hex")}`;
 }
-function nextCheckId(existingIds) {
-  let highest = 0;
-  for (const id of existingIds) {
-    const match = /^CHK-(\d+)$/.exec(id);
-    if (match) highest = Math.max(highest, Number.parseInt(match[1], 10));
-  }
-  const next = highest + 1;
-  return `CHK-${String(next).padStart(2, "0")}`;
+function checkIdOrdinal(id) {
+  const match = /^CHK-(\d+)$/.exec(id);
+  return match ? Number.parseInt(match[1], 10) : 0;
 }
 
 // src/skills/verification-doc/scripts/lib/verification_doc.ts
@@ -38143,7 +38147,7 @@ function projectKnowledgeGraph(model) {
         });
         continue;
       }
-      const anchorSeenKey = `${anchor2.path}\0${anchorKey}`;
+      const anchorSeenKey = JSON.stringify([anchor2.path, anchorKey]);
       const firstAnchor = seenAnchors.get(anchorSeenKey);
       if (firstAnchor !== void 0) {
         issues.push({
@@ -38432,6 +38436,7 @@ function projectKnowledgeGraph(model) {
     });
   }
   const checkEdges = [];
+  const projectedCheckClaims = /* @__PURE__ */ new Set();
   for (const node3 of nodes) {
     for (const check2 of node3.checks) {
       const claimRef = parseClaimReference(check2.target);
@@ -38479,17 +38484,18 @@ function projectKnowledgeGraph(model) {
       const targetKey = artifactKeyOf(targetDoc.path);
       const targetNode = nodeByKey.get(targetKey);
       const to = targetNode ? { path: targetNode.path, id: targetNode.id } : { path: targetDoc.path, id: targetDoc.id };
+      const targetClaims = claimsByKey.get(targetKey);
+      const claimExists = targetClaims !== void 0 && targetClaims.has(claimRef.key);
       checkEdges.push({
         from: { path: node3.path, id: node3.id },
         check: qualifiedCheckId,
         target: check2.target,
-        to,
+        to: claimExists ? to : null,
         method: check2.method,
         required: check2.required,
-        resolution: "resolved"
+        resolution: claimExists ? "resolved" : "unresolved"
       });
-      const targetClaims = claimsByKey.get(targetKey);
-      if (!targetClaims || !targetClaims.has(claimRef.key)) {
+      if (!claimExists) {
         issues.push({
           code: "unresolved-check-target",
           path: node3.path,
@@ -38499,15 +38505,19 @@ function projectKnowledgeGraph(model) {
         });
         continue;
       }
-      derivedEdges.push({
-        from: { path: node3.path, id: node3.id },
-        relation: "checks",
-        target: check2.target,
-        to,
-        claim: check2.target,
-        via: "checks[].target",
-        derived: true
-      });
+      const forwardKey = JSON.stringify([node3.path, check2.target]);
+      if (!projectedCheckClaims.has(forwardKey)) {
+        projectedCheckClaims.add(forwardKey);
+        derivedEdges.push({
+          from: { path: node3.path, id: node3.id },
+          relation: "checks",
+          target: check2.target,
+          to,
+          claim: check2.target,
+          via: "checks[].target",
+          derived: true
+        });
+      }
       derivedEdges.push({
         from: { path: to.path, id: to.id },
         relation: "checked-by",
@@ -38545,11 +38555,42 @@ async function scanKnowledgeGraph(options2) {
 }
 
 // src/skills/verification-doc/scripts/lib/verification_doc.ts
-function resolveVerificationDoc(cwd, ref) {
-  const resolved = resolveDocumentReference(cwd, ref);
-  if (!resolved) {
-    throw new Error(`--doc does not resolve to a document: ${ref}`);
+function isCheckEntry(entry) {
+  return typeof entry === "object" && entry !== null && !Array.isArray(entry);
+}
+function primaryFileOf(candidates) {
+  const nonLocalized = candidates.filter((full) => !LOCALE_FILE_PATTERN.test(import_node_path6.default.basename(full)));
+  const pool = nonLocalized.length > 0 ? nonLocalized : candidates;
+  return [...pool].sort()[0];
+}
+function artifactPrimaryPath(full) {
+  const locale = LOCALE_FILE_PATTERN.exec(import_node_path6.default.basename(full));
+  if (!locale) return full;
+  const sibling = import_node_path6.default.join(import_node_path6.default.dirname(full), `${locale[1]}.md`);
+  return import_node_fs5.default.existsSync(sibling) ? sibling : full;
+}
+function resolveVerificationDocPath(cwd, ref, flag) {
+  const matches = resolveDocumentReferenceAll(cwd, ref);
+  if (matches.length === 0) {
+    throw new Error(`${flag} does not resolve to a document: ${ref}`);
   }
+  const groups = /* @__PURE__ */ new Map();
+  for (const full of matches) {
+    const key = artifactKeyOf(import_node_path6.default.relative(cwd, full).replace(/\\/g, "/"));
+    const bucket = groups.get(key) ?? [];
+    bucket.push(full);
+    groups.set(key, bucket);
+  }
+  if (groups.size > 1) {
+    const candidates = [...groups.values()].map((group) => import_node_path6.default.relative(cwd, primaryFileOf(group)).replace(/\\/g, "/")).sort();
+    throw new Error(
+      `${flag} id is ambiguous \u2014 it names ${groups.size} distinct documents: ${candidates.join(", ")} (disambiguate by path): ${ref}`
+    );
+  }
+  return artifactPrimaryPath(primaryFileOf([...groups.values()][0]));
+}
+function resolveVerificationDoc(cwd, ref) {
+  const resolved = resolveVerificationDocPath(cwd, ref, "--doc");
   if (!isInsideCheckout(cwd, resolved)) {
     throw new Error(`--doc resolves outside the checkout: ${ref}`);
   }
@@ -38570,33 +38611,33 @@ function resolveVerificationDoc(cwd, ref) {
 }
 function existingCheckIds(checksValue) {
   if (!Array.isArray(checksValue)) return [];
-  return checksValue.filter((entry) => typeof entry === "object" && entry !== null && !Array.isArray(entry)).map((entry) => entry.id).filter((id) => typeof id === "string");
+  return checksValue.filter(isCheckEntry).map((entry) => entry.id).filter((id) => typeof id === "string");
 }
 function assembleChecks(rawPayloads, takenIds, options2) {
   const checks = [];
   const taken = new Set(takenIds);
-  const used = new Set(takenIds);
   const batchIds = /* @__PURE__ */ new Set();
+  let highWater = Math.max(options2?.highWater ?? 0, ...takenIds.map(checkIdOrdinal), 0);
   for (const raw of rawPayloads) {
     const { check: check2, issues } = parseCheckInput(raw);
     if (!check2) {
-      return { checks: [], error: issues.map((issue2) => issue2.message).join("\n") };
+      return { checks: [], error: issues.map((issue2) => issue2.message).join("\n"), highWater };
     }
     if (check2.id !== "") {
       const exists = taken.has(check2.id);
       if (batchIds.has(check2.id) || exists && !options2?.allowExistingIds) {
-        return { checks: [], error: `Check id ${check2.id} is already declared \u2014 check ids must be unique within the document` };
+        return { checks: [], error: `Check id ${check2.id} is already declared \u2014 check ids must be unique within the document`, highWater };
       }
-      used.add(check2.id);
       batchIds.add(check2.id);
+      highWater = Math.max(highWater, checkIdOrdinal(check2.id));
     } else {
-      check2.id = nextCheckId([...used]);
-      used.add(check2.id);
+      highWater += 1;
+      check2.id = `CHK-${String(highWater).padStart(2, "0")}`;
       batchIds.add(check2.id);
     }
     checks.push(check2);
   }
-  return { checks, error: null };
+  return { checks, error: null, highWater };
 }
 async function verifyCheckTargets(cwd, checks) {
   const graph = await scanKnowledgeGraph({ cwd });
@@ -38612,25 +38653,46 @@ async function verifyCheckTargets(cwd, checks) {
   return { graph, error: null };
 }
 function upsertChecks(existing, updates) {
-  const base = Array.isArray(existing) ? existing.filter((entry) => typeof entry === "object" && entry !== null && !Array.isArray(entry)) : [];
+  const base = Array.isArray(existing) ? [...existing] : [];
   for (const update of updates) {
     const canonical = canonicalCheck(update);
-    const index2 = base.findIndex((entry) => entry.id === update.id);
+    const index2 = base.findIndex((entry) => isCheckEntry(entry) && entry.id === update.id);
     if (index2 >= 0) base[index2] = canonical;
     else base.push(canonical);
   }
   return base;
 }
 function removeChecks(existing, removeIds) {
-  const base = Array.isArray(existing) ? existing.filter((entry) => typeof entry === "object" && entry !== null && !Array.isArray(entry)) : [];
-  const declared = new Set(base.map((entry) => entry.id).filter((id) => typeof id === "string"));
+  const base = Array.isArray(existing) ? [...existing] : [];
+  const declared = new Set(
+    base.filter(isCheckEntry).map((entry) => entry.id).filter((id) => typeof id === "string")
+  );
   for (const id of removeIds) {
     if (!declared.has(id)) {
       return { checks: [], error: `--remove-check ${id} names no declared check` };
     }
   }
   const drop = new Set(removeIds);
-  return { checks: base.filter((entry) => typeof entry.id !== "string" || !drop.has(entry.id)), error: null };
+  return {
+    checks: base.filter((entry) => !isCheckEntry(entry) || typeof entry.id !== "string" || !drop.has(entry.id)),
+    error: null
+  };
+}
+function assertVerificationSupersedes(cwd, targets) {
+  for (const target of targets) {
+    const resolved = resolveVerificationDocPath(cwd, target, "--supersedes");
+    if (!isInsideCheckout(cwd, resolved)) {
+      throw new Error(`--supersedes target resolves outside the checkout: ${target}`);
+    }
+    const parsed = parseDoc(import_node_fs5.default.readFileSync(resolved, "utf8"));
+    const targetType = !parsed.error && typeof parsed.data.type === "string" ? parsed.data.type : null;
+    if (targetType !== "verification") {
+      throw new Error(`--supersedes target resolves to type ${JSON.stringify(targetType)}, expected verification: ${target}`);
+    }
+  }
+}
+function checkHighWaterOf(value) {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
 }
 function writeVerificationDoc(doc) {
   import_node_fs5.default.writeFileSync(doc.fullPath, import_gray_matter3.default.stringify(doc.body, doc.data), "utf8");
@@ -38698,20 +38760,8 @@ async function main() {
       if (additions.length === 0) continue;
       const existing = Array.isArray(relations[field]) ? relations[field].filter((item) => typeof item === "string") : [];
       const merged = new Set(existing);
-      for (const target of additions) {
-        if (field === "supersedes") {
-          const resolved = resolveDocumentReference(cwd, target);
-          if (!resolved || !isInsideCheckout(cwd, resolved)) {
-            throw new Error(`--supersedes target does not resolve to a document: ${target}`);
-          }
-          const parsed = parseDoc(import_node_fs6.default.readFileSync(resolved, "utf8"));
-          const targetType = !parsed.error && typeof parsed.data.type === "string" ? parsed.data.type : null;
-          if (targetType !== "verification") {
-            throw new Error(`--supersedes target resolves to type ${JSON.stringify(targetType)}, expected verification: ${target}`);
-          }
-        }
-        merged.add(target);
-      }
+      if (field === "supersedes") assertVerificationSupersedes(cwd, additions);
+      for (const target of additions) merged.add(target);
       relations[field] = [...merged];
     }
     if (args.from.length > 0 || args.supersedes.length > 0) {
@@ -38722,9 +38772,14 @@ async function main() {
         throw new Error(`Invalid --remove-check id: ${id} (expected CHK-<digits>)`);
       }
     }
+    const declaredIds = existingCheckIds(data.checks);
+    const highWater = Math.max(checkHighWaterOf(data.checkHighWater), ...declaredIds.map(checkIdOrdinal), 0);
     const removed = removeChecks(data.checks, args.removeChecks);
     if (removed.error) throw new Error(removed.error);
-    const assembled = assembleChecks(args.checks, existingCheckIds(removed.checks), { allowExistingIds: true });
+    const assembled = assembleChecks(args.checks, existingCheckIds(removed.checks), {
+      allowExistingIds: true,
+      highWater
+    });
     if (assembled.error) throw new Error(assembled.error);
     if (assembled.checks.length > 0) {
       const targets = await verifyCheckTargets(cwd, assembled.checks);
@@ -38732,6 +38787,7 @@ async function main() {
     }
     if (args.removeChecks.length > 0 || args.checks.length > 0) {
       data.checks = upsertChecks(removed.checks, assembled.checks);
+      data.checkHighWater = assembled.highWater;
     }
     data.updated = date5;
     writeVerificationDoc(doc);

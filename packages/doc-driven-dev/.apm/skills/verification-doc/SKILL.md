@@ -38,8 +38,10 @@ checks:
 
 Check ids (`CHK-<digits>`) are stable across edits and unique inside the
 document; the qualified check reference is `VD-<id>::CHK-NN` — what task
-`checks` entries and Evidence Records cite. `passCriteria.kind` is a
-typed discriminant that must equal `method` — each method carries its own
+`checks` entries and Evidence Records cite. The `checkHighWater`
+front-matter field is the durable allocation mark the scripts maintain so
+a removed check id is never reissued. `passCriteria.kind` is a typed
+discriminant that must equal `method` — each method carries its own
 criterion field, so one boolean never flattens different verification
 methods. Optional body anchors of the form `<!-- check:CHK-NN -->` bind a
 check's id to its prose description.
@@ -107,6 +109,7 @@ title: "Checkout total calculation"
 created: "YYYY-MM-DD"
 updated: "YYYY-MM-DD"
 checks: []            # VerificationCheckV1 entries — the Check contract
+# checkHighWater: N   # script-maintained once ids exist — removed CHK ids are never reissued
 owners: []
 relations:
   source: []

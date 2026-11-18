@@ -880,6 +880,7 @@ export {
   isExternalReference,
   isSettled,
   lifecycleBucketOf,
+  LOCALE_FILE_PATTERN,
   REQUIRED_FRONT_MATTER_FIELDS,
   scanRepository,
   SETTLED_STATUSES,

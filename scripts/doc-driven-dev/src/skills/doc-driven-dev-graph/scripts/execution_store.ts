@@ -35,7 +35,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { schemaEntrypointGuard } from "../../lib/schema_preflight";
-import { assertTaskCheckRefs } from "../../lib/execution_store/check_resolution";
+import { assertTaskCheckRefs, assertTasksCheckRefs } from "../../lib/execution_store/check_resolution";
 import {
   StoreError,
   approvePlan,
@@ -169,15 +169,21 @@ function emit(args: CliArgs, payload: Record<string, unknown>): void {
 // Task `checks` entries are qualified Verification Check references —
 // resolved against the live Claim/Check contract at the write boundary,
 // never stored as unchecked strings (Issue #239). Resolution needs the
-// Knowledge Graph, so it runs before the synchronous store call.
-async function assertInputTaskChecks(cwd: string, input: unknown, owner: string): Promise<void> {
-  if (typeof input !== "object" || input === null) return;
+// Knowledge Graph, so it runs before the synchronous store call. Shape
+// validation (`checks` must be a string array) happens here so callers
+// can collect refs across tasks and resolve them against one scan.
+function inputCheckRefs(input: unknown, owner: string): string[] {
+  if (typeof input !== "object" || input === null) return [];
   const checks = (input as { checks?: unknown }).checks;
-  if (checks === undefined) return;
+  if (checks === undefined) return [];
   if (!Array.isArray(checks) || !checks.every((check) => typeof check === "string")) {
     throw new Error(`${owner} checks must be a string array`);
   }
-  await assertTaskCheckRefs(cwd, checks as string[], owner);
+  return checks as string[];
+}
+
+async function assertInputTaskChecks(cwd: string, input: unknown, owner: string): Promise<void> {
+  await assertTaskCheckRefs(cwd, inputCheckRefs(input, owner), owner);
 }
 
 async function main(): Promise<void> {
@@ -212,10 +218,14 @@ async function main(): Promise<void> {
       if (args.tasksFile !== undefined) {
         const tasks = JSON.parse(readFileArg(cwd, args.tasksFile, "--tasks-file"));
         if (!Array.isArray(tasks)) throw new Error("--tasks-file must be a JSON array");
-        for (const task of tasks) {
+        // Validate shapes first, then resolve every task's `checks`
+        // against ONE Knowledge Graph scan — N tasks share the
+        // projection, they do not rescan it (Issue #239).
+        const declared = tasks.map((task) => {
           const owner = `task ${typeof task === "object" && task !== null && typeof (task as { taskId?: unknown }).taskId === "string" ? (task as { taskId: string }).taskId : "<unknown>"}`;
-          await assertInputTaskChecks(cwd, task, owner);
-        }
+          return { owner, checks: inputCheckRefs(task, owner) };
+        });
+        await assertTasksCheckRefs(cwd, declared);
         input.tasks = tasks;
       }
       const snapshot = createRun(cwd, input, options);

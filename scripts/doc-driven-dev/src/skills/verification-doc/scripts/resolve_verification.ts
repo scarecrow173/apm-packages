@@ -83,21 +83,39 @@ async function main(): Promise<void> {
     }
 
     if (args.doc) {
-      const node = graph.nodes.find(
-        (candidate) => candidate.type === "verification" && (candidate.id === args.doc || candidate.path === args.doc),
+      const docRef = args.doc;
+      // The artifact boundary the write path applies: a ref may name the
+      // primary file or a locale sibling (`paths` covers the whole
+      // group), and an id declared by several distinct artifacts is
+      // ambiguous — never first-match it.
+      const matches = graph.nodes.filter(
+        (candidate) => candidate.type === "verification"
+          && (candidate.id === docRef || candidate.path === docRef || candidate.paths.includes(docRef)),
       );
-      if (!node) {
+      if (matches.length === 0) {
         emit({ status: "unresolved-document", doc: args.doc });
         process.exitCode = 1;
         return;
       }
-      emit({ status: "resolved", document: nodeSummary(node) });
+      if (matches.length > 1) {
+        emit({
+          status: "ambiguous",
+          doc: args.doc,
+          candidates: matches.map((candidate) => ({ id: candidate.id, path: candidate.path })),
+        });
+        process.exitCode = 1;
+        return;
+      }
+      emit({ status: "resolved", document: nodeSummary(matches[0]) });
       return;
     }
 
     // --for-claim <DOC::KEY>: which Verification Designs already check this
     // claim — the reuse-first lookup the skill runs before creating a new
     // document (Issue #239: an existing design is updated, not duplicated).
+    // checkEdges resolve at claim level, so a check targeting a claim the
+    // document never declared (claimStatus "unresolved-claim") does not
+    // masquerade as coverage.
     const claimResolution = resolveClaimReference(graph, args.forClaim as string);
     const covering = graph.checkEdges
       .filter((edge) => edge.resolution === "resolved" && edge.target === (args.forClaim as string).trim())

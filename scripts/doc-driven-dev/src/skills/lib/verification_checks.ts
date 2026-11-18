@@ -314,7 +314,11 @@ function validateCheckEntry(
   }
 
   // --- required completeness ---
-  if (required === true && (preconditions === null || preconditions.length === 0)) {
+  // Only a *valid but empty* preconditions list earns this finding — a
+  // missing or malformed `preconditions` already reported
+  // missing-check-field for the same root cause, and one defect must not
+  // double-report.
+  if (required === true && preconditions !== null && preconditions.length === 0) {
     issues.push({
       code: "incomplete-required-check",
       index,
@@ -400,8 +404,26 @@ function parseCheckInput(raw: string): { check: VerificationCheckV1 | null; issu
   return validateCheckEntry(value, 0, true);
 }
 
+// Recursively sort a value's object keys (arrays keep element order, their
+// object elements are canonicalized too). Two spellings of the same
+// logical payload must collapse to identical canonical bytes — an
+// order-only resubmission is not an edit.
+function canonicalizeValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalizeValue);
+  if (isPlainObject(value)) {
+    return Object.fromEntries(
+      Object.keys(value).sort().map((key) => [key, canonicalizeValue(value[key])]),
+    );
+  }
+  return value;
+}
+
 // The canonical key order a check serializes in — creation, update, and
 // revision hashing all emit this shape so the durable form is stable.
+// `passCriteria` is recursively key-sorted for the same reason: the
+// discriminated union carries method-specific fields whose authored order
+// is presentation, not content — reordering them must not change the
+// bytes the design revision hashes.
 function canonicalCheck(check: VerificationCheckV1): Record<string, unknown> {
   return {
     id: check.id,
@@ -409,7 +431,7 @@ function canonicalCheck(check: VerificationCheckV1): Record<string, unknown> {
     method: check.method,
     implementation: check.implementation,
     preconditions: check.preconditions,
-    passCriteria: check.passCriteria,
+    passCriteria: canonicalizeValue(check.passCriteria),
     limitations: check.limitations,
     required: check.required,
   };
@@ -423,14 +445,21 @@ function checkDesignRevision(check: VerificationCheckV1): string {
   return `sha256:${createHash("sha256").update(canonical, "utf8").digest("hex")}`;
 }
 
+// The numeric ordinal of a check id (`CHK-07` → 7, anything else → 0) —
+// the shared suffix read the high-water arithmetic and `nextCheckId`
+// both use.
+function checkIdOrdinal(id: string): number {
+  const match = /^CHK-(\d+)$/.exec(id);
+  return match ? Number.parseInt(match[1], 10) : 0;
+}
+
 // Next unallocated CHK-NN for a document — the smallest unused number at
 // least one greater than the highest declared suffix, zero-padded to two
 // digits. Ids are never renumbered: allocation only appends.
 function nextCheckId(existingIds: readonly string[]): string {
   let highest = 0;
   for (const id of existingIds) {
-    const match = /^CHK-(\d+)$/.exec(id);
-    if (match) highest = Math.max(highest, Number.parseInt(match[1], 10));
+    highest = Math.max(highest, checkIdOrdinal(id));
   }
   const next = highest + 1;
   return `CHK-${String(next).padStart(2, "0")}`;
@@ -445,6 +474,7 @@ export {
   CHECK_KEY_PATTERN,
   CHECK_MARKER_PATTERN,
   checkDesignRevision,
+  checkIdOrdinal,
   isVerificationMethod,
   METHOD_CRITERIA_FIELDS,
   nextCheckId,

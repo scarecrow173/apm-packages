@@ -36,7 +36,9 @@ checks:
 
 チェック ID (`CHK-<digits>`) は編集をまたいで安定かつ文書内一意で、
 修飾チェック参照は `VD-<id>::CHK-NN` です —— タスクの `checks` エントリや
-Evidence Record が参照するものです。`passCriteria.kind` は `method` と一致
+Evidence Record が参照するものです。フロントマターの `checkHighWater`
+フィールドは、削除されたチェック ID が再発行されないようスクリプトが
+維持する永続的な採番マークです。`passCriteria.kind` は `method` と一致
 しなければならない型付き識別子であり、メソッドごとに固有のクライテリア
 フィールドを持つため、単一の真偽値が異なる検証方法を潰すことはありません。
 `<!-- check:CHK-NN -->` 形式の本文アンカーは、チェックの id をその散文の
@@ -104,6 +106,7 @@ title: "Checkout total calculation"
 created: "YYYY-MM-DD"
 updated: "YYYY-MM-DD"
 checks: []            # VerificationCheckV1 エントリ —— Check 契約
+# checkHighWater: N   # id 存在時にスクリプトが維持 —— 削除された CHK id は再発行されない
 owners: []
 relations:
   source: []

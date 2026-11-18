@@ -37648,7 +37648,7 @@ function validateCheckEntry(entry, index2, allowMissingId) {
       passCriteria = criteria;
     }
   }
-  if (required2 === true && (preconditions === null || preconditions.length === 0)) {
+  if (required2 === true && preconditions !== null && preconditions.length === 0) {
     issues.push({
       code: "incomplete-required-check",
       index: index2,
@@ -37704,6 +37704,15 @@ function parseVerificationChecks(value) {
   }
   return { checks, issues };
 }
+function canonicalizeValue(value) {
+  if (Array.isArray(value)) return value.map(canonicalizeValue);
+  if (isPlainObject5(value)) {
+    return Object.fromEntries(
+      Object.keys(value).sort().map((key) => [key, canonicalizeValue(value[key])])
+    );
+  }
+  return value;
+}
 function canonicalCheck(check2) {
   return {
     id: check2.id,
@@ -37711,7 +37720,7 @@ function canonicalCheck(check2) {
     method: check2.method,
     implementation: check2.implementation,
     preconditions: check2.preconditions,
-    passCriteria: check2.passCriteria,
+    passCriteria: canonicalizeValue(check2.passCriteria),
     limitations: check2.limitations,
     required: check2.required
   };
@@ -37814,8 +37823,10 @@ function extractCheckAnchors(document3) {
 function resolveCheckReference(graph, ref) {
   const parsed = parseClaimReference(ref.trim());
   if (!parsed || !CHECK_KEY_PATTERN.test(parsed.key)) return { status: "invalid" };
-  const node3 = graph.nodes.find((candidate) => candidate.id === parsed.docId);
-  if (!node3) return { status: "unresolved-document" };
+  const matches = graph.nodes.filter((candidate) => candidate.id === parsed.docId);
+  if (matches.length === 0) return { status: "unresolved-document" };
+  if (matches.length > 1) return { status: "ambiguous" };
+  const node3 = matches[0];
   if (node3.type !== "verification") return { status: "not-verification", node: node3 };
   const check2 = node3.checks.find((candidate) => candidate.id === parsed.key);
   if (!check2) return { status: "unresolved-check", node: node3 };
@@ -38084,7 +38095,7 @@ function projectKnowledgeGraph(model) {
         });
         continue;
       }
-      const anchorSeenKey = `${anchor2.path}\0${anchorKey}`;
+      const anchorSeenKey = JSON.stringify([anchor2.path, anchorKey]);
       const firstAnchor = seenAnchors.get(anchorSeenKey);
       if (firstAnchor !== void 0) {
         issues.push({
@@ -38373,6 +38384,7 @@ function projectKnowledgeGraph(model) {
     });
   }
   const checkEdges = [];
+  const projectedCheckClaims = /* @__PURE__ */ new Set();
   for (const node3 of nodes) {
     for (const check2 of node3.checks) {
       const claimRef = parseClaimReference(check2.target);
@@ -38420,17 +38432,18 @@ function projectKnowledgeGraph(model) {
       const targetKey = artifactKeyOf(targetDoc.path);
       const targetNode = nodeByKey.get(targetKey);
       const to = targetNode ? { path: targetNode.path, id: targetNode.id } : { path: targetDoc.path, id: targetDoc.id };
+      const targetClaims = claimsByKey.get(targetKey);
+      const claimExists = targetClaims !== void 0 && targetClaims.has(claimRef.key);
       checkEdges.push({
         from: { path: node3.path, id: node3.id },
         check: qualifiedCheckId,
         target: check2.target,
-        to,
+        to: claimExists ? to : null,
         method: check2.method,
         required: check2.required,
-        resolution: "resolved"
+        resolution: claimExists ? "resolved" : "unresolved"
       });
-      const targetClaims = claimsByKey.get(targetKey);
-      if (!targetClaims || !targetClaims.has(claimRef.key)) {
+      if (!claimExists) {
         issues.push({
           code: "unresolved-check-target",
           path: node3.path,
@@ -38440,15 +38453,19 @@ function projectKnowledgeGraph(model) {
         });
         continue;
       }
-      derivedEdges.push({
-        from: { path: node3.path, id: node3.id },
-        relation: "checks",
-        target: check2.target,
-        to,
-        claim: check2.target,
-        via: "checks[].target",
-        derived: true
-      });
+      const forwardKey = JSON.stringify([node3.path, check2.target]);
+      if (!projectedCheckClaims.has(forwardKey)) {
+        projectedCheckClaims.add(forwardKey);
+        derivedEdges.push({
+          from: { path: node3.path, id: node3.id },
+          relation: "checks",
+          target: check2.target,
+          to,
+          claim: check2.target,
+          via: "checks[].target",
+          derived: true
+        });
+      }
       derivedEdges.push({
         from: { path: to.path, id: to.id },
         relation: "checked-by",
@@ -38539,15 +38556,25 @@ async function main() {
       return;
     }
     if (args.doc) {
-      const node3 = graph.nodes.find(
-        (candidate) => candidate.type === "verification" && (candidate.id === args.doc || candidate.path === args.doc)
+      const docRef = args.doc;
+      const matches = graph.nodes.filter(
+        (candidate) => candidate.type === "verification" && (candidate.id === docRef || candidate.path === docRef || candidate.paths.includes(docRef))
       );
-      if (!node3) {
+      if (matches.length === 0) {
         emit({ status: "unresolved-document", doc: args.doc });
         process.exitCode = 1;
         return;
       }
-      emit({ status: "resolved", document: nodeSummary(node3) });
+      if (matches.length > 1) {
+        emit({
+          status: "ambiguous",
+          doc: args.doc,
+          candidates: matches.map((candidate) => ({ id: candidate.id, path: candidate.path }))
+        });
+        process.exitCode = 1;
+        return;
+      }
+      emit({ status: "resolved", document: nodeSummary(matches[0]) });
       return;
     }
     const claimResolution = resolveClaimReference(graph, args.forClaim);

@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 "use strict";
 
-import fs from "node:fs";
 import path from "node:path";
-import { configFor, parseDoc, resolveDocumentReference } from "../../lib/doc_suite_utils";
-import { isInsideCheckout } from "../../lib/document_utils";
+import { configFor } from "../../lib/doc_suite_utils";
 import { LIFECYCLE_VALUES } from "../../lib/doc_types";
 import { schemaEntrypointGuard } from "../../lib/schema_preflight";
-import { CHECK_KEY_PATTERN } from "../../lib/verification_checks";
+import { CHECK_KEY_PATTERN, checkIdOrdinal } from "../../lib/verification_checks";
 import {
   assembleChecks,
+  assertVerificationSupersedes,
+  checkHighWaterOf,
   existingCheckIds,
   removeChecks,
   resolveVerificationDoc,
@@ -108,20 +108,8 @@ async function main(): Promise<void> {
         ? (relations[field] as unknown[]).filter((item): item is string => typeof item === "string")
         : [];
       const merged = new Set(existing);
-      for (const target of additions) {
-        if (field === "supersedes") {
-          const resolved = resolveDocumentReference(cwd, target);
-          if (!resolved || !isInsideCheckout(cwd, resolved)) {
-            throw new Error(`--supersedes target does not resolve to a document: ${target}`);
-          }
-          const parsed = parseDoc(fs.readFileSync(resolved, "utf8"));
-          const targetType = !parsed.error && typeof parsed.data.type === "string" ? parsed.data.type : null;
-          if (targetType !== "verification") {
-            throw new Error(`--supersedes target resolves to type ${JSON.stringify(targetType)}, expected verification: ${target}`);
-          }
-        }
-        merged.add(target);
-      }
+      if (field === "supersedes") assertVerificationSupersedes(cwd, additions);
+      for (const target of additions) merged.add(target);
       relations[field] = [...merged];
     }
     if (args.from.length > 0 || args.supersedes.length > 0) {
@@ -132,15 +120,24 @@ async function main(): Promise<void> {
     // re-declare a removed id in one invocation (a replace, not an id
     // conflict). Upserts validate the full VerificationCheckV1 schema and
     // resolve Claim targets; an invalid payload refuses the whole update
-    // before any write (Issue #239).
+    // before any write (Issue #239). The allocation floor is the
+    // document's check-id high-water — the persisted `checkHighWater`
+    // plus every id declared pre-mutation — so a removed id is never
+    // reissued, even when it was the highest (tail-delete + add mints a
+    // fresh id, and removal-only writes still persist the mark).
     for (const id of args.removeChecks) {
       if (!CHECK_KEY_PATTERN.test(id)) {
         throw new Error(`Invalid --remove-check id: ${id} (expected CHK-<digits>)`);
       }
     }
+    const declaredIds = existingCheckIds(data.checks);
+    const highWater = Math.max(checkHighWaterOf(data.checkHighWater), ...declaredIds.map(checkIdOrdinal), 0);
     const removed = removeChecks(data.checks, args.removeChecks);
     if (removed.error) throw new Error(removed.error);
-    const assembled = assembleChecks(args.checks, existingCheckIds(removed.checks), { allowExistingIds: true });
+    const assembled = assembleChecks(args.checks, existingCheckIds(removed.checks), {
+      allowExistingIds: true,
+      highWater,
+    });
     if (assembled.error) throw new Error(assembled.error);
     if (assembled.checks.length > 0) {
       const targets = await verifyCheckTargets(cwd, assembled.checks);
@@ -148,6 +145,7 @@ async function main(): Promise<void> {
     }
     if (args.removeChecks.length > 0 || args.checks.length > 0) {
       data.checks = upsertChecks(removed.checks, assembled.checks);
+      data.checkHighWater = assembled.highWater;
     }
     data.updated = date;
 
