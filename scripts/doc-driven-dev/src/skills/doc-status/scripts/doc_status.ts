@@ -62,7 +62,7 @@ function usage(): string {
     "  health   Aggregate repository-wide findings by category",
     "",
     "Options:",
-    "  [--type idea|brainstorm|discovery|spec|plan|task|design|adr|test-spec|all]",
+    "  [--type idea|brainstorm|discovery|spec|plan|task|design|adr|knowledge|verification|test-spec|all]",
     "  [--dir <path>] [--status <status>] [--rule <ruleId>] [--severity error|warning|info]",
     "  [--profile artifact|materialized] [--blocking] [--json] [--external-links]",
   ].join("\n");

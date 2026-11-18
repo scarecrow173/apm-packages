@@ -107,6 +107,27 @@ const GRAPH_ISSUE_RULES: Record<KnowledgeGraphIssueCode, {
   "self-relation": { ruleId: "self-relation", category: "relation", severity: "warning", blocking: false, repair: "manual" },
   "invalid-relation-target-type": { ruleId: "invalid-relation-target-type", category: "traceability", severity: "warning", blocking: true, repair: "manual" },
   "relation-cycle": { ruleId: "relation-cycle", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  // Verification Design v1 Check contract (#239). Structural violations of
+  // the `checks:` front-matter schema are errors like every other schema
+  // rule; claim-resolution and body-anchor findings follow the
+  // claim/relation convention of blocking warnings.
+  "malformed-checks": { ruleId: "malformed-checks", category: "front-matter", severity: "error", blocking: true, repair: "manual" },
+  "malformed-check-entry": { ruleId: "malformed-check-entry", category: "front-matter", severity: "error", blocking: true, repair: "manual" },
+  "missing-check-field": { ruleId: "missing-check-field", category: "front-matter", severity: "error", blocking: true, repair: "manual" },
+  "invalid-check-id": { ruleId: "invalid-check-id", category: "front-matter", severity: "error", blocking: true, repair: "manual" },
+  "duplicate-check": { ruleId: "duplicate-check", category: "front-matter", severity: "warning", blocking: true, repair: "manual" },
+  "invalid-check-target": { ruleId: "invalid-check-target", category: "front-matter", severity: "error", blocking: true, repair: "manual" },
+  "invalid-check-method": { ruleId: "invalid-check-method", category: "front-matter", severity: "error", blocking: true, repair: "manual" },
+  "check-criteria-mismatch": { ruleId: "check-criteria-mismatch", category: "front-matter", severity: "error", blocking: true, repair: "manual" },
+  "incomplete-required-check": { ruleId: "incomplete-required-check", category: "front-matter", severity: "error", blocking: true, repair: "manual" },
+  "misplaced-checks": { ruleId: "misplaced-checks", category: "front-matter", severity: "warning", blocking: true, repair: "manual" },
+  "unresolved-check-target": { ruleId: "unresolved-check-target", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "ambiguous-check-target": { ruleId: "ambiguous-check-target", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "invalid-check-anchor": { ruleId: "invalid-check-anchor", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "unresolved-check-anchor": { ruleId: "unresolved-check-anchor", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "duplicate-check-anchor": { ruleId: "duplicate-check-anchor", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "check-anchor-mismatch": { ruleId: "check-anchor-mismatch", category: "relation", severity: "warning", blocking: true, repair: "manual" },
+  "misplaced-check-anchor": { ruleId: "misplaced-check-anchor", category: "relation", severity: "warning", blocking: true, repair: "manual" },
 };
 
 // Project the Knowledge Graph once per scope and attribute its issues to

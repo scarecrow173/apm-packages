@@ -27211,8 +27211,8 @@ var configs = {
     owner: "doc-suite",
     indexFormat: "shared-4col",
     creator: "new_verification",
-    mutators: [],
-    auditors: [],
+    mutators: ["update_verification"],
+    auditors: ["resolve_verification"],
     requiredFields: [],
     fieldVocabularies: {},
     requiredRelations: [],
@@ -27229,7 +27229,7 @@ var configs = {
     requiredDirectoryFiles: [],
     reservedFiles: [],
     scaffoldIndexTitle: "Verification Design Documents",
-    note: "Durable verification-intent document (#239 defines the Check contract)."
+    note: "Durable verification-intent document; Verification Design v1 defines the Check contract (#239)."
   }
 };
 var executionTypes = ["plan", "task"];

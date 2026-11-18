@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
+import * as yaml from "js-yaml";
 import { z } from "zod";
 import { generateArtifactId } from "./artifact_id";
 import { parseClaimReference } from "./claim_ids";
@@ -558,15 +559,21 @@ function formatMetadataBlock(metadata?: MetadataInput): string[] {
 }
 
 // Type-specific top-level front-matter fields the registry declares beyond
-// the shared base set (e.g. `knowledge_kind` on knowledge docs). Scalars
-// only — the writer emits them next to the axis block; lint validates them
-// through `requiredFields`/`fieldVocabularies` on the contract.
+// the shared base set (e.g. `knowledge_kind` on knowledge docs, `checks` on
+// verification docs). Scalars emit inline; arrays and objects serialize as
+// an indented YAML block — the writer emits them next to the axis block;
+// lint validates them through `requiredFields`/`fieldVocabularies` on the
+// contract or the owning type's parser (Verification Design checks).
 function formatExtraFieldsBlock(fields?: MetadataInput): string[] {
   if (!fields) return [];
-  return Object.entries(fields).flatMap(([key, value]) =>
-    (typeof value === "string" || typeof value === "number" || typeof value === "boolean")
-      ? [`${key}: ${formatMetadataScalar(value)}`]
-      : []);
+  return Object.entries(fields).flatMap(([key, value]) => {
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+      return [`${key}: ${formatMetadataScalar(value)}`];
+    }
+    if (value === undefined || value === null) return [];
+    const dumped = yaml.dump(value, { lineWidth: -1, noRefs: true }).trimEnd();
+    return [`${key}:`, ...dumped.split("\n").map((line) => `  ${line}`)];
+  });
 }
 
 // The relation fields a durable type stores: `source` (provenance, shared)
@@ -801,21 +808,19 @@ function bodyFor(type: DocType, title: string): string {
       "",
       "## Purpose",
       "",
-      "<!-- The verification intent this design preserves: which claims it checks and when it may be retired. -->",
+      "<!-- The verification intent this design preserves: which claims it checks and when the design may be retired. -->",
       "",
       "## Scope",
       "",
-      "- <!-- behavior, contract, or claim under verification -->",
+      "<!-- The claims, contracts, or behaviors this design verifies — and the boundaries it stays inside. -->",
       "",
       "## Checks",
       "",
-      "<!-- One check per entry; each targets a Claim ID (<TYPE>-<id>::R-NN). The Check contract (method, criteria, required) is defined by Verification Design v1. -->",
+      "<!-- The authoritative check list is the front-matter `checks:` array — the sole Check→Claim authority. Each entry is a VerificationCheckV1 { id, target, method, implementation, preconditions, passCriteria, limitations, required }. Describe each check's intent in prose here and bind it to its front-matter id with a body anchor of the form check:CHK-NN inside an HTML comment. -->",
       "",
-      "- [ ] <!-- check: claim target + verification method + pass criteria -->",
+      "## Non-goals",
       "",
-      "## Non-Goals",
-      "",
-      "- <!-- what this design deliberately does not verify -->",
+      "<!-- What this design deliberately does not verify. -->",
     ].join("\n");
   }
   if (type === "design") {
@@ -1407,7 +1412,13 @@ function relationValues(value: unknown): string[] {
   return [];
 }
 
-function resolveDocumentReference(cwd: string, target: string, fromDir?: string): string | null {
+// Every file a document reference resolves to — the multi-match form of
+// resolveDocumentReference. A path ref still yields at most one file; an
+// id may name several files (locale siblings, or a duplicated id across
+// distinct artifacts). Callers that must refuse ambiguity or prefer the
+// artifact's primary file consume this; resolveDocumentReference keeps the
+// historical first-match contract.
+function resolveDocumentReferenceAll(cwd: string, target: string, fromDir?: string): string[] {
   const trimmed = target.trim();
   // Claim-qualified references (`DOC-ID::KEY`) address documents by id only —
   // never by path — the same contract the repository/graph boundary uses.
@@ -1416,9 +1427,10 @@ function resolveDocumentReference(cwd: string, target: string, fromDir?: string)
   if (!claimRef) {
     for (const base of fromDir ? [fromDir, cwd] : [cwd]) {
       const candidate = path.resolve(base, trimmed);
-      if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return [candidate];
     }
   }
+  const matches = new Set<string>();
   for (const type of docTypes) {
     for (const dirName of configs[type].dirs) {
       const dir = path.join(cwd, dirName);
@@ -1426,11 +1438,15 @@ function resolveDocumentReference(cwd: string, target: string, fromDir?: string)
       for (const file of docFiles(dir)) {
         const fullPath = path.join(dir, file);
         const parsed = parseDoc(fs.readFileSync(fullPath, "utf8"));
-        if (!parsed.error && parsed.data.id === idLookup) return fullPath;
+        if (!parsed.error && parsed.data.id === idLookup) matches.add(fullPath);
       }
     }
   }
-  return null;
+  return [...matches];
+}
+
+function resolveDocumentReference(cwd: string, target: string, fromDir?: string): string | null {
+  return resolveDocumentReferenceAll(cwd, target, fromDir)[0] ?? null;
 }
 
 export {
@@ -1458,6 +1474,7 @@ export {
   renderIndexBody,
   renderManagedIndex,
   resolveDocumentReference,
+  resolveDocumentReferenceAll,
   sanitizeTitle,
   logIndexResult,
   migrateDocs,

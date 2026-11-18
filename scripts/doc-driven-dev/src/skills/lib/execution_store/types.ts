@@ -65,7 +65,8 @@ type RunManifest = {
 
 // Task record — per-task CAS object. `version` bumps on every write.
 // `dependsOn` lists sibling task ids inside the same run; `checks` carries
-// opaque VerificationCheck references (#239); `scope` declares the write
+// qualified Verification Check references (`VD-<id>::CHK-NN`) resolved at
+// the write boundary (#239); `scope` declares the write
 // scope (file / dir-prefix entries, or opaque prose) the task may touch —
 // the authority the parallel-scope judgment compares against (#237).
 type TaskRecord = {

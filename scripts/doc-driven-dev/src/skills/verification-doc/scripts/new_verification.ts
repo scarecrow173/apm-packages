@@ -4,8 +4,11 @@
 import path from "node:path";
 import { createDocument, logIndexResult } from "../../lib/doc_suite_utils";
 import { schemaEntrypointGuard } from "../../lib/schema_preflight";
+import { canonicalCheck } from "../../lib/verification_checks";
+import { assembleChecks, assertVerificationSupersedes, verifyCheckTargets } from "./lib/verification_doc";
 
 type CliArgs = {
+  checks: string[];
   cwd: string;
   date?: string;
   dir?: string;
@@ -21,10 +24,11 @@ type CliArgs = {
 };
 
 function parseArgs(argv: string[]): CliArgs {
-  const args: CliArgs = { cwd: process.cwd(), from: [], supersedes: [] };
+  const args: CliArgs = { checks: [], cwd: process.cwd(), from: [], supersedes: [] };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--title") args.title = argv[++i];
+    else if (arg === "--check") args.checks.push(argv[++i]);
     else if (arg === "--from") args.from.push(argv[++i]);
     else if (arg === "--supersedes") args.supersedes.push(argv[++i]);
     else if (arg === "--dir") args.dir = argv[++i];
@@ -43,7 +47,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return "Usage: node scripts/new_verification.js --title <title> [--from <source>] [--supersedes <verification-doc>] [--dir <path>] [--name <filename>] [--status <status>] [--lifecycle <lifecycle>]";
+  return "Usage: node scripts/new_verification.js --title <title> [--check '<json>']... [--from <source>] [--supersedes <verification-doc>] [--dir <path>] [--name <filename>] [--status <status>] [--lifecycle <lifecycle>]";
 }
 
 async function main(): Promise<void> {
@@ -56,10 +60,33 @@ async function main(): Promise<void> {
     if (!args.title) throw new Error("Missing required --title");
     const cwd = path.resolve(args.cwd);
     if (!schemaEntrypointGuard(cwd)) return;
+    // The `checks:` front-matter array is the Check contract's sole
+    // authority — every `--check` payload is a full VerificationCheckV1
+    // minus `id` (allocated CHK-NN here) and must satisfy the complete
+    // schema and resolve a live Claim target before any file is written
+    // (Issue #239).
+    const assembled = assembleChecks(args.checks, []);
+    if (assembled.error) throw new Error(assembled.error);
+    if (assembled.checks.length > 0) {
+      const targets = await verifyCheckTargets(cwd, assembled.checks);
+      if (targets.error) throw new Error(targets.error);
+    }
+    // `supersedes` targets must resolve to verification documents — the
+    // same declared targetTypes contract update enforces, applied before
+    // any file is written so a wrong-typed edge is never minted.
+    assertVerificationSupersedes(cwd, args.supersedes);
     const result = await createDocument("verification", {
       cwd,
       date: args.date,
       dir: args.dir,
+      // `checks:` is written even when empty — the field's presence keeps
+      // the Check contract visible in every new Verification Design.
+      // `checkHighWater` joins it once ids exist: the persisted mark that
+      // keeps removed CHK ids from ever being reissued.
+      fields: {
+        checks: assembled.checks.map(canonicalCheck),
+        ...(assembled.highWater > 0 ? { checkHighWater: assembled.highWater } : {}),
+      },
       lifecycle: args.lifecycle,
       name: args.name,
       relations: {

@@ -48,6 +48,8 @@ import { allowedRelationsFor, knowledgeRelationFields, knowledgeRelationInverses
 import { nonReferenceRelationKeys } from "./document_utils";
 import { CLAIM_KEY_PATTERN, CLAIM_MARKER_PATTERN, CLAIM_REFERENCE_PATTERN, claimId, isClaimKey, parseClaimReference } from "./claim_ids";
 import type { ClaimReference } from "./claim_ids";
+import { CHECK_KEY_PATTERN, CHECK_MARKER_PATTERN, checkDesignRevision, parseVerificationChecks } from "./verification_checks";
+import type { VerificationCheckIssueCode, VerificationCheckV1 } from "./verification_checks";
 
 // ---------------------------------------------------------------------------
 // Claim declarations
@@ -173,6 +175,86 @@ function extractClaimDeclarations(document: RepositoryDocument): ClaimDeclaratio
 }
 
 // ---------------------------------------------------------------------------
+// Verification Check declarations (Issue #239)
+// ---------------------------------------------------------------------------
+
+// A `<!-- check:... -->` body marker inside a verification document — the
+// prose anchor for one front-matter check, mirroring `<!-- claim:... -->`.
+type CheckAnchor = {
+  // Bare check key (`CHK-01`), or the key part of a qualified anchor.
+  key: string | null;
+  // Document id a qualified anchor names; null for the bare form.
+  declaredDocId: string | null;
+  // Marker content when it was neither CHK-NN nor DOC::CHK-NN.
+  invalid: string | null;
+  path: string;
+  line: number;
+};
+
+// One validated check as the graph sees it — the node-level read model for
+// `checks[]` entries. `designRevision` is the content digest Evidence
+// Records (#240) pin so outcomes measured against a since-edited check are
+// detectable; outcomes themselves never appear here.
+type KnowledgeCheck = {
+  // Document-local stable key (`CHK-01`).
+  id: string;
+  // Fully qualified check reference (`VD-<id>::CHK-01`); null when the
+  // owning document declares no front-matter id.
+  qualifiedId: string | null;
+  // The stored Check→Claim authority — `<document-id>::<KEY>`.
+  target: string;
+  method: string;
+  required: boolean;
+  designRevision: string;
+};
+
+// The projected Check→Claim edge — derived from `checks[].target`, never
+// stored in `relations`. Only emitted for structurally valid checks;
+// `resolution` carries the claim-level resolution state (`resolved` only
+// when the named claim exists, `ambiguous`/`unresolved` otherwise), and
+// `to` the claim-owning document when the claim resolves.
+type KnowledgeCheckEdge = {
+  from: KnowledgeEdgeEndpoint;
+  // Fully qualified check id (`VD-<id>::CHK-01`), or the local key when
+  // the design document has no front-matter id.
+  check: string;
+  // The claim reference exactly as declared in the check.
+  target: string;
+  to: KnowledgeEdgeEndpoint | null;
+  method: string;
+  required: boolean;
+  resolution: "resolved" | "unresolved" | "ambiguous";
+};
+
+function extractCheckAnchors(document: RepositoryDocument): CheckAnchor[] {
+  const anchors: CheckAnchor[] = [];
+  const body = unfencedBody(document.body);
+  const lines = body.split("\n");
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const lineNo = document.bodyStartLine + index + 1;
+    for (const match of line.matchAll(CHECK_MARKER_PATTERN)) {
+      const raw = match[1].trim();
+      const parsed = parseClaimReference(raw);
+      // Both forms must carry a check key: `CHK-NN` bare, or
+      // `DOC-ID::CHK-NN` qualified. `DOC::R-01` is a claim reference, not
+      // a check anchor — marker content that misses the check grammar is
+      // invalid, not reinterpreted.
+      const qualified = parsed && CHECK_KEY_PATTERN.test(parsed.key) ? parsed : null;
+      const bare = !qualified && CHECK_KEY_PATTERN.test(raw) ? raw : null;
+      anchors.push({
+        key: qualified?.key ?? bare,
+        declaredDocId: qualified?.docId ?? null,
+        invalid: (qualified === null && bare === null) ? raw : null,
+        path: document.path,
+        line: lineNo,
+      });
+    }
+  }
+  return anchors;
+}
+
+// ---------------------------------------------------------------------------
 // Graph model
 // ---------------------------------------------------------------------------
 
@@ -185,6 +267,9 @@ type KnowledgeNode = {
   type: string;
   paths: string[];
   claims: KnowledgeClaim[];
+  // Validated Verification Design checks — populated only on
+  // `type: verification` nodes, from the front-matter `checks:` authority.
+  checks: KnowledgeCheck[];
 };
 
 type KnowledgeEdgeEndpoint = {
@@ -237,7 +322,19 @@ type KnowledgeGraphIssueCode =
   | "relation-escapes-root"
   | "self-relation"
   | "invalid-relation-target-type"
-  | "relation-cycle";
+  | "relation-cycle"
+  // Verification Check contract — document-local codes come from
+  // verification_checks.ts verbatim; resolution and anchor codes are
+  // emitted by this projection.
+  | VerificationCheckIssueCode
+  | "unresolved-check-target"
+  | "ambiguous-check-target"
+  | "invalid-check-anchor"
+  | "unresolved-check-anchor"
+  | "duplicate-check-anchor"
+  | "check-anchor-mismatch"
+  | "misplaced-check-anchor"
+  | "misplaced-checks";
 
 type KnowledgeGraphIssue = {
   code: KnowledgeGraphIssueCode;
@@ -257,6 +354,10 @@ type KnowledgeGraph = {
   edges: KnowledgeEdge[];
   // Derived inverse projection of the resolved forward edges.
   derivedEdges: DerivedKnowledgeEdge[];
+  // Derived Check→Claim projection — the graph form of every valid
+  // `checks[].target` (#239). Never stored; `relations.checks` is not a
+  // field anywhere.
+  checkEdges: KnowledgeCheckEdge[];
   issues: KnowledgeGraphIssue[];
 };
 
@@ -270,6 +371,62 @@ function knowledgeNeighbors(graph: KnowledgeGraph, ref: string): { outbound: Kno
     outbound: graph.edges.filter((edge) => edge.from.path === node.path),
     inbound: graph.derivedEdges.filter((edge) => edge.from.path === node.path),
   };
+}
+
+// The Check reference resolution boundary — the surface Execution-Store
+// task `checks` entries (#237) and Evidence Records (#240) resolve
+// through. `ref` is a qualified check reference `VD-<id>::CHK-NN` in the
+// shared `<document-id>::<KEY>` grammar; anything else — a bare key, a
+// claim key, a legacy `TSPEC-…::…` reference, a test-spec path — fails
+// closed as `invalid` or `unresolved-document` and never resolves to a
+// check by accident.
+type CheckResolution =
+  | { status: "resolved"; node: KnowledgeNode; check: KnowledgeCheck }
+  | { status: "invalid" }
+  | { status: "ambiguous" }
+  | { status: "unresolved-document" }
+  | { status: "not-verification"; node: KnowledgeNode }
+  | { status: "unresolved-check"; node: KnowledgeNode };
+
+function resolveCheckReference(graph: KnowledgeGraph, ref: string): CheckResolution {
+  const parsed = parseClaimReference(ref.trim());
+  if (!parsed || !CHECK_KEY_PATTERN.test(parsed.key)) return { status: "invalid" };
+  // The same fail-closed document boundary resolveClaimReference applies:
+  // an id declared by several distinct artifacts is ambiguous — resolving
+  // the path-first candidate would pin a task or Evidence Record to a
+  // check chosen by file order, never by the reference.
+  const matches = graph.nodes.filter((candidate) => candidate.id === parsed.docId);
+  if (matches.length === 0) return { status: "unresolved-document" };
+  if (matches.length > 1) return { status: "ambiguous" };
+  const node = matches[0];
+  if (node.type !== "verification") return { status: "not-verification", node };
+  const check = node.checks.find((candidate) => candidate.id === parsed.key);
+  if (!check) return { status: "unresolved-check", node };
+  return { status: "resolved", node, check };
+}
+
+// The Claim reference resolution boundary for writers — `new_verification`
+// and `update_verification` validate `checks[].target` through this so a
+// check is never minted against an unknown Claim ID. `ref` is any
+// `DOC::KEY` claim reference; the graph's own projection uses the same
+// rule via lookupById + the claim index.
+type ClaimResolution =
+  | { status: "resolved"; node: KnowledgeNode; claim: KnowledgeClaim }
+  | { status: "invalid" }
+  | { status: "ambiguous" }
+  | { status: "unresolved-document" }
+  | { status: "unresolved-claim"; node: KnowledgeNode };
+
+function resolveClaimReference(graph: KnowledgeGraph, ref: string): ClaimResolution {
+  const parsed = parseClaimReference(ref.trim());
+  if (!parsed) return { status: "invalid" };
+  const matches = graph.nodes.filter((candidate) => candidate.id === parsed.docId);
+  if (matches.length === 0) return { status: "unresolved-document" };
+  if (matches.length > 1) return { status: "ambiguous" };
+  const node = matches[0];
+  const claim = node.claims.find((candidate) => candidate.key === parsed.key);
+  if (!claim) return { status: "unresolved-claim", node };
+  return { status: "resolved", node, claim };
 }
 
 // ---------------------------------------------------------------------------
@@ -470,6 +627,120 @@ function projectKnowledgeGraph(model: DocumentRepository): KnowledgeGraph {
       });
     }
     claimsByKey.set(key, claimKeys);
+
+    // Verification Check extraction (Issue #239): the `checks:`
+    // front-matter array is the sole Check→Claim authority. It is parsed
+    // per member file so a locale sibling's drift surfaces, and deduped
+    // by check id across the artifact group — a mirrored definition is
+    // one logical check, a conflicting one is `duplicate-check`.
+    const isVerification = primary.type === "verification";
+    const nodeChecks: KnowledgeCheck[] = [];
+    const declaredChecks = new Map<string, { path: string; revision: string }>();
+    const checkAnchors: CheckAnchor[] = [];
+    for (const document of group) {
+      if (isVerification) {
+        const parsed = parseVerificationChecks(document.frontMatter.checks);
+        for (const issue of parsed.issues) {
+          issues.push({ code: issue.code, path: document.path, line: null, target: issue.target, message: issue.message });
+        }
+        for (const check of parsed.checks) {
+          const revision = checkDesignRevision(check);
+          const first = declaredChecks.get(check.id);
+          if (first) {
+            if (first.revision !== revision) {
+              issues.push({
+                code: "duplicate-check",
+                path: document.path,
+                line: null,
+                target: check.id,
+                message: `Check id ${check.id} is declared with a different definition in ${document.path} than in ${first.path} — locale siblings mirror one logical check`,
+              });
+            }
+            continue;
+          }
+          declaredChecks.set(check.id, { path: document.path, revision });
+          nodeChecks.push({
+            id: check.id,
+            qualifiedId: primary.id ? claimId(primary.id, check.id) : null,
+            target: check.target,
+            method: check.method,
+            required: check.required,
+            designRevision: revision,
+          });
+        }
+      } else if (document.frontMatter.checks !== undefined) {
+        issues.push({
+          code: "misplaced-checks",
+          path: document.path,
+          line: null,
+          target: "checks",
+          message: `checks: is the Verification Design contract — a ${primary.type ?? "untyped"} document does not declare checks`,
+        });
+      }
+      checkAnchors.push(...extractCheckAnchors(document));
+    }
+
+    // Body `<!-- check:... -->` anchors bind a check's identity to its
+    // prose position — validated against the front-matter declarations,
+    // never an independent source of check ids.
+    const seenAnchors = new Map<string, number>();
+    for (const anchor of checkAnchors) {
+      if (anchor.invalid !== null) {
+        issues.push({
+          code: "invalid-check-anchor",
+          path: anchor.path,
+          line: anchor.line,
+          target: anchor.invalid,
+          message: `Check marker does not declare a check key or DOC::CHK-NN reference: <!-- check:${anchor.invalid} -->`,
+        });
+        continue;
+      }
+      if (!isVerification) {
+        issues.push({
+          code: "misplaced-check-anchor",
+          path: anchor.path,
+          line: anchor.line,
+          target: anchor.declaredDocId ? `${anchor.declaredDocId}::${anchor.key}` : anchor.key,
+          message: `Check anchor <!-- check:${anchor.declaredDocId ? `${anchor.declaredDocId}::` : ""}${anchor.key} --> sits outside a verification document — check markers only bind inside Verification Designs`,
+        });
+        continue;
+      }
+      if (primary.id !== null && anchor.declaredDocId !== null && anchor.declaredDocId !== primary.id) {
+        issues.push({
+          code: "check-anchor-mismatch",
+          path: anchor.path,
+          line: anchor.line,
+          target: `${anchor.declaredDocId}::${anchor.key}`,
+          message: `Check anchor ${anchor.declaredDocId}::${anchor.key} is declared inside ${primary.id} — a qualified check anchor names its own document`,
+        });
+        continue;
+      }
+      const anchorKey = anchor.key as string;
+      if (!declaredChecks.has(anchorKey)) {
+        issues.push({
+          code: "unresolved-check-anchor",
+          path: anchor.path,
+          line: anchor.line,
+          target: anchorKey,
+          message: `Check anchor ${anchorKey} names a check the front matter of ${primary.path} does not declare`,
+        });
+        continue;
+      }
+      const anchorSeenKey = JSON.stringify([anchor.path, anchorKey]);
+      const firstAnchor = seenAnchors.get(anchorSeenKey);
+      if (firstAnchor !== undefined) {
+        issues.push({
+          code: "duplicate-check-anchor",
+          path: anchor.path,
+          line: anchor.line,
+          target: anchorKey,
+          message: `Check anchor ${anchorKey} is bound more than once in ${anchor.path} (first at line ${firstAnchor})`,
+        });
+        continue;
+      }
+      seenAnchors.set(anchorSeenKey, anchor.line);
+    }
+
     const node: KnowledgeNode = {
       key,
       path: primary.path,
@@ -477,6 +748,7 @@ function projectKnowledgeGraph(model: DocumentRepository): KnowledgeGraph {
       type: primary.type ?? "",
       paths: group.map((document) => document.path).sort(compareStrings),
       claims: nodeClaims.sort((a, b) => compareStrings(a.key, b.key) || a.line - b.line),
+      checks: nodeChecks.sort((a, b) => compareStrings(a.id, b.id)),
     };
     nodes.push(node);
     nodeByKey.set(key, node);
@@ -763,6 +1035,120 @@ function projectKnowledgeGraph(model: DocumentRepository): KnowledgeGraph {
     });
   }
 
+  // Check→Claim projection (Issue #239): every structurally valid check's
+  // `target` resolves through the same document-id + claim-index boundary
+  // relation targets use. The projection is the only place `checks` /
+  // `checked-by` relations exist — they are derived from `checks[].target`
+  // and are never stored in `relations`. The claim-level edges project
+  // only when the named claim actually exists in the target document;
+  // document-level checkEdges still record the resolution state so a
+  // missing claim is a finding, not a silent drop.
+  const checkEdges: KnowledgeCheckEdge[] = [];
+  const projectedCheckClaims = new Set<string>();
+  for (const node of nodes) {
+    for (const check of node.checks) {
+      // parseVerificationChecks guarantees the target is DOC::KEY.
+      const claimRef = parseClaimReference(check.target) as ClaimReference;
+      const qualifiedCheckId = check.qualifiedId ?? check.id;
+      const lookup = model.lookupById(claimRef.docId);
+      if (lookup.status === "ambiguous") {
+        checkEdges.push({
+          from: { path: node.path, id: node.id },
+          check: qualifiedCheckId,
+          target: check.target,
+          to: null,
+          method: check.method,
+          required: check.required,
+          resolution: "ambiguous",
+        });
+        issues.push({
+          code: "ambiguous-check-target",
+          path: node.path,
+          line: null,
+          target: check.target,
+          message: `Check ${check.id} target ${check.target} matches multiple documents: ${lookup.candidates.map((doc) => doc.path).join(", ")}`,
+        });
+        continue;
+      }
+      if (lookup.status === "none") {
+        checkEdges.push({
+          from: { path: node.path, id: node.id },
+          check: qualifiedCheckId,
+          target: check.target,
+          to: null,
+          method: check.method,
+          required: check.required,
+          resolution: "unresolved",
+        });
+        issues.push({
+          code: "unresolved-check-target",
+          path: node.path,
+          line: null,
+          target: check.target,
+          message: `Check ${check.id} targets claim ${check.target}, but no document declares id ${claimRef.docId} — unknown Claim ID`,
+        });
+        continue;
+      }
+      const targetDoc = lookup.document;
+      const targetKey = artifactKeyOf(targetDoc.path);
+      const targetNode = nodeByKey.get(targetKey);
+      const to: KnowledgeEdgeEndpoint = targetNode
+        ? { path: targetNode.path, id: targetNode.id }
+        : { path: targetDoc.path, id: targetDoc.id };
+      // The edge's verdict is claim-level: a document that resolves but
+      // declares no such claim leaves the edge unresolved — coverage
+      // surfaces count only checks that actually bind a live claim, not
+      // declared intent that names a missing one.
+      const targetClaims = claimsByKey.get(targetKey);
+      const claimExists = targetClaims !== undefined && targetClaims.has(claimRef.key);
+      checkEdges.push({
+        from: { path: node.path, id: node.id },
+        check: qualifiedCheckId,
+        target: check.target,
+        to: claimExists ? to : null,
+        method: check.method,
+        required: check.required,
+        resolution: claimExists ? "resolved" : "unresolved",
+      });
+      if (!claimExists) {
+        issues.push({
+          code: "unresolved-check-target",
+          path: node.path,
+          line: null,
+          target: check.target,
+          message: `Check ${check.id} targets claim ${check.target}, but ${targetDoc.path} declares no claim ${claimRef.key} — unknown Claim ID`,
+        });
+        continue;
+      }
+      // The forward "checks" edge states document→claim coverage — N
+      // checks on one claim state it once (the per-check granularity lives
+      // on `checked-by`, which carries the qualified check id, and on
+      // checkEdges). Emitting N identical edges would be noise, not data.
+      const forwardKey = JSON.stringify([node.path, check.target]);
+      if (!projectedCheckClaims.has(forwardKey)) {
+        projectedCheckClaims.add(forwardKey);
+        derivedEdges.push({
+          from: { path: node.path, id: node.id },
+          relation: "checks",
+          target: check.target,
+          to,
+          claim: check.target,
+          via: "checks[].target",
+          derived: true,
+        });
+      }
+      derivedEdges.push({
+        from: { path: to.path, id: to.id },
+        relation: "checked-by",
+        target: qualifiedCheckId,
+        to: { path: node.path, id: node.id },
+        claim: check.target,
+        via: "checks[].target",
+        derived: true,
+      });
+    }
+  }
+
   for (const component of relationCycles(nodes, edges)) {
     const label = component.join(" -> ");
     for (const member of component) {
@@ -780,9 +1166,10 @@ function projectKnowledgeGraph(model: DocumentRepository): KnowledgeGraph {
 
   edges.sort(edgeCompare);
   derivedEdges.sort(derivedEdgeCompare);
+  checkEdges.sort((left, right) => compareStrings(left.from.path, right.from.path) || compareStrings(left.check, right.check));
   issues.sort(issueCompare);
 
-  return { nodes, edges, derivedEdges, issues };
+  return { nodes, edges, derivedEdges, checkEdges, issues };
 }
 
 async function scanKnowledgeGraph(options: ScanOptions): Promise<KnowledgeGraph> {
@@ -795,18 +1182,26 @@ export {
   CLAIM_MARKER_PATTERN,
   CLAIM_REFERENCE_PATTERN,
   claimId,
+  extractCheckAnchors,
   extractClaimDeclarations,
   isClaimKey,
   knowledgeNeighbors,
   parseClaimReference,
   projectKnowledgeGraph,
+  resolveCheckReference,
+  resolveClaimReference,
   scanKnowledgeGraph,
 };
 
 export type {
+  CheckAnchor,
+  CheckResolution,
+  ClaimResolution,
   ClaimDeclaration,
   ClaimReference,
   DerivedKnowledgeEdge,
+  KnowledgeCheck,
+  KnowledgeCheckEdge,
   KnowledgeClaim,
   KnowledgeEdge,
   KnowledgeEdgeEndpoint,
