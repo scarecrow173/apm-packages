@@ -17,6 +17,9 @@ canonical Markdown、Graph YAML、Execution Store の run record が authority
 1. 対象 repository と、この skill のインストール先を解決します。
 2. `--focus`、`--current`、`--signal` は caller が明示した場合だけ渡します。
    未指定値を補完せず、文書 status から実行位置を推測しません。
+   `--run` は caller が特定の Execution Store run を指定した場合だけ、
+   `--state-root`/`--allow-external-root` は caller が既定以外の state
+   root を指定した場合だけ渡します。
 3. この skill directory から sibling の配布 script を解決して実行します。
 
    ```bash
@@ -41,7 +44,11 @@ canonical Markdown、Graph YAML、Execution Store の run record が authority
 追加します。カードには title、opaque ID、record path、依存関係、所属 run、
 coverage、runnable / resumable の別の投影結果を表示します。依存待ちの todo は
 todo レーンに残ります。Graph topology、route preview、run 別 task 詳細、文書、
-relation、diagnostic は補助ビューとして残ります。
+relation、diagnostic は補助ビューとして残ります。gate の隣にある
+`verification（Evidence）` パネルは、不変の Evidence Store から導出された
+Verification Summary —— check・claim・evidence の件数と HEAD binding —— を
+表示します。Effect Receipt は別の権威であり、verification Evidence として
+表示されることはありません。
 
 ## Boundaries
 

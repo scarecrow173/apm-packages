@@ -112,6 +112,23 @@ function gitContext(cwd: string): GitContext {
   return { kind: "none" };
 }
 
+// The repo-relative paths Git currently tracks below `pathspec` (`"."`
+// means everything under `cwd`), reported relative to `cwd`. `git
+// ls-files` is the authority on tracking — an empty answer still means
+// "nothing tracked" — while a failed probe fails closed: callers only
+// reach this inside a `worktree` context (see `gitContext`), so a git
+// error here is a broken repository, never "no tracked files".
+function gitTrackedPaths(cwd: string, pathspec = "."): Set<string> {
+  const result = git(["ls-files", "-z", "--", pathspec], cwd);
+  if (result.status !== 0) {
+    throw new StoreError(
+      "boundary-git-unavailable",
+      `git ls-files failed (${result.stderr || `exit ${result.status}`}) — tracked files cannot be ruled out`,
+    );
+  }
+  return new Set(result.stdout.split("\0").filter(Boolean));
+}
+
 // ---------------------------------------------------------------------------
 // .gitignore evaluation for the no-worktree fallback
 // ---------------------------------------------------------------------------
@@ -326,18 +343,12 @@ function requireNoTrackedState(cwd: string, resolved: ResolvedRoot, context: Git
   const trackedRoot = realRoot.startsWith(".apm/state")
     ? ".apm/state"
     : realRoot;
-  const result = git(["ls-files", "-z", "--", `${trackedRoot}`], cwd);
-  if (result.status !== 0) {
-    throw new StoreError(
-      "boundary-git-unavailable",
-      `git ls-files failed (${result.stderr || `exit ${result.status}`}) — tracked execution state cannot be ruled out`,
-    );
-  }
-  if (result.stdout.length > 0) {
-    const tracked = result.stdout.split("\0").filter(Boolean).slice(0, 5);
+  const trackedPaths = gitTrackedPaths(cwd, trackedRoot);
+  if (trackedPaths.size > 0) {
+    const tracked = [...trackedPaths].sort().slice(0, 5);
     throw new StoreError(
       "boundary-tracked",
-      `${resolved.repoRelative} already contains Git-tracked files (${tracked.join(", ")}${result.stdout.split("\0").filter(Boolean).length > 5 ? ", …" : ""}) — untrack them before writing execution state`,
+      `${resolved.repoRelative} already contains Git-tracked files (${tracked.join(", ")}${trackedPaths.size > 5 ? ", …" : ""}) — untrack them before writing execution state`,
       { tracked },
     );
   }
@@ -453,10 +464,15 @@ function runDirFor(resolved: ResolvedRoot, runId: string): string {
 export {
   ensureStateRootBoundary,
   gitContext,
+  gitTrackedPaths,
   ignoreDecision,
   initStateRoot,
   resolveStateRoot,
   runDirFor,
+};
+
+export type {
+  GitContext,
 };
 
 export type { ResolvedRoot, StoreRootOptions };

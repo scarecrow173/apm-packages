@@ -17,6 +17,9 @@ export type DashboardArgs = {
   out: string;
   force: boolean;
   help: boolean;
+  run?: string;
+  stateRoot?: string;
+  allowExternalRoot: boolean;
 };
 
 const DEFAULT_OUTPUT = "reports/doc-driven-dev/index.html";
@@ -64,12 +67,16 @@ export function parseDashboardArgs(argv: string[], processCwd: string): Dashboar
   const signals: string[] = [];
   let force = false;
   let help = false;
+  let runValue: string | undefined;
+  let stateRootValue: string | undefined;
+  let allowExternalRoot = false;
 
   for (let index = 0; index < argv.length; index += 1) {
     const option = argv[index];
     if (option === "--force") force = true;
     else if (option === "--help") help = true;
-    else if (["--cwd", "--graph", "--focus", "--current", "--signal", "--out"].includes(option)) {
+    else if (option === "--allow-external-root") allowExternalRoot = true;
+    else if (["--cwd", "--graph", "--focus", "--current", "--signal", "--out", "--run", "--state-root"].includes(option)) {
       const value = requiredValue(argv, index);
       index += 1;
       if (option === "--cwd") cwdValue = value;
@@ -77,6 +84,8 @@ export function parseDashboardArgs(argv: string[], processCwd: string): Dashboar
       else if (option === "--focus") focus.push(value);
       else if (option === "--current") current = value;
       else if (option === "--signal") signals.push(value);
+      else if (option === "--run") runValue = value;
+      else if (option === "--state-root") stateRootValue = value;
       else outValue = value;
     } else if (option.startsWith("--")) {
       throw new Error(`Unknown option: ${option}`);
@@ -95,6 +104,9 @@ export function parseDashboardArgs(argv: string[], processCwd: string): Dashboar
     out: path.resolve(cwd, outValue),
     force,
     help,
+    run: runValue,
+    stateRoot: stateRootValue,
+    allowExternalRoot,
   };
 }
 
@@ -189,6 +201,9 @@ Options:
   --focus <value>   Focus ID or canonical path (repeatable)
   --current <node>  Current graph node for route preview (default: omitted)
   --signal <signal> Caller supplied signal (repeatable)
+  --run <run-id>    Execution Store run to project for the task graph (default: inferred)
+  --state-root <path> Execution/Evidence state root (default: .apm/state/doc-driven-dev)
+  --allow-external-root Authorize a --state-root outside the checkout
   --out <file.html> Output path relative to --cwd (default: ${DEFAULT_OUTPUT})
   --force           Replace an existing regular HTML output
   --help            Show this help without reading or writing files`;
@@ -214,6 +229,9 @@ export async function runDashboard(argv: string[]): Promise<void> {
     focus: args.focus,
     current: args.current,
     signals: args.signals,
+    run: args.run,
+    stateRoot: args.stateRoot,
+    allowExternalRoot: args.allowExternalRoot,
   });
   const html = renderDashboard(snapshot);
   const output = writeDashboard(args.cwd, args.out, html, args.force);

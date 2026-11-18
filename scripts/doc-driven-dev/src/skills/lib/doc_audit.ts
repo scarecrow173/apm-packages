@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { lintEvidenceStore, lintTrackedExecutionDocs } from "./doc_evidence_lint";
 import { lintLegacyIdReferences, lintScope, scopeFor } from "./doc_lint";
 import { profileGates } from "./doc_report";
 import type { AuditProfile, ProfileGates } from "./doc_report";
@@ -42,6 +43,10 @@ type AuditReport = {
 type AuditOptions = {
   externalLinks?: boolean;
   profile?: AuditProfile;
+  // Evidence-axis checks read the Git-external Evidence Store — the same
+  // state-root selector pair the other v3 CLIs accept (Issue #246).
+  stateRoot?: string;
+  allowExternalRoot?: boolean;
 };
 
 // The audit model scans every managed dir spelling — durable contract dirs
@@ -89,7 +94,9 @@ async function auditWithModel(
     findings.sort(compareFindings);
   }
   const legacy = findings.map((finding) => toLegacyFinding(relativeDir, finding));
-  return { directory: relativeDir, files: files.length, findings: legacy, profile, gates: profileGates(profile) };
+  // A per-type audit never fires the repo-level authorities — the envelope
+  // reports them as skipped, not ran (Issue #246).
+  return { directory: relativeDir, files: files.length, findings: legacy, profile, gates: profileGates(profile, false) };
 }
 
 async function auditDocuments(cwd: string, type: string, explicitDir?: string, options?: AuditOptions): Promise<AuditReport> {
@@ -122,7 +129,13 @@ async function auditAllDocuments(cwd: string, explicitDir?: string, options?: Au
   const relativeDirs = types.map((type) => normalizedDir ?? docDir(cwd, type));
   const model = await buildModel(cwd, [...relativeDirs, ...distributionDocRoots(cwd)]);
   const profile = options?.profile ?? "materialized";
-  const merged: AuditReport = { directory: ".", files: 0, findings: [], profile, gates: profileGates(profile) };
+  const merged: AuditReport = {
+    directory: ".",
+    files: 0,
+    findings: [],
+    profile,
+    gates: profileGates(profile, normalizedDir === null),
+  };
   for (const type of types) {
     const report = await auditWithModel(model, cwd, type, normalizedDir ?? undefined, options);
     merged.files += report.files;
@@ -151,6 +164,28 @@ async function auditAllDocuments(cwd: string, explicitDir?: string, options?: Au
       message: finding.message,
       blocking: finding.blocking,
     });
+  }
+  // Repo-level authorities (Issue #246): a --dir narrows the audit to that
+  // scope, so they only fire on the repo-wide run — Git-tracked plan/task
+  // and legacy documents (migration-owned) plus Evidence Store records
+  // re-assessed against the live graph.
+  if (normalizedDir === null) {
+    const repoLevel = [
+      ...lintTrackedExecutionDocs(model),
+      ...await lintEvidenceStore(cwd, model, {
+        stateRoot: options?.stateRoot,
+        allowExternalRoot: options?.allowExternalRoot,
+      }),
+    ];
+    for (const finding of repoLevel) {
+      merged.findings.push({
+        severity: finding.severity,
+        file: finding.path,
+        code: finding.ruleId,
+        message: finding.message,
+        blocking: finding.blocking,
+      });
+    }
   }
   const seenFindings = new Set<string>();
   merged.findings = merged.findings.filter((finding) => {

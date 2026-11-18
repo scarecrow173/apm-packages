@@ -4860,12 +4860,12 @@ function configFor(type) {
   if (entry?.persistence === "durable") return entry;
   if (entry?.persistence === "ephemeral") {
     throw new Error(
-      `Document type "${type}" is execution-bound (persistence: ephemeral): it has no durable Git form under Document Registry 3 \u2014 plan/task state lives in the Execution Store`
+      `Document type "${type}" is execution-bound (persistence: ephemeral): it has no durable Git form under Document Registry 3 \u2014 plan/task state lives in the Execution Store; to inventory a tracked legacy corpus run doc_maintenance.js migrate plan --json`
     );
   }
   if (legacyAliases.has(type)) {
     throw new Error(
-      `Document type "${type}" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document`
+      `Document type "${type}" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document \u2014 run doc_maintenance.js migrate plan --json to plan the migration`
     );
   }
   throw new Error(`Unknown document type: ${type}`);
@@ -27475,10 +27475,14 @@ function isGeneratedIndex(content, legacyTitle) {
   return Boolean(legacyTitle) && content.startsWith(`# ${legacyTitle}`) && /Directory: `/.test(content);
 }
 function isForeignDocType(typeValue, expected, relativeDir) {
-  if (typeof typeValue !== "string" || typeValue === expected) return false;
-  if (!docTypes.includes(typeValue)) return false;
+  if (typeof typeValue !== "string") return false;
+  const actual = resolveDocType(typeValue);
+  const resident = resolveDocType(expected);
+  if (resident.entry !== null && resident.entry === actual.entry) return false;
+  if (actual.kind === "legacy" || actual.kind === "ephemeral") return true;
+  if (actual.kind !== "durable") return false;
   const normalized = normalizeDir(relativeDir);
-  return configFor(typeValue).dirs.map((dir) => normalizeDir(dir)).includes(normalized);
+  return actual.entry.dirs.map((dir) => normalizeDir(dir)).includes(normalized);
 }
 async function titleFromDocument(content, fallback, headingToTitle) {
   const parsed = parseDoc(content);

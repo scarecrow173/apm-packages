@@ -408,11 +408,27 @@ function isGeneratedIndex(content: string, legacyTitle?: string): boolean {
     && /Directory: `/.test(content);
 }
 
+// A declared `type:` the scope can never own. The scope's own resident
+// type — canonical name or a declared registry alias (`implementation-record`
+// inside `docs/impl/ir` is the impl scope's own document, not drift) — is
+// never foreign. Two kinds are foreign wherever they land (Issue #246):
+// execution-bound spellings (plan/task — their state lives in the
+// Execution Store) and legacy migration-only spellings (test-spec/exp
+// and impl aliases — migration tooling owns their interpretation).
+// Neither can be a scope document or an index row under a durable
+// directory. A DURABLE type is foreign only when it is canonically
+// resident in a different directory — then the wrong-scope file belongs
+// to its own suite, not this one. Unknown spellings stay in-scope so
+// `invalid-type`/`invalid-front-matter` can name them.
 function isForeignDocType(typeValue: unknown, expected: string, relativeDir: string): boolean {
-  if (typeof typeValue !== "string" || typeValue === expected) return false;
-  if (!(docTypes as readonly string[]).includes(typeValue)) return false;
+  if (typeof typeValue !== "string") return false;
+  const actual = resolveDocType(typeValue);
+  const resident = resolveDocType(expected);
+  if (resident.entry !== null && resident.entry === actual.entry) return false;
+  if (actual.kind === "legacy" || actual.kind === "ephemeral") return true;
+  if (actual.kind !== "durable") return false;
   const normalized = normalizeDir(relativeDir);
-  return configFor(typeValue).dirs.map((dir) => normalizeDir(dir)).includes(normalized);
+  return actual.entry.dirs.map((dir) => normalizeDir(dir)).includes(normalized);
 }
 
 function formatIssuePath(pathParts: PropertyKey[]): string {

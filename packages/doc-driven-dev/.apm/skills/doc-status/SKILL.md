@@ -80,10 +80,16 @@ The unified `doc_status.js` entry point exposes four read-only commands.
    `health` is an aggregate view over the same findings — it is not a second
    scanner and reports no numeric score. Its `Orphans` line (`orphans` in
    `--json`) rolls up `orphan-*` findings by rule and document type.
+   Repo-level findings aggregate under their own `migration` and
+   `evidence` categories.
 
    Shared filters: `--type`, `--dir`, `--rule`, `--severity`,
    `--blocking`, `--status` (list), `--json`, `--external-links`,
-   `--profile` (lint, audit, health).
+   `--profile` (lint, audit, health), `--state-root`, and
+   `--allow-external-root`. The last two select the Evidence Store the
+   repo-level `evidence` gate reads — an external `--state-root` is
+   refused unless `--allow-external-root` is passed, the same
+   containment contract the Execution/Evidence CLIs enforce.
    Findings print in deterministic order; exit status is `0` unless the
    invocation itself is invalid.
 
@@ -98,6 +104,30 @@ The unified `doc_status.js` entry point exposes four read-only commands.
    `experiment-log`. `--owners` requires `--type all` and cannot be
    combined with `--dir`; owner audits always run their full check
    regardless of `--profile`.
+
+   An un-narrowed query — `--type all` or an omitted `--type` with no
+   `--dir` — additionally runs the two repo-level gates. The
+   `execution-boundary` gate inventories every file the repository model
+   classifies as migration corpus: Markdown under migration-owned
+   directories (former `plan`/`task` homes and legacy
+   `test-spec`/`impl`/`exp` scopes) plus `plan`, `task`, `test-spec`,
+   `impl`, or `exp` typed files wherever they land — a durable directory
+   cannot make them durable documents. `git ls-files` is the tracking
+   authority: a Git-tracked file reports `tracked-execution-doc` or
+   `tracked-legacy-doc` (durable Git form no longer exists — that state
+   lives in the Execution Store or belongs to migration tooling), while
+   content the index does not track — untracked leftovers, gitignored
+   files, or corpus where no usable Git work tree exists — reports
+   `legacy-corpus-doc`, never a guessed tracked state. All are blocking
+   `migration` findings whose repair class is `migration`, never the
+   safe fix path. The `evidence` gate first audits the Evidence Store's
+   own marker — a torn or invalid `manifest.json` reports
+   `corrupt-evidence-store`, record files with no manifest report
+   `unmanifested-evidence-store`, and an absent store reports nothing —
+   then re-assesses every record against the live Knowledge Graph and
+   the checkout's `HEAD` subject, one finding per failed axis (rule
+   list below). A `--type`- or `--dir`-narrowed query never runs these
+   gates; the report's `gates` envelope lists them under `skipped`.
 
    Named audits from `doc-driven-dev-graph` map to commands as follows:
    durable document types (`spec`, `adr`, `design`, `idea`, `brainstorm`,
@@ -220,6 +250,47 @@ check groups ran or were skipped. Covered checks include:
   `external-link-unverifiable` — opt-in external link probing via
   `audit_docs.js --external-links`. Disabled by default so audits stay
   deterministic and offline-safe.
+- `legacy-doc-in-durable-dir` — a file inside a durable scope whose
+  declared `type:` has no durable Git form (execution-bound
+  `plan`/`task` or legacy `test-spec`/`impl`/`exp`). The file is
+  migration corpus, never a document of that scope — no scope rule or
+  index row applies to it. Blocking `migration` marker on scoped and
+  repo-wide queries alike.
+- `tracked-execution-doc`, `tracked-legacy-doc`, `legacy-corpus-doc` —
+  repo-level migration sweep over Markdown the repository model
+  classifies as migration corpus (former `plan`/`task` homes, legacy
+  `test-spec`/`impl`/`exp` scope, and execution-bound or legacy-typed
+  files wherever they land). `git ls-files` is the tracking authority:
+  tracked files report `tracked-execution-doc`/`tracked-legacy-doc`;
+  untracked, gitignored, or unverifiable content reports
+  `legacy-corpus-doc` — never a guessed tracked state. Blocking
+  `migration`-category markers; the `migrate` family of
+  `doc_maintenance.js` owns the repair. Repo-wide queries only.
+- `corrupt-evidence-store`, `unmanifested-evidence-store` — Evidence
+  Store marker integrity: a `manifest.json` that cannot be read or
+  fails validation reports `corrupt-evidence-store` (blocking error);
+  record files present without the write-once manifest report
+  `unmanifested-evidence-store` (blocking warning). Records under an
+  uncertified marker still get their per-axis assessment; an absent
+  store emits nothing. Repo-wide queries only.
+- `unresolved-evidence-claim`, `unresolved-evidence-check`,
+  `stale-evidence-revision`, `evidence-check-target-mismatch`,
+  `evidence-method-mismatch`, `stale-evidence-subject`,
+  `evidence-artifact-unavailable`, `evidence-artifact-expired`,
+  `failed-evidence` — blocking Evidence Store axes: claim/check refs
+  that no longer resolve in the live Knowledge Graph, pinned revisions
+  that moved, a check that does not verify the credited claim, a method
+  mismatch, a subject older than `HEAD`, inaccessible or expired
+  artifacts, and a recorded failed outcome.
+- `unverifiable-evidence-subject`, `unverifiable-evidence-target`,
+  `unverified-evidence-artifact`, `attestation-only-evidence`,
+  `inconclusive-evidence` — non-blocking Evidence axes: subjects that
+  cannot be digest-verified in this checkout, artifacts never
+  digest-verified, attestation-only records, and outcomes that are not
+  a conclusive pass/fail. The Evidence Store stays read-only for the
+  linter — records are re-assessed, never copied into Markdown.
+  Repo-wide queries only; `--state-root`/`--allow-external-root`
+  select the store root.
 
 Relation targets resolve by unique artifact ID first, then by repository or
 document-relative path. Missing relations are never inferred from filenames or
@@ -240,7 +311,8 @@ index regeneration are delegated to a separate maintenance capability.
 - `scripts/audit_docs.js`: validate front matter, statuses, relations, links,
   index coverage, and orphans. `--external-links` enables opt-in external
   link probing; `--owners` extends `--type all` into the package-wide
-  audit.
+  audit; `--state-root`/`--allow-external-root` select the Evidence Store
+  the repo-level `evidence` gate reads.
 
 ## Graph Effect Outcome
 

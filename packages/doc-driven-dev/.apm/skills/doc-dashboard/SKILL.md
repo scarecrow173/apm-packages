@@ -16,7 +16,9 @@ for the complete CLI, coverage, and metric definitions.
 1. Resolve the target repository and this skill's installed directory.
 2. Pass `--focus`, `--current`, and `--signal` only when the caller explicitly
    supplies them. Omit unknown values; never infer an execution position from
-   document status.
+   document status. Pass `--run` only when the caller names a specific
+   Execution Store run, and `--state-root`/`--allow-external-root` only when
+   the caller points at a non-default state root.
 3. Resolve the sibling bundled script from this skill directory, then run it:
 
    ```bash
@@ -44,7 +46,11 @@ status or parse-error tasks. Cards show title, opaque ID, record path,
 dependencies, run membership, coverage, and separate runnable/resumable
 readiness projections. A dependency-waiting todo remains in the todo lane.
 Graph topology, route preview, per-run task details, documents, relations, and
-diagnostics remain available as supporting views.
+diagnostics remain available as supporting views. The `verification（Evidence）`
+panel beside the gates renders the derived Verification Summary — check,
+claim, and evidence counts plus the HEAD binding — from the immutable
+Evidence Store; Effect Receipts are a separate authority and never appear
+as verification Evidence.
 
 ## Boundaries
 

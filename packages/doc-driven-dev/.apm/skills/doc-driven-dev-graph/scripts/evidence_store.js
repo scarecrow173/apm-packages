@@ -16540,12 +16540,12 @@ function configFor(type) {
   if (entry?.persistence === "durable") return entry;
   if (entry?.persistence === "ephemeral") {
     throw new Error(
-      `Document type "${type}" is execution-bound (persistence: ephemeral): it has no durable Git form under Document Registry 3 \u2014 plan/task state lives in the Execution Store`
+      `Document type "${type}" is execution-bound (persistence: ephemeral): it has no durable Git form under Document Registry 3 \u2014 plan/task state lives in the Execution Store; to inventory a tracked legacy corpus run doc_maintenance.js migrate plan --json`
     );
   }
   if (legacyAliases.has(type)) {
     throw new Error(
-      `Document type "${type}" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document`
+      `Document type "${type}" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document \u2014 run doc_maintenance.js migrate plan --json to plan the migration`
     );
   }
   throw new Error(`Unknown document type: ${type}`);
@@ -37420,7 +37420,7 @@ async function scanRepository(options2) {
     const canonical = expectedTypes.length > 0;
     const docDirName = normalizeDir(import_node_path4.default.posix.dirname(repoPath));
     const indexNamed = isIndexFileName(import_node_path4.default.posix.basename(repoPath));
-    const kind = canonical ? indexNamed ? "index" : "canonical" : migrationDirs.some((dir) => docDirName === dir || isUnderDir2(docDirName, dir)) ? indexNamed ? "index" : "legacy" : "unmanaged";
+    const dirKind = canonical ? indexNamed ? "index" : "canonical" : migrationDirs.some((dir) => docDirName === dir || isUnderDir2(docDirName, dir)) ? indexNamed ? "index" : "legacy" : "unmanaged";
     let content3 = "";
     let readError = null;
     try {
@@ -37433,12 +37433,14 @@ async function scanRepository(options2) {
     const structure = await extractMarkdownStructure(parsed.body, bodyStartLine);
     const data = parsed.data;
     const owners = Array.isArray(data.owners) ? data.owners.filter((owner) => typeof owner === "string" && Boolean(owner.trim())) : [];
+    const declaredType = stringField(data, "type");
+    const kind = dirKind === "canonical" && declaredType !== null && (resolveDocType(declaredType).kind === "ephemeral" || resolveDocType(declaredType).kind === "legacy") ? "legacy" : dirKind;
     files.push({
       path: repoPath,
       absolutePath: absolute,
       kind,
       expectedTypes,
-      type: stringField(data, "type"),
+      type: declaredType,
       id: stringField(data, "id"),
       status: stringField(data, "status"),
       lifecycle: stringField(data, "lifecycle"),
@@ -38815,6 +38817,16 @@ function gitContext(cwd) {
   }
   return { kind: "none" };
 }
+function gitTrackedPaths(cwd, pathspec = ".") {
+  const result = git(["ls-files", "-z", "--", pathspec], cwd);
+  if (result.status !== 0) {
+    throw new StoreError(
+      "boundary-git-unavailable",
+      `git ls-files failed (${result.stderr || `exit ${result.status}`}) \u2014 tracked files cannot be ruled out`
+    );
+  }
+  return new Set(result.stdout.split("\0").filter(Boolean));
+}
 function parseIgnorePattern(raw) {
   let line = raw.replace(/\r$/, "");
   line = line.replace(/(?<!\\) +$/, "");
@@ -38963,18 +38975,12 @@ function requireNoTrackedState(cwd, resolved, context) {
   if (context.kind !== "worktree") return;
   const realRoot = realRootRelative(cwd, resolved);
   const trackedRoot = realRoot.startsWith(".apm/state") ? ".apm/state" : realRoot;
-  const result = git(["ls-files", "-z", "--", `${trackedRoot}`], cwd);
-  if (result.status !== 0) {
-    throw new StoreError(
-      "boundary-git-unavailable",
-      `git ls-files failed (${result.stderr || `exit ${result.status}`}) \u2014 tracked execution state cannot be ruled out`
-    );
-  }
-  if (result.stdout.length > 0) {
-    const tracked = result.stdout.split("\0").filter(Boolean).slice(0, 5);
+  const trackedPaths = gitTrackedPaths(cwd, trackedRoot);
+  if (trackedPaths.size > 0) {
+    const tracked = [...trackedPaths].sort().slice(0, 5);
     throw new StoreError(
       "boundary-tracked",
-      `${resolved.repoRelative} already contains Git-tracked files (${tracked.join(", ")}${result.stdout.split("\0").filter(Boolean).length > 5 ? ", \u2026" : ""}) \u2014 untrack them before writing execution state`,
+      `${resolved.repoRelative} already contains Git-tracked files (${tracked.join(", ")}${trackedPaths.size > 5 ? ", \u2026" : ""}) \u2014 untrack them before writing execution state`,
       { tracked }
     );
   }
@@ -39514,6 +39520,28 @@ function query(cwd, filter = {}, options2 = {}) {
     if (filter.runId !== void 0 && record2.runId !== filter.runId) return false;
     return true;
   }).sort((a, b) => a.createdAt === b.createdAt ? a.evidenceId.localeCompare(b.evidenceId) : a.createdAt.localeCompare(b.createdAt));
+}
+function inspectEvidenceStore(cwd, options2 = {}) {
+  const resolved = resolveStateRoot(cwd, options2);
+  const evidenceRoot = evidenceRootFor(resolved);
+  const manifestFile = import_node_path7.default.join(evidenceRoot, MANIFEST_FILE);
+  if (!import_node_fs6.default.existsSync(manifestFile)) {
+    const recordsDir = containedDir(resolved, recordsDirFor(resolved), "records dir");
+    const count = listRecordFiles(recordsDir).length;
+    return count === 0 ? { integrity: "absent", detail: null } : {
+      integrity: "unmanifested",
+      detail: `${count} record file(s) exist under ${recordsDir} with no ${MANIFEST_FILE} \u2014 the store's declared boundary is missing`
+    };
+  }
+  try {
+    loadManifest(cwd, options2);
+  } catch (error62) {
+    if (error62 instanceof StoreError && (error62.code === "corrupt-state" || error62.code === "state-unreadable")) {
+      return { integrity: "corrupt", detail: error62.message };
+    }
+    throw error62;
+  }
+  return { integrity: "ok", detail: null };
 }
 function buildIndex(records) {
   const ordered = [...records].sort((a, b) => a.createdAt === b.createdAt ? a.evidenceId.localeCompare(b.evidenceId) : a.createdAt.localeCompare(b.createdAt));
@@ -40306,9 +40334,10 @@ function normalizeTarget(cwd, input2) {
 async function buildVerificationSummary(cwd, input2, options2 = {}) {
   const root = import_node_path10.default.resolve(cwd);
   const graph = await scanKnowledgeGraph({ cwd: root });
+  const storeQueried = input2.records === void 0;
   const records = input2.records ?? query(root, { runId: input2.runId }, options2);
   const target = normalizeTarget(root, input2);
-  return buildVerificationSummaryIn(graph, { ...input2, subject: target.subject, records, subjectDigest: target.subjectDigest }, {
+  const summary = buildVerificationSummaryIn(graph, { ...input2, subject: target.subject, records, subjectDigest: target.subjectDigest }, {
     readDocument: (docPath) => {
       try {
         return import_node_fs9.default.readFileSync(import_node_path10.default.join(root, docPath), "utf8");
@@ -40318,6 +40347,14 @@ async function buildVerificationSummary(cwd, input2, options2 = {}) {
     },
     resolveSubjectDigest: (subject) => recordSubjectDigest(root, subject)
   });
+  if (storeQueried) {
+    const store = inspectEvidenceStore(root, options2);
+    if (store.integrity === "corrupt" || store.integrity === "unmanifested") {
+      if (summary.verdict === "verified") summary.verdict = "indeterminate";
+      summary.reasons = [.../* @__PURE__ */ new Set([...summary.reasons, `evidence-store-${store.integrity}`])].sort();
+    }
+  }
+  return summary;
 }
 
 // src/skills/doc-driven-dev-graph/scripts/evidence_store.ts

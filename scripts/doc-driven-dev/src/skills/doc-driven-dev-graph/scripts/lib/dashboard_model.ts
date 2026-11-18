@@ -4,6 +4,7 @@ import type { RouteDecision } from "./graph_router";
 import type { TaskGraphResult } from "./task_graph";
 import type { Finding } from "../../../lib/doc_repository";
 import type { HealthReport } from "../../../lib/doc_report";
+import type { EvidenceStoreInspection } from "../../../lib/evidence_store";
 
 export type InventoryItem = {
   path: string;
@@ -39,6 +40,12 @@ export type DashboardSnapshot = {
   definition: GraphInspection;
   state: GraphState;
   decision: RouteDecision | null;
+  // The Evidence Store's own marker state (`inspectEvidenceStore`), read
+  // from the same selected root as `state.verification`'s summary — the
+  // render layer uses it to tell an absent store (nothing ever written)
+  // from an initialized-but-empty one and from a store whose records can
+  // no longer be certified (Issue #246).
+  evidenceStore: EvidenceStoreInspection;
   inventory: InventoryItem[];
   runs: RunView[];
   findings: Finding[];

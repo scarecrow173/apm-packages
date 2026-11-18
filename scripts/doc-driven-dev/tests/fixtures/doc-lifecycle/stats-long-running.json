@@ -130,11 +130,11 @@
     "inboundTargets": 102
   },
   "findings": {
-    "total": 78,
-    "blocking": 53,
+    "total": 135,
+    "blocking": 110,
     "warnings": 8,
     "infos": 17,
-    "onDocuments": 77,
+    "onDocuments": 134,
     "onIndexes": 1,
     "unattributed": 0,
     "byRuleId": {
@@ -148,11 +148,14 @@
       "provenance-missing-source": 1,
       "provenance-unresolved-local-source": 1,
       "stale-upstream": 3,
-      "traceability-missing-upstream": 1
+      "traceability-missing-upstream": 1,
+      "tracked-execution-doc": 32,
+      "tracked-legacy-doc": 25
     },
     "byCategory": {
       "front-matter": 48,
       "index": 4,
+      "migration": 57,
       "orphan": 19,
       "provenance": 2,
       "relation": 1,
@@ -160,7 +163,7 @@
     },
     "health": {
       "documents": 48,
-      "blocking": 53,
+      "blocking": 110,
       "warnings": 8,
       "infos": 17,
       "categories": [
@@ -204,6 +207,13 @@
           "blocking": 0,
           "warnings": 2,
           "infos": 17,
+          "clean": false
+        },
+        {
+          "category": "migration",
+          "blocking": 57,
+          "warnings": 0,
+          "infos": 0,
           "clean": false
         }
       ],
@@ -449,8 +459,8 @@
       "orphanIndex": 0,
       "orphanNavigation": 0,
       "orphanRelation": 0,
-      "findings": 0,
-      "blockingFindings": 0
+      "findings": 18,
+      "blockingFindings": 18
     },
     "plan": {
       "files": 9,
@@ -489,8 +499,8 @@
       "orphanIndex": 0,
       "orphanNavigation": 0,
       "orphanRelation": 0,
-      "findings": 0,
-      "blockingFindings": 0
+      "findings": 9,
+      "blockingFindings": 9
     },
     "spec": {
       "files": 11,
@@ -568,8 +578,8 @@
       "orphanIndex": 0,
       "orphanNavigation": 0,
       "orphanRelation": 0,
-      "findings": 0,
-      "blockingFindings": 0
+      "findings": 23,
+      "blockingFindings": 23
     },
     "test-spec": {
       "files": 7,
@@ -606,8 +616,8 @@
       "orphanIndex": 0,
       "orphanNavigation": 0,
       "orphanRelation": 0,
-      "findings": 0,
-      "blockingFindings": 0
+      "findings": 7,
+      "blockingFindings": 7
     },
     "unmanaged": {
       "files": 1,

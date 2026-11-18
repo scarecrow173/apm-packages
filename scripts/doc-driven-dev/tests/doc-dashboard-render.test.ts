@@ -60,6 +60,7 @@ function snapshot(inventory: InventoryItem[] = []): DashboardSnapshot {
       focus: [], gates: {}, signals: [], blockers: [], hardBlockers: [],
     },
     decision: null,
+    evidenceStore: { integrity: "absent", detail: null },
     inventory,
     runs: [], findings: [],
     health: {
@@ -147,6 +148,82 @@ test("secondary sections use chip-based signals, callout route preview, and tint
   assert.match(html, /detail-toggle button\{[^}]*border-radius:999px/);
   assert.match(html, /main h2::before\{content:""/);
   assert.match(html, /footer\{margin-top:2\.2rem/);
+});
+
+test("verification panel renders the Evidence-derived summary, never Effect Receipts", () => {
+  const value = snapshot();
+  // No Evidence Store/projection input → honest empty state (Issue #246).
+  const emptyHtml = renderDashboard(value);
+  assert.match(emptyHtml, /<h3>verification（Evidence）<\/h3><p class="empty">Evidence Store なし — 検証サマリ未提供<\/p>/);
+
+  // A store that certified the summary renders the store-backed note —
+  // `別権威` separates Evidence from run Effect Receipts.
+  value.evidenceStore = { integrity: "ok", detail: null };
+  value.state.verification = {
+    boundToHead: true,
+    documents: ["docs/verification/vd.md"],
+    summary: {
+      schemaVersion: 1,
+      kind: "verification-summary",
+      target: { subject: { kind: "commit", commit: "a".repeat(40) }, subjectDigest: `sha256:${"b".repeat(64)}` },
+      assessedAt: "2026-09-21T00:00:00Z",
+      scope: { claims: ["SPEC-abcd::R-01"], checks: ["VD-efgh::CHK-01"] },
+      claims: [{ ref: "SPEC-abcd::R-01", status: "covered", checks: ["VD-efgh::CHK-01"], requiredChecks: ["VD-efgh::CHK-01"], reasons: [] }],
+      checks: [{
+        ref: "VD-efgh::CHK-01", claim: "SPEC-abcd::R-01", method: "unit", required: true,
+        designRevision: `sha256:${"c".repeat(64)}`, constraints: [], executed: true, status: "satisfied",
+        evidence: { sufficient: ["EVID-0001"], insufficient: [], indeterminate: [] },
+        latestConclusiveAt: "2026-09-21T00:00:00Z", waiver: null, notApplicable: null, reasons: [],
+      }],
+      evidence: [{
+        schemaVersion: 1, evidenceId: "EVID-0001", claim: "SPEC-abcd::R-01", check: "VD-efgh::CHK-01",
+        outcome: "passed", applicability: "applicable", availability: "available", integrity: "verified",
+        assessment: "sufficient", reasons: [],
+      }],
+      rejectedWaivers: [],
+      rejectedNotApplicable: [],
+      shadowedExemptions: [],
+      counts: {
+        checks: { total: 1, required: 1, advisory: 0, satisfied: 1, failed: 0, waived: 0, outOfScope: 0, undetermined: 0, unresolved: 0 },
+        claims: { total: 1, covered: 1, partial: 0, uncovered: 0, failed: 0 },
+        evidence: { total: 1, sufficient: 1, insufficient: 0, indeterminate: 0 },
+      },
+      verdict: "verified",
+      reasons: ["no-required-coverage"],
+    },
+  };
+  const html = renderDashboard(value);
+  assert.match(html, /<h3>verification（Evidence）<\/h3>/);
+  assert.match(html, /<span class="status-pill status-done">verified<\/span>/);
+  assert.match(html, /<span class="badge badge-runnable">HEAD 一致<\/span>/);
+  assert.match(html, /<dd>1 satisfied \/ 0 failed \/ 0 open（required 1）<\/dd>/);
+  assert.match(html, /<dd>1\/1 covered<\/dd>/);
+  assert.match(html, /別権威/, "the panel must separate verification Evidence from run Effect Receipts");
+
+  // A summary computed over an absent store still renders — with the
+  // honest "no store" badge + derived-from-zero-records note, never the
+  // store-backed wording (Issue #246).
+  const absent = snapshot();
+  absent.state.verification = value.state.verification;
+  const absentHtml = renderDashboard(absent);
+  assert.match(absentHtml, /<span class="badge">Evidence Store なし<\/span>/);
+  assert.match(absentHtml, /ストア未初期化/);
+  assert.doesNotMatch(absentHtml, /別権威/);
+
+  // A degraded marker flags the records' integrity as unverifiable.
+  const torn = snapshot();
+  torn.evidenceStore = { integrity: "corrupt", detail: "manifest parse failed" };
+  torn.state.verification = value.state.verification;
+  const tornHtml = renderDashboard(torn);
+  assert.match(tornHtml, /<span class="badge badge-blocked">store corrupt<\/span>/);
+  assert.match(tornHtml, /整合性は未検証/);
+
+  // A missing summary over a real store never claims the store is absent.
+  const noSummary = snapshot();
+  noSummary.evidenceStore = { integrity: "ok", detail: null };
+  const noSummaryHtml = renderDashboard(noSummary);
+  assert.match(noSummaryHtml, /<p class="empty">検証サマリ未提供<\/p>/);
+  assert.doesNotMatch(noSummaryHtml, /Evidence Store なし/);
 });
 
 test("attention section stays neutral when nothing blocks progress", () => {

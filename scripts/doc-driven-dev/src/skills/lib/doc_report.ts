@@ -1,5 +1,6 @@
 "use strict";
 
+import { lintEvidenceStore, lintTrackedExecutionDocs } from "./doc_evidence_lint";
 import { lintScope, scopeFor } from "./doc_lint";
 import type { AuditProfile } from "./doc_lint";
 import { lintExternalLinks } from "./doc_structure_lint";
@@ -15,6 +16,11 @@ type DocStatusQuery = {
   dir?: string;
   externalLinks?: boolean;
   profile?: AuditProfile;
+  // Repo-level authorities live outside Git: the Evidence Store root the
+  // evidence-axis checks read (and the state root tracked plan/task
+  // detection describes). Same selector pair every v3 CLI accepts.
+  stateRoot?: string;
+  allowExternalRoot?: boolean;
 };
 
 type FindingFilter = {
@@ -69,12 +75,20 @@ const CATEGORY_ORDER = [
   "index",
   "orphan",
   "structure",
+  // Repo-level authorities (Issue #246): tracked execution/legacy corpus
+  // and Evidence Store axes report under their own health categories.
+  "migration",
+  "evidence",
 ];
 
 // Check-group names reported in the lint/audit/health output envelopes — the
 // names are stable and JSON-visible, so consumers can tell which evaluation
 // surface a run covered. `artifact` runs the canonical-document gates;
-// `materialized` adds the managed-index gates on top (Issue #195).
+// `materialized` adds the managed-index gates on top (Issue #195). The two
+// repo-level gates fire on repo-wide queries only — `execution-boundary`
+// flags Git-tracked plan/task/legacy documents the Execution Store and
+// migration tooling own (Issue #246), `evidence` re-assesses Evidence
+// Store records against the live graph.
 const ARTIFACT_GATES = [
   "front-matter",
   "relations",
@@ -86,6 +100,13 @@ const ARTIFACT_GATES = [
   "traceability",
 ] as const;
 
+// Repo-wide authorities (Issue #246) — they fire only on un-narrowed
+// queries, so a scoped run reports them as skipped, never as ran.
+const REPO_LEVEL_GATES = [
+  "execution-boundary",
+  "evidence",
+] as const;
+
 const MATERIALIZED_ONLY_GATES = [
   "index-presence",
   "index-membership",
@@ -93,10 +114,17 @@ const MATERIALIZED_ONLY_GATES = [
   "orphan-index-membership",
 ] as const;
 
-function profileGates(profile: AuditProfile): ProfileGates {
-  return profile === "artifact"
-    ? { ran: [...ARTIFACT_GATES], skipped: [...MATERIALIZED_ONLY_GATES] }
-    : { ran: [...ARTIFACT_GATES, ...MATERIALIZED_ONLY_GATES], skipped: [] };
+function profileGates(profile: AuditProfile, repoLevel = true): ProfileGates {
+  const ran = [
+    ...ARTIFACT_GATES,
+    ...(repoLevel ? REPO_LEVEL_GATES : []),
+    ...(profile === "materialized" ? MATERIALIZED_ONLY_GATES : []),
+  ];
+  const skipped = [
+    ...(repoLevel ? [] : REPO_LEVEL_GATES),
+    ...(profile === "artifact" ? MATERIALIZED_ONLY_GATES : []),
+  ];
+  return { ran: [...ran], skipped: [...skipped] };
 }
 
 // As in doc_audit: the model scans every managed dir spelling — durable
@@ -128,6 +156,17 @@ async function collectFindings(cwd: string, query: DocStatusQuery): Promise<Coll
       findings.push(...await lintExternalLinks(model, scope));
     }
   }
+  // Repo-level authorities (Issue #246): only a repo-wide query reports
+  // them — a --type/--dir-narrowed run audits its scope, not the store.
+  // `all` and an omitted --type are equivalent spellings of the repo view.
+  const repoLevel = explicitDir === null && (query.type === undefined || query.type === "all");
+  if (repoLevel) {
+    findings.push(...lintTrackedExecutionDocs(model));
+    findings.push(...await lintEvidenceStore(cwd, model, {
+      stateRoot: query.stateRoot,
+      allowExternalRoot: query.allowExternalRoot,
+    }));
+  }
   // A shared directory hosts multiple document types, so overlapping scopes
   // can emit identical findings; collapse them before reporting.
   const seen = new Set<string>();
@@ -138,7 +177,7 @@ async function collectFindings(cwd: string, query: DocStatusQuery): Promise<Coll
     return true;
   });
   deduped.sort(compareFindings);
-  return { model, types, documents, findings: deduped, profile, gates: profileGates(profile) };
+  return { model, types, documents, findings: deduped, profile, gates: profileGates(profile, repoLevel) };
 }
 
 function filterFindings(findings: Finding[], filter: FindingFilter): Finding[] {
@@ -221,6 +260,7 @@ export {
   listDocuments,
   MATERIALIZED_ONLY_GATES,
   profileGates,
+  REPO_LEVEL_GATES,
   summarizeHealth,
 };
 export type { AuditProfile, CollectedFindings, DocStatusQuery, FindingFilter, HealthCategory, HealthOrphanSummary, HealthReport, ProfileGates };

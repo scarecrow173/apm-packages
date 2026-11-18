@@ -7,7 +7,7 @@ import { parseClaimReference } from "./claim_ids";
 import { configFor, docTypes, parseDoc } from "./doc_suite_utils";
 import { isSettledEntry, lifecycleBucketForType, SETTLED_STATUSES } from "./doc_lifecycle";
 import { isIndexFileName, isInside, isInsideCheckout, isInsideRealpath, nonReferenceRelationKeys, normalizeDir } from "./document_utils";
-import { ephemeralConfigs, executionTypes, legacyDocTypes, managedDocDirs } from "./doc_types";
+import { ephemeralConfigs, executionTypes, legacyDocTypes, managedDocDirs, resolveDocType } from "./doc_types";
 import type { DocRegistryEntry, RequiredRelation, UpstreamExpectation } from "./doc_types";
 
 // ---------------------------------------------------------------------------
@@ -659,7 +659,7 @@ async function scanRepository(options: ScanOptions): Promise<DocumentRepository>
     const canonical = expectedTypes.length > 0;
     const docDirName = normalizeDir(path.posix.dirname(repoPath));
     const indexNamed = isIndexFileName(path.posix.basename(repoPath));
-    const kind: DocumentKind = canonical
+    const dirKind: DocumentKind = canonical
       ? indexNamed ? "index" : "canonical"
       : migrationDirs.some((dir) => docDirName === dir || isUnderDir(docDirName, dir))
         ? indexNamed ? "index" : "legacy"
@@ -679,13 +679,28 @@ async function scanRepository(options: ScanOptions): Promise<DocumentRepository>
     const owners = Array.isArray(data.owners)
       ? data.owners.filter((owner): owner is string => typeof owner === "string" && Boolean(owner.trim()))
       : [];
+    const declaredType = stringField(data, "type");
+
+    // A declared `type:` no durable scope can own (execution-bound or
+    // legacy spelling) is migration corpus wherever the file lands — a
+    // durable directory cannot make it canonical (Issue #246). The
+    // misplaced placement is the lint layer's `legacy-doc-in-durable-dir`
+    // boundary; the model records the corpus class so the Knowledge
+    // Graph, focus resolution, and the migration sweep all agree the
+    // file is never a durable document. An unknown or absent spelling
+    // keeps the directory class so scope rules can name the violation.
+    const kind: DocumentKind = dirKind === "canonical"
+      && declaredType !== null
+      && (resolveDocType(declaredType).kind === "ephemeral" || resolveDocType(declaredType).kind === "legacy")
+      ? "legacy"
+      : dirKind;
 
     files.push({
       path: repoPath,
       absolutePath: absolute,
       kind,
       expectedTypes,
-      type: stringField(data, "type"),
+      type: declaredType,
       id: stringField(data, "id"),
       status: stringField(data, "status"),
       lifecycle: stringField(data, "lifecycle"),
@@ -881,6 +896,7 @@ export {
   isSettled,
   lifecycleBucketOf,
   LOCALE_FILE_PATTERN,
+  migrationOwnedDirs,
   REQUIRED_FRONT_MATTER_FIELDS,
   scanRepository,
   SETTLED_STATUSES,

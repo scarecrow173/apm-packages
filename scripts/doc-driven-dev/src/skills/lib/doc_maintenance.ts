@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { collectFindings, docDir } from "./doc_report";
 import type { DocStatusQuery } from "./doc_report";
+import { REPO_LEVEL_RULE_IDS } from "./doc_evidence_lint";
 import { lintScope } from "./doc_lint";
 import type { DocumentRepository, Finding } from "./doc_repository";
 import { isGeneratedIndex, residentTypesForDir, writeGeneratedIndex } from "./doc_suite_utils";
@@ -162,6 +163,22 @@ async function planMaintenance(cwd: string, query: DocStatusQuery, options?: App
         message: finding.message,
       });
     }
+  }
+
+  // Repo-level findings (Git-tracked execution docs, Evidence Store axis
+  // findings — Issue #246) never appear in a per-type scope above: they
+  // are reported verbatim as skipped, by their repair class. None of them
+  // is whitelisted — the safe surface never migrates documents or rewrites
+  // evidence.
+  for (const finding of collected.findings) {
+    if (!REPO_LEVEL_RULE_IDS.has(finding.ruleId)) continue;
+    pushSkipped({
+      ruleId: finding.ruleId,
+      category: finding.category,
+      path: finding.path,
+      reason: finding.repair === "migration" ? "migration" : "manual",
+      message: finding.message,
+    });
   }
 
   for (const [indexPath, indexPlan] of [...indexPlans.entries()].sort(([a], [b]) => a.localeCompare(b))) {

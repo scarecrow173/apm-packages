@@ -97,11 +97,11 @@
     "inboundTargets": 0
   },
   "findings": {
-    "total": 14,
-    "blocking": 8,
+    "total": 18,
+    "blocking": 12,
     "warnings": 6,
     "infos": 0,
-    "onDocuments": 12,
+    "onDocuments": 16,
     "onIndexes": 0,
     "unattributed": 2,
     "byRuleId": {
@@ -110,17 +110,20 @@
       "missing-lifecycle": 3,
       "missing-overview": 1,
       "orphan-index": 3,
-      "orphan-navigation": 3
+      "orphan-navigation": 3,
+      "tracked-execution-doc": 2,
+      "tracked-legacy-doc": 2
     },
     "byCategory": {
       "front-matter": 3,
       "index": 4,
+      "migration": 4,
       "orphan": 6,
       "structure": 1
     },
     "health": {
       "documents": 3,
-      "blocking": 8,
+      "blocking": 12,
       "warnings": 6,
       "infos": 0,
       "categories": [
@@ -148,6 +151,13 @@
         {
           "category": "structure",
           "blocking": 1,
+          "warnings": 0,
+          "infos": 0,
+          "clean": false
+        },
+        {
+          "category": "migration",
+          "blocking": 4,
           "warnings": 0,
           "infos": 0,
           "clean": false
@@ -273,8 +283,8 @@
       "orphanIndex": 0,
       "orphanNavigation": 0,
       "orphanRelation": 0,
-      "findings": 0,
-      "blockingFindings": 0
+      "findings": 1,
+      "blockingFindings": 1
     },
     "plan": {
       "files": 1,
@@ -309,8 +319,8 @@
       "orphanIndex": 0,
       "orphanNavigation": 0,
       "orphanRelation": 0,
-      "findings": 0,
-      "blockingFindings": 0
+      "findings": 1,
+      "blockingFindings": 1
     },
     "spec": {
       "files": 1,
@@ -381,8 +391,8 @@
       "orphanIndex": 0,
       "orphanNavigation": 0,
       "orphanRelation": 0,
-      "findings": 0,
-      "blockingFindings": 0
+      "findings": 1,
+      "blockingFindings": 1
     },
     "test-spec": {
       "files": 1,
@@ -417,8 +427,8 @@
       "orphanIndex": 0,
       "orphanNavigation": 0,
       "orphanRelation": 0,
-      "findings": 0,
-      "blockingFindings": 0
+      "findings": 1,
+      "blockingFindings": 1
     }
   }
 }

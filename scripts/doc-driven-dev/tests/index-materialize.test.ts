@@ -1115,6 +1115,47 @@ test("apply refuses impl targets on mid-apply source and index drift", async () 
   assert.ok(fs.readFileSync(indexAbs, "utf8").endsWith("concurrent edit\n"), "legacy index untouched");
 });
 
+// --- apply: Knowledge / Verification dirs (Issue #246) -------------------------
+//
+// `docs/knowledge` and `docs/verification` are durable Registry 3 homes — the
+// materializer covers them exactly like the other shared-4col dirs: index
+// materialization stays a derived view over the canonical Markdown, created
+// and regenerated only through explicit plan/apply.
+
+test("apply creates Knowledge and Verification indexes; a second apply is a no-op", async () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/knowledge/k.md", {
+    id: "KNOW-0001", type: "knowledge", status: "active", title: "Lesson",
+  });
+  writeDoc(repo, "docs/verification/vd.md", {
+    id: "VD-0001", type: "verification", status: "approved", title: "Design",
+  });
+
+  const plan = await planIndexMaterialization(repo);
+  assert.equal(targetFor(plan, "docs/knowledge").verdict, "create");
+  assert.equal(targetFor(plan, "docs/verification").verdict, "create");
+
+  const applied = await applyIndexMaterialization(repo);
+  assert.ok(applied.written.includes("docs/knowledge/README.md"));
+  assert.ok(applied.written.includes("docs/verification/README.md"));
+
+  const knowledgeIndex = fs.readFileSync(path.join(repo, "docs/knowledge/README.md"), "utf8");
+  assert.ok(knowledgeIndex.includes(MARKER));
+  assert.ok(knowledgeIndex.includes("k.md"));
+  const verificationIndex = fs.readFileSync(path.join(repo, "docs/verification/README.md"), "utf8");
+  assert.ok(verificationIndex.includes(MARKER));
+  assert.ok(verificationIndex.includes("vd.md"));
+
+  // Execution/Evidence state never lands in README indexes: a Git-external
+  // state root inside the checkout is not an index source.
+  const before = treeHashes(repo);
+  const second = await applyIndexMaterialization(repo);
+  assert.deepEqual(second.written, []);
+  assert.equal(targetFor(second.plan, "docs/knowledge").verdict, "in-sync");
+  assert.equal(targetFor(second.plan, "docs/verification").verdict, "in-sync");
+  assert.deepEqual(treeHashes(repo), before, "second apply changed nothing");
+});
+
 // --- apply: idempotence across kinds -----------------------------------------
 
 test("a second apply is a no-op across kinds — in-sync targets never write or block", async () => {

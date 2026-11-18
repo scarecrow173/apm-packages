@@ -154,6 +154,16 @@ measured a failure).
 - `verified` — otherwise. An empty scope verifies with an explicit
   `no-required-coverage` reason — never silently.
 
+When the summary queries the Evidence Store itself (a caller-supplied
+record list is the caller's own authority and is never re-inspected), the
+store's marker state bounds the verdict: a `manifest.json` that cannot be
+read or fails validation, or record files with no manifest at all, means
+the marker can no longer certify the records as store state — the verdict
+can never reach `verified` and `reasons` carries `evidence-store-corrupt`
+or `evidence-store-unmanifested`. An absent store stays a legitimate
+empty input (zero records is honest coverage). This is the same boundary
+the repo-level lint reports as the `*-evidence-store` findings.
+
 A `verified` verdict must be internally consistent: no required check
 `undetermined`/`unresolved`/`failed` and no claim left un-covered
 (advisory failures never gate). A file claiming `verified` over
@@ -235,10 +245,13 @@ out-of-scope verdicts are judgments only a caller can supply.
 Auto-compute is intentionally per-invocation: each route decision
 re-derives the summary so routing never reads a cached assessment
 against a moved `HEAD` or a changed store. The trade-off is a widened
-failure domain — an unreadable or corrupt Evidence Store fails the whole
-route invocation (the gate's authority cannot be computed), not just
-verification subcommands. That is deliberate fail-closed: a store that
-cannot prove coverage can never satisfy the gate.
+failure domain — an Evidence Store that cannot be scanned at all
+(unreadable records, a boundary violation) fails the whole route
+invocation, not just verification subcommands, while a store whose
+marker cannot certify its records yields a degraded summary the gate
+blocks on `verification-indeterminate` with the `evidence-store-*`
+reason naming which surface failed. That is deliberate fail-closed: a
+store that cannot prove coverage can never satisfy the gate.
 
 ## CLI
 

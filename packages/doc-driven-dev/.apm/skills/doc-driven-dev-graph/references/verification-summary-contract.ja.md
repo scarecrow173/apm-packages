@@ -156,6 +156,17 @@ required check が 0 件の gap を含む）、`failed`（required check が
   `no-required-coverage` の reason を伴って verified になります
   —— 黙ってはなりません。
 
+summary が Evidence Store 自体を問い合わせる場合（caller 供給の
+record 一覧は caller 自身の権威であり、再検査しません）、store の
+marker 状態が verdict を制約します: 読み取れない・検証に失敗する
+`manifest.json`、あるいは manifest のない record ファイルは、marker
+が record を store の状態として証明できないことを意味します ——
+verdict は `verified` に到達せず、`reasons` に
+`evidence-store-corrupt` または `evidence-store-unmanifested` を
+載せます。store が存在しない場合は正当な空入力のままです
+（record 0 件は正直なカバレッジ）。これは repo-level lint が
+`*-evidence-store` finding として報告するのと同じ境界です。
+
 `verified` verdict は内部整合性を満たさなければなりません: required
 check が `undetermined`/`unresolved`/`failed` のまま残らず、
 カバーされない claim も残らない（advisory の失敗は gate しません）。
@@ -242,9 +253,12 @@ Store と Knowledge Graph から `HEAD` に対してサマリーを自ら計算�
 自動計算は意図的に呼び出しごとです: 各 route 判定がサマリーを再導出
 するため、動いた `HEAD` や変化した store に対するキャッシュ済み
 assessment を routing が読むことはありません。トレードオフとして
-失敗ドメインは広がります —— 読み取り不能・破損した Evidence Store
-は検証サブコマンドだけでなく route 呼び出し全体を失敗させます
-（gate の権威を計算できない）。これは意図的な fail-closed です:
+失敗ドメインは広がります —— そもそもスキャンできない Evidence
+Store（読み取り不能な record、境界違反）は検証サブコマンドだけでなく
+route 呼び出し全体を失敗させ、marker が record を証明できない
+store は degrade したサマリーを返し、gate は `evidence-store-*`
+reason がどの面で失敗したかを示した上で `verification-indeterminate`
+で block します。これは意図的な fail-closed です:
 カバレッジを証明できない store は gate を決して満たせません。
 
 ## CLI

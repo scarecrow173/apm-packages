@@ -5,10 +5,11 @@ import path from "node:path";
 
 import { contractForType, finding, isExternalReference, REQUIRED_FRONT_MATTER_FIELDS, sortFindings } from "./doc_repository";
 import type { DocumentRepository, Finding, RepositoryDocument } from "./doc_repository";
+import { MIGRATE_HINT } from "./doc_evidence_lint";
 import { lintProvenance, lintStaleUpstreams, lintTraceability } from "./doc_provenance_lint";
 import { lintStructure } from "./doc_structure_lint";
 import { configFor, docTypes, frontMatterSchema, isForeignDocType } from "./doc_suite_utils";
-import { allIdPrefixes } from "./doc_types";
+import { allIdPrefixes, resolveDocType } from "./doc_types";
 import { isIndexFileName, isInsideRealpath, normalizeDir } from "./document_utils";
 import { parseClaimReference } from "./claim_ids";
 import { projectKnowledgeGraph } from "./knowledge_graph";
@@ -129,6 +130,33 @@ const GRAPH_ISSUE_RULES: Record<KnowledgeGraphIssueCode, {
   "check-anchor-mismatch": { ruleId: "check-anchor-mismatch", category: "relation", severity: "warning", blocking: true, repair: "manual" },
   "misplaced-check-anchor": { ruleId: "misplaced-check-anchor", category: "relation", severity: "warning", blocking: true, repair: "manual" },
 };
+
+// A declared `type:` no durable scope can own (`isForeignDocType` already
+// keeps it out of `scope.documents` and index rows — the same boundary).
+// Naming it here keeps lint and index materialization agreed on one rule:
+// the file is migration-domain corpus, never a document of this scope —
+// so the finding is a blocking `migration` marker, not a scope-integrity
+// error a rewrite could repair (Issue #246).
+function lintMisplacedLegacyDocs(scope: LintScope): Finding[] {
+  const findings: Finding[] = [];
+  for (const document of scope.files) {
+    if (typeof document.type !== "string") continue;
+    const resolved = resolveDocType(document.type);
+    if (resolved.kind === "durable" || resolved.kind === "unknown") continue;
+    findings.push(finding({
+      ruleId: "legacy-doc-in-durable-dir",
+      category: "migration",
+      severity: "warning",
+      blocking: true,
+      path: document.path,
+      artifactId: document.id,
+      message: `${resolved.kind === "ephemeral" ? "execution-bound" : "legacy"} ${document.type} document declares a type with no durable Git form under Document Registry 3 — it is migration corpus in a durable directory, never a ${scope.type} document or index row; ${MIGRATE_HINT} to plan the migration`,
+      target: document.type,
+      repair: "migration",
+    }));
+  }
+  return findings;
+}
 
 // Project the Knowledge Graph once per scope and attribute its issues to
 // the files under this scope's directory. Shared dirs (docs/discovery hosts
@@ -659,6 +687,7 @@ function lintScope(
       findings.push(...lintUnmanagedRelations(model, document));
     }
   }
+  findings.push(...lintMisplacedLegacyDocs(scope));
   findings.push(...lintKnowledgeGraph(model, scope));
   findings.push(...lintLegacyIdReferences(model, scope.files));
   findings.push(...lintDuplicateIds(model, scope));

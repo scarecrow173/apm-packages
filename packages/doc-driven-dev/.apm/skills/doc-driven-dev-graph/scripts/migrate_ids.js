@@ -4429,7 +4429,7 @@ var require_extend = __commonJS({
       }
       return toStr.call(arr) === "[object Array]";
     };
-    var isPlainObject6 = function isPlainObject7(obj) {
+    var isPlainObject7 = function isPlainObject8(obj) {
       if (!obj || toStr.call(obj) !== "[object Object]") {
         return false;
       }
@@ -4486,12 +4486,12 @@ var require_extend = __commonJS({
             src = getProperty(target, name);
             copy = getProperty(options2, name);
             if (target !== copy) {
-              if (deep && copy && (isPlainObject6(copy) || (copyIsArray = isArray(copy)))) {
+              if (deep && copy && (isPlainObject7(copy) || (copyIsArray = isArray(copy)))) {
                 if (copyIsArray) {
                   copyIsArray = false;
                   clone2 = src && isArray(src) ? src : [];
                 } else {
-                  clone2 = src && isPlainObject6(src) ? src : {};
+                  clone2 = src && isPlainObject7(src) ? src : {};
                 }
                 setProperty(target, { name, newValue: extend3(deep, clone2, copy) });
               } else if (typeof copy !== "undefined") {
@@ -4515,7 +4515,7 @@ var init_default = __esm({
 });
 
 // node_modules/.pnpm/is-plain-obj@4.1.0/node_modules/is-plain-obj/index.js
-function isPlainObject3(value) {
+function isPlainObject6(value) {
   if (typeof value !== "object" || value === null) {
     return false;
   }
@@ -4809,10 +4809,10 @@ var init_vfile_message = __esm({
 });
 
 // node_modules/.pnpm/vfile@6.0.3/node_modules/vfile/lib/minpath.js
-var import_node_path4;
+var import_node_path5;
 var init_minpath = __esm({
   "node_modules/.pnpm/vfile@6.0.3/node_modules/vfile/lib/minpath.js"() {
-    import_node_path4 = __toESM(require("node:path"), 1);
+    import_node_path5 = __toESM(require("node:path"), 1);
   }
 });
 
@@ -4847,9 +4847,9 @@ var init_minurl = __esm({
 
 // node_modules/.pnpm/vfile@6.0.3/node_modules/vfile/lib/index.js
 function assertPart(part, name) {
-  if (part && part.includes(import_node_path4.default.sep)) {
+  if (part && part.includes(import_node_path5.default.sep)) {
     throw new Error(
-      "`" + name + "` cannot be a path: did not expect `" + import_node_path4.default.sep + "`"
+      "`" + name + "` cannot be a path: did not expect `" + import_node_path5.default.sep + "`"
     );
   }
 }
@@ -4947,7 +4947,7 @@ var init_lib4 = __esm({
        *   Basename.
        */
       get basename() {
-        return typeof this.path === "string" ? import_node_path4.default.basename(this.path) : void 0;
+        return typeof this.path === "string" ? import_node_path5.default.basename(this.path) : void 0;
       }
       /**
        * Set basename (including extname) (`'index.min.js'`).
@@ -4964,7 +4964,7 @@ var init_lib4 = __esm({
       set basename(basename) {
         assertNonEmpty(basename, "basename");
         assertPart(basename, "basename");
-        this.path = import_node_path4.default.join(this.dirname || "", basename);
+        this.path = import_node_path5.default.join(this.dirname || "", basename);
       }
       /**
        * Get the parent path (example: `'~'`).
@@ -4973,7 +4973,7 @@ var init_lib4 = __esm({
        *   Dirname.
        */
       get dirname() {
-        return typeof this.path === "string" ? import_node_path4.default.dirname(this.path) : void 0;
+        return typeof this.path === "string" ? import_node_path5.default.dirname(this.path) : void 0;
       }
       /**
        * Set the parent path (example: `'~'`).
@@ -4987,7 +4987,7 @@ var init_lib4 = __esm({
        */
       set dirname(dirname) {
         assertPath(this.basename, "dirname");
-        this.path = import_node_path4.default.join(dirname || "", this.basename);
+        this.path = import_node_path5.default.join(dirname || "", this.basename);
       }
       /**
        * Get the extname (including dot) (example: `'.js'`).
@@ -4996,7 +4996,7 @@ var init_lib4 = __esm({
        *   Extname.
        */
       get extname() {
-        return typeof this.path === "string" ? import_node_path4.default.extname(this.path) : void 0;
+        return typeof this.path === "string" ? import_node_path5.default.extname(this.path) : void 0;
       }
       /**
        * Set the extname (including dot) (example: `'.js'`).
@@ -5021,7 +5021,7 @@ var init_lib4 = __esm({
             throw new Error("`extname` cannot contain multiple dots");
           }
         }
-        this.path = import_node_path4.default.join(this.dirname, this.stem + (extname || ""));
+        this.path = import_node_path5.default.join(this.dirname, this.stem + (extname || ""));
       }
       /**
        * Get the full path (example: `'~/index.min.js'`).
@@ -5060,7 +5060,7 @@ var init_lib4 = __esm({
        *   Stem.
        */
       get stem() {
-        return typeof this.path === "string" ? import_node_path4.default.basename(this.path, this.extname) : void 0;
+        return typeof this.path === "string" ? import_node_path5.default.basename(this.path, this.extname) : void 0;
       }
       /**
        * Set the stem (basename w/o extname) (example: `'index.min'`).
@@ -5077,7 +5077,7 @@ var init_lib4 = __esm({
       set stem(stem) {
         assertNonEmpty(stem, "stem");
         assertPart(stem, "stem");
-        this.path = import_node_path4.default.join(this.dirname || "", stem + (this.extname || ""));
+        this.path = import_node_path5.default.join(this.dirname || "", stem + (this.extname || ""));
       }
       // Normal prototypal methods.
       /**
@@ -5366,7 +5366,7 @@ function assertUnfrozen(name, frozen) {
   }
 }
 function assertNode(node3) {
-  if (!isPlainObject3(node3) || typeof node3.type !== "string") {
+  if (!isPlainObject6(node3) || typeof node3.type !== "string") {
     throw new TypeError("Expected node, got `" + node3 + "`");
   }
 }
@@ -5983,7 +5983,7 @@ var init_lib5 = __esm({
           } else if (parameters2.length > 0) {
             let [primary, ...rest] = parameters2;
             const currentPrimary = attachers[entryIndex][1];
-            if (isPlainObject3(currentPrimary) && isPlainObject3(primary)) {
+            if (isPlainObject6(currentPrimary) && isPlainObject6(primary)) {
               primary = (0, import_extend.default)(true, currentPrimary, primary);
             }
             attachers[entryIndex] = [plugin, primary, ...rest];
@@ -13589,8 +13589,8 @@ var import_node_path13 = __toESM(require("node:path"));
 
 // src/skills/doc-maintenance/scripts/lib/id_migration.ts
 var import_node_child_process = require("node:child_process");
-var import_node_fs10 = __toESM(require("node:fs"));
-var import_node_path11 = __toESM(require("node:path"));
+var import_node_fs11 = __toESM(require("node:fs"));
+var import_node_path12 = __toESM(require("node:path"));
 
 // src/skills/adr-doc/scripts/lib/adr_utils.ts
 var import_node_fs3 = __toESM(require("node:fs"));
@@ -14052,12 +14052,12 @@ function configFor(type) {
   if (entry?.persistence === "durable") return entry;
   if (entry?.persistence === "ephemeral") {
     throw new Error(
-      `Document type "${type}" is execution-bound (persistence: ephemeral): it has no durable Git form under Document Registry 3 \u2014 plan/task state lives in the Execution Store`
+      `Document type "${type}" is execution-bound (persistence: ephemeral): it has no durable Git form under Document Registry 3 \u2014 plan/task state lives in the Execution Store; to inventory a tracked legacy corpus run doc_maintenance.js migrate plan --json`
     );
   }
   if (legacyAliases.has(type)) {
     throw new Error(
-      `Document type "${type}" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document`
+      `Document type "${type}" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document \u2014 run doc_maintenance.js migrate plan --json to plan the migration`
     );
   }
   throw new Error(`Unknown document type: ${type}`);
@@ -36835,10 +36835,14 @@ function isGeneratedIndex(content3, legacyTitle) {
   return Boolean(legacyTitle) && content3.startsWith(`# ${legacyTitle}`) && /Directory: `/.test(content3);
 }
 function isForeignDocType(typeValue, expected, relativeDir) {
-  if (typeof typeValue !== "string" || typeValue === expected) return false;
-  if (!docTypes.includes(typeValue)) return false;
+  if (typeof typeValue !== "string") return false;
+  const actual = resolveDocType(typeValue);
+  const resident = resolveDocType(expected);
+  if (resident.entry !== null && resident.entry === actual.entry) return false;
+  if (actual.kind === "legacy" || actual.kind === "ephemeral") return true;
+  if (actual.kind !== "durable") return false;
   const normalized = normalizeDir(relativeDir);
-  return configFor(typeValue).dirs.map((dir) => normalizeDir(dir)).includes(normalized);
+  return actual.entry.dirs.map((dir) => normalizeDir(dir)).includes(normalized);
 }
 async function titleFromDocument(content3, fallback, headingToTitle) {
   const parsed = parseDoc(content3);
@@ -37075,1200 +37079,519 @@ async function buildIndex2(cwd, relativeDir) {
 }
 
 // src/skills/lib/doc_audit.ts
-var import_node_fs7 = __toESM(require("node:fs"));
-var import_node_path8 = __toESM(require("node:path"));
+var import_node_fs8 = __toESM(require("node:fs"));
+var import_node_path9 = __toESM(require("node:path"));
 
-// src/skills/lib/doc_lint.ts
-var import_node_fs6 = __toESM(require("node:fs"));
-var import_node_path7 = __toESM(require("node:path"));
-
-// src/skills/lib/doc_repository.ts
+// src/skills/lib/schema_preflight.ts
 var import_node_fs4 = __toESM(require("node:fs"));
-var import_node_path5 = __toESM(require("node:path"));
-function finding(input2) {
-  const severity = input2.severity ?? "error";
-  return {
-    ruleId: input2.ruleId,
-    category: input2.category,
-    severity,
-    blocking: input2.blocking ?? severity === "error",
-    path: input2.path ?? null,
-    line: input2.line ?? null,
-    artifactId: input2.artifactId ?? null,
-    message: input2.message,
-    target: input2.target ?? null,
-    repair: input2.repair ?? "manual"
-  };
-}
-function compareStrings(left, right) {
-  return left.localeCompare(right);
-}
-function compareFindings(left, right) {
-  return compareStrings(left.path ?? "", right.path ?? "") || (left.line ?? 0) - (right.line ?? 0) || compareStrings(left.ruleId, right.ruleId) || compareStrings(left.target ?? "", right.target ?? "") || compareStrings(left.message, right.message);
-}
-function sortFindings(findings) {
-  return [...findings].sort(compareFindings);
-}
-var REQUIRED_FRONT_MATTER_FIELDS = [
-  "id",
-  "type",
-  "status",
-  "lifecycle",
-  "title",
-  "created",
-  "updated",
-  "owners",
-  "relations"
-];
-var DEAD_UPSTREAM_STATUSES = /* @__PURE__ */ new Set([
-  "superseded",
-  "rejected",
-  "deprecated",
-  "archived",
-  "abandoned",
-  "wont-do",
-  "completed",
-  "done"
+var import_node_path4 = __toESM(require("node:path"));
+var import_gray_matter3 = __toESM(require_gray_matter());
+var DOC_DRIVEN_DEV_DIR = "docs/.doc-driven-dev";
+var SCHEMA_MANIFEST_PATH = `${DOC_DRIVEN_DEV_DIR}/schema.json`;
+var MIGRATION_JOURNAL_PATH = `${DOC_DRIVEN_DEV_DIR}/migration.journal.json`;
+var EXECUTION_STATE_ROOT = ".apm/state/doc-driven-dev";
+var MANIFEST_SCHEMA_VERSION = 1;
+var EVIDENCE_TMP_PATTERN = /\.tmp-\d+-\d+$/;
+var EXPECTED_COMPONENT_VERSIONS = {
+  documentRegistry: 3,
+  knowledgeRelations: 1,
+  verificationDesign: 1,
+  evidenceRecord: 1,
+  graphDefinition: 3
+};
+var EXECUTION_RUN_SCHEMA_VERSION = 1;
+var SCHEMA_PREFLIGHT_EXIT_CODE = 2;
+var EXECUTION_BOUND_TYPES = new Set(executionBoundTypeNames());
+var KNOWLEDGE_RELATIONS_V1 = new Set(knowledgeRelationFields());
+var MANIFEST_DIR_ALLOWED_FILES = /* @__PURE__ */ new Set([
+  "schema.json",
+  "migration.journal.json"
 ]);
-var UPSTREAM_FIELDS = /* @__PURE__ */ new Set([
-  "motivates",
-  "decides-for",
-  "realizes"
-]);
-function lifecycleBucketOf(document3) {
-  if (document3.kind === "unmanaged") return "unmanaged";
-  return lifecycleBucketForType(document3.type);
+function toRepoRelative2(cwd, absolute) {
+  return import_node_path4.default.relative(import_node_path4.default.resolve(cwd), absolute).split(import_node_path4.default.sep).join("/");
 }
-function migrationOwnedDirs() {
-  const dirs = /* @__PURE__ */ new Set();
-  for (const type of executionTypes) {
-    for (const dir of ephemeralConfigs[type].formerDirs) dirs.add(normalizeDir(dir));
-  }
-  for (const entry of Object.values(legacyDocTypes)) {
-    for (const dir of entry.formerDirs) dirs.add(normalizeDir(dir));
-    for (const dir of entry.scopeDirs) dirs.add(normalizeDir(dir));
-  }
-  return [...dirs].sort(compareStrings);
+function isUnderDir(relPath, dir) {
+  return relPath === dir || relPath.startsWith(`${dir}/`);
 }
-function isSettled(document3) {
-  return isSettledEntry(lifecycleBucketOf(document3), document3.status, document3.lifecycle);
+function isPlainObject3(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-function staleUpstreamTargets(model, document3) {
-  if (isSettled(document3)) return [];
-  const stale = [];
-  for (const [field, targets] of Object.entries(document3.relations)) {
-    if (!UPSTREAM_FIELDS.has(field)) continue;
-    for (const target of targets) {
-      const resolved = model.resolveRelationTarget(document3, target);
-      if (resolved.status === "resolved" && resolved.document.status !== null && DEAD_UPSTREAM_STATUSES.has(resolved.document.status)) {
-        stale.push({ field, target, upstream: resolved.document });
-      }
-    }
-  }
-  return stale;
+function managedRootAliases() {
+  return managedDocDirs().filter((dir) => !dir.startsWith("docs/"));
 }
-function contractForDocType(entry) {
-  return {
-    type: entry.type,
-    persistence: entry.persistence,
-    idPrefix: entry.idPrefix,
-    idPattern: new RegExp(`^${entry.idPrefix}-(?:\\d+|[0-9A-Za-z]{22})$`),
-    idExceptions: [...entry.idExceptions],
-    canonicalDir: entry.dir ?? "",
-    dirs: [...entry.dirs],
-    defaultStatus: entry.defaultStatus,
-    statusValues: [...entry.statusValues],
-    lifecycleValues: [...entry.lifecycleValues],
-    defaultLifecycle: entry.defaultLifecycle,
-    requiredFields: [...REQUIRED_FRONT_MATTER_FIELDS, ...entry.requiredFields],
-    fieldVocabularies: Object.fromEntries(
-      Object.entries(entry.fieldVocabularies).map(([field, values]) => [field, [...values]])
-    ),
-    requiredRelations: entry.requiredRelations.map((rule) => ({ ...rule, targetTypes: [...rule.targetTypes] })),
-    requiredDirectoryFiles: [...entry.requiredDirectoryFiles],
-    reservedFiles: [...entry.reservedFiles],
-    allowsRootArtifact: entry.allowsRootArtifact,
-    requiresSourceEvidence: entry.requiresSourceEvidence,
-    expectedUpstream: entry.expectedUpstream.map((expectation) => ({ ...expectation, fields: [...expectation.fields] })),
-    allowedRelations: Object.fromEntries(
-      entry.allowedRelations.map((relation) => [relation.field, [...relation.targetTypes]])
-    )
-  };
-}
-var contracts = Object.fromEntries(
-  docTypes.map((type) => [type, contractForDocType(configFor(type))])
-);
-function contractForType(type) {
-  return contracts[type] ?? null;
-}
-var markdownModules = null;
-async function loadMarkdownModules() {
-  if (!markdownModules) {
-    markdownModules = Promise.all([
-      Promise.resolve().then(() => (init_unified(), unified_exports)),
-      Promise.resolve().then(() => (init_remark_parse(), remark_parse_exports)),
-      Promise.resolve().then(() => (init_unist_util_visit(), unist_util_visit_exports))
-    ]).then(([unifiedModule, remarkParseModule, visitModule]) => ({
-      unified: unifiedModule.unified,
-      remarkParse: remarkParseModule.default || remarkParseModule,
-      visit: visitModule.visit
-    }));
-  }
-  return markdownModules;
-}
-function textFromNode(node3) {
-  if (typeof node3.value === "string") return node3.value;
-  return (node3.children || []).map(textFromNode).join("");
-}
-function slugifyAnchor(text3) {
-  return text3.trim().toLowerCase().replace(/[^\p{L}\p{N}_\- ]/gu, "").replace(/ /g, "-");
-}
-function frontMatterEndLine(content3) {
-  const lines = content3.split(/\r?\n/);
-  if (lines[0]?.trim() !== "---") return 0;
-  const closing = lines.findIndex((line, index2) => index2 > 0 && line.trim() === "---");
-  return closing > 0 ? closing + 1 : 0;
-}
-async function extractMarkdownStructure(body, lineOffset = 0) {
-  const { unified: unified2, remarkParse: remarkParse2, visit: visit3 } = await loadMarkdownModules();
-  const tree = unified2().use(remarkParse2).parse(body);
-  const definitions = /* @__PURE__ */ new Map();
-  visit3(tree, "definition", (node3) => {
-    if (typeof node3.identifier === "string" && typeof node3.url === "string") {
-      definitions.set(node3.identifier.toLowerCase(), node3.url);
-    }
-  });
-  const links = [];
-  const headings = [];
-  const usedSlugs = /* @__PURE__ */ new Map();
-  visit3(tree, (node3) => {
-    const line = (node3.position?.start?.line ?? 0) + lineOffset;
-    const column = node3.position?.start?.column ?? 0;
-    if (node3.type === "heading") {
-      const text3 = textFromNode(node3).replace(/\s+/g, " ").trim();
-      const base = slugifyAnchor(text3);
-      const seen = usedSlugs.get(base) ?? 0;
-      usedSlugs.set(base, seen + 1);
-      headings.push({ depth: node3.depth ?? 0, text: text3, slug: seen === 0 ? base : `${base}-${seen}`, line });
-      return;
-    }
-    if (node3.type === "link" || node3.type === "image") {
-      if (typeof node3.url === "string" && node3.url.trim()) {
-        links.push({ target: node3.url.trim(), line, column, isImage: node3.type === "image" });
-      }
-      return;
-    }
-    if (node3.type === "linkReference" || node3.type === "imageReference") {
-      const url2 = typeof node3.identifier === "string" ? definitions.get(node3.identifier.toLowerCase()) : void 0;
-      if (url2 && url2.trim()) {
-        links.push({ target: url2.trim(), line, column, isImage: node3.type === "imageReference" });
-      }
-    }
-  });
-  return { links, headings };
-}
-var SKIPPED_DIRS = /* @__PURE__ */ new Set([".git", "node_modules", ".pnpm-store"]);
-var EXTERNAL_REFERENCE = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
-var WINDOWS_ABSOLUTE_PATH = /^[a-z]:[\\/]/i;
-var LOCALE_FILE_PATTERN = /^(.+)\.([a-z]{2})\.md$/i;
-function isWindowsAbsolutePath(value) {
-  return WINDOWS_ABSOLUTE_PATH.test(value.trim());
-}
-function isExternalReference(value) {
-  const trimmed = value.trim();
-  if (isWindowsAbsolutePath(trimmed)) return false;
-  if (parseClaimReference(trimmed)) return false;
-  return EXTERNAL_REFERENCE.test(trimmed);
-}
-function walkMarkdownFiles2(root) {
-  if (!import_node_fs4.default.existsSync(root) || !import_node_fs4.default.statSync(root).isDirectory()) return [];
-  const files = [];
-  const visitDir = (dir) => {
-    const entries = import_node_fs4.default.readdirSync(dir, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name));
-    for (const entry of entries) {
-      const full = import_node_path5.default.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (!SKIPPED_DIRS.has(entry.name)) visitDir(full);
-      } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
-        files.push(full);
-      }
-    }
-  };
-  visitDir(root);
-  return files.sort(compareStrings);
-}
-function toRepoPath(cwd, absolute) {
-  return import_node_path5.default.relative(cwd, absolute).split(import_node_path5.default.sep).join("/");
-}
-function isUnderDir(child, parent) {
-  const c = normalizeDir(child);
-  const p = normalizeDir(parent);
-  return c === p || c.startsWith(`${p}/`);
-}
-function artifactKeyOf(repoPath) {
-  const dir = import_node_path5.default.posix.dirname(repoPath);
-  const base = import_node_path5.default.posix.basename(repoPath).replace(/\.md$/i, "");
-  const locale = /^(.+)\.[a-z]{2}$/i.exec(base);
-  return `${dir}::${locale ? locale[1] : base}`;
-}
-function groupByArtifact(group) {
-  const buckets = /* @__PURE__ */ new Map();
-  for (const document3 of group) {
-    const key = artifactKeyOf(document3.path);
-    const bucket = buckets.get(key) ?? [];
-    bucket.push(document3);
-    buckets.set(key, bucket);
-  }
-  return buckets;
-}
-function primaryDocumentOf(group) {
-  const nonLocalized = group.filter(
-    (document3) => !LOCALE_FILE_PATTERN.test(import_node_path5.default.posix.basename(document3.path))
-  );
-  const pool = nonLocalized.length > 0 ? nonLocalized : group;
-  return [...pool].sort((a, b) => compareStrings(a.path, b.path))[0];
-}
-function artifactPrimaries(group) {
-  return [...groupByArtifact(group).values()].map(primaryDocumentOf).sort((a, b) => compareStrings(a.path, b.path));
-}
-function canonicalTypeMap() {
-  const byDir = /* @__PURE__ */ new Map();
-  for (const contract of Object.values(contracts)) {
-    for (const dir of contract.dirs) {
-      const normalized = normalizeDir(dir);
-      const types = byDir.get(normalized) ?? /* @__PURE__ */ new Set();
-      types.add(contract.type);
-      byDir.set(normalized, types);
-    }
-  }
-  return [...byDir.entries()].map(([dir, types]) => ({ dir, types: [...types].sort(compareStrings) })).sort((a, b) => b.dir.length - a.dir.length || compareStrings(a.dir, b.dir));
-}
-function expectedTypesFor(repoPath, typeMap) {
-  const dir = normalizeDir(import_node_path5.default.posix.dirname(repoPath));
-  const match = typeMap.find((entry) => isUnderDir(dir, entry.dir));
-  return match ? match.types : [];
-}
-function extractRelations(data) {
-  const result = {};
-  const raw = data.relations;
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return result;
-  for (const [key, value] of Object.entries(raw)) {
-    if (nonReferenceRelationKeys.has(key)) continue;
-    const items = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
-    const values = items.filter((item) => typeof item === "string" && Boolean(item.trim())).map((item) => item.trim());
-    if (values.length > 0) result[key] = [...new Set(values)].sort(compareStrings);
-  }
-  return result;
-}
-function stringField(data, field) {
-  const value = data[field];
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-function localeSiblingsFor(repoPath, siblingsByDir) {
-  const dir = import_node_path5.default.posix.dirname(repoPath);
-  const base = import_node_path5.default.posix.basename(repoPath);
-  const peers = siblingsByDir.get(dir);
-  if (!peers) return [];
-  const localeMatch = LOCALE_FILE_PATTERN.exec(base);
-  if (localeMatch) {
-    const sibling = `${dir === "." ? "" : `${dir}/`}${localeMatch[1]}.md`;
-    return peers.has(localeMatch[1] + ".md") ? [sibling] : [];
-  }
-  const stem = base.replace(/\.md$/i, "");
-  return [...peers].filter((peer) => LOCALE_FILE_PATTERN.test(peer) && peer.replace(LOCALE_FILE_PATTERN, "$1") === stem).map((peer) => `${dir === "." ? "" : `${dir}/`}${peer}`).sort(compareStrings);
-}
-function defaultScanRoots(cwd) {
-  const roots = /* @__PURE__ */ new Set();
-  if (import_node_fs4.default.existsSync(import_node_path5.default.join(cwd, "docs"))) roots.add("docs");
-  for (const dir of managedDocDirs()) {
-    if (import_node_fs4.default.existsSync(import_node_path5.default.join(cwd, dir))) roots.add(dir);
-  }
-  return [...roots].sort(compareStrings);
-}
-function pruneNestedRoots(roots) {
-  const sorted = [...new Set(roots.map((root) => normalizeDir(root)))].sort(compareStrings);
-  return sorted.filter((root) => !sorted.some((other) => other !== root && isUnderDir(root, other)));
-}
-async function scanRepository(options2) {
-  const cwd = import_node_path5.default.resolve(options2.cwd);
-  const roots = pruneNestedRoots(options2.roots?.length ? options2.roots : defaultScanRoots(cwd)).filter((root) => isInsideRealpath(cwd, import_node_path5.default.join(cwd, root)));
-  const typeMap = canonicalTypeMap();
-  const absoluteFiles = /* @__PURE__ */ new Set();
-  for (const root of roots) {
-    for (const file2 of walkMarkdownFiles2(import_node_path5.default.join(cwd, root))) absoluteFiles.add(file2);
-  }
-  if (options2.includeTopLevelMarkdown !== false) {
-    for (const entry of import_node_fs4.default.readdirSync(cwd, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name))) {
-      if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
-        absoluteFiles.add(import_node_path5.default.join(cwd, entry.name));
-      }
-    }
-  }
-  const siblingsByDir = /* @__PURE__ */ new Map();
-  for (const absolute of absoluteFiles) {
-    const repoPath = toRepoPath(cwd, absolute);
-    const dir = import_node_path5.default.posix.dirname(repoPath);
-    const peers = siblingsByDir.get(dir) ?? /* @__PURE__ */ new Set();
-    peers.add(import_node_path5.default.posix.basename(repoPath));
-    siblingsByDir.set(dir, peers);
-  }
-  const migrationDirs = migrationOwnedDirs();
-  const files = [];
-  for (const absolute of [...absoluteFiles].sort(compareStrings)) {
-    const repoPath = toRepoPath(cwd, absolute);
-    const expectedTypes = expectedTypesFor(repoPath, typeMap);
-    const canonical = expectedTypes.length > 0;
-    const docDirName = normalizeDir(import_node_path5.default.posix.dirname(repoPath));
-    const indexNamed = isIndexFileName(import_node_path5.default.posix.basename(repoPath));
-    const kind = canonical ? indexNamed ? "index" : "canonical" : migrationDirs.some((dir) => docDirName === dir || isUnderDir(docDirName, dir)) ? indexNamed ? "index" : "legacy" : "unmanaged";
-    let content3 = "";
-    let readError = null;
+function walkTree(cwd, relRoot, visit3, onEscape) {
+  const absRoot = import_node_path4.default.resolve(cwd, relRoot);
+  if (!import_node_fs4.default.existsSync(absRoot) || !import_node_fs4.default.statSync(absRoot).isDirectory()) return false;
+  if (!isInsideCheckout(cwd, absRoot)) return false;
+  const stack = [absRoot];
+  while (stack.length > 0) {
+    const dir = stack.pop();
+    let entries;
     try {
-      content3 = import_node_fs4.default.readFileSync(absolute, "utf8");
-    } catch (error62) {
-      readError = error62 instanceof Error ? error62.message : String(error62);
+      entries = import_node_fs4.default.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      continue;
     }
-    const parsed = readError ? { data: {}, body: "", error: readError } : parseDoc(content3);
-    const bodyStartLine = frontMatterEndLine(content3);
-    const structure = await extractMarkdownStructure(parsed.body, bodyStartLine);
-    const data = parsed.data;
-    const owners = Array.isArray(data.owners) ? data.owners.filter((owner) => typeof owner === "string" && Boolean(owner.trim())) : [];
-    files.push({
-      path: repoPath,
-      absolutePath: absolute,
-      kind,
-      expectedTypes,
-      type: stringField(data, "type"),
-      id: stringField(data, "id"),
-      status: stringField(data, "status"),
-      lifecycle: stringField(data, "lifecycle"),
-      title: stringField(data, "title"),
-      owners,
-      created: stringField(data, "created"),
-      updated: stringField(data, "updated"),
-      frontMatter: parsed.error ? {} : data,
-      parseError: parsed.error,
-      relations: extractRelations(data),
-      links: structure.links,
-      headings: structure.headings,
-      indexMembership: [],
-      localeSiblings: localeSiblingsFor(repoPath, siblingsByDir),
-      body: parsed.body,
-      bodyStartLine
+    for (const entry of entries) {
+      const abs = import_node_path4.default.join(dir, entry.name);
+      const rel = toRepoRelative2(cwd, abs);
+      if (entry.isDirectory()) {
+        if (!isInsideCheckout(cwd, abs)) {
+          onEscape?.(rel, "dir");
+          continue;
+        }
+        visit3(rel, true);
+        stack.push(abs);
+      } else if (entry.isFile() || entry.isSymbolicLink()) {
+        if (!isInsideCheckout(cwd, abs)) {
+          onEscape?.(rel, "entry");
+          continue;
+        }
+        visit3(rel, false);
+      }
+    }
+  }
+  return true;
+}
+function relationIssues(relPath, relations) {
+  const scoped = [];
+  if (relations === void 0) return scoped;
+  if (!isPlainObject3(relations)) {
+    scoped.push({
+      reason: "legacy-relations",
+      path: relPath,
+      detail: "relations: is not a map of relation keys to target lists"
+    });
+    return scoped;
+  }
+  for (const [key, value] of Object.entries(relations)) {
+    if (nonReferenceRelationKeys.has(key) || PROVENANCE_RELATION_KEYS.includes(key)) continue;
+    const populated = typeof value === "string" ? value.trim() !== "" : Array.isArray(value) && value.length > 0;
+    const wellFormed = typeof value === "string" || Array.isArray(value) && value.every((item) => typeof item === "string");
+    if (!wellFormed) {
+      scoped.push({
+        reason: "legacy-relations",
+        path: relPath,
+        detail: `relations.${key} is not a string or list of strings`
+      });
+      continue;
+    }
+    if (!populated) continue;
+    if (!KNOWLEDGE_RELATIONS_V1.has(key)) {
+      scoped.push({
+        reason: "legacy-relations",
+        path: relPath,
+        detail: `relations.${key} is outside the Knowledge Relations v1 vocabulary (stored forward set: ${[...KNOWLEDGE_RELATIONS_V1].join(", ")})`
+      });
+    }
+  }
+  return scoped;
+}
+function scanDocuments(cwd) {
+  const scan = {
+    issues: [],
+    manifestScopedIssues: [],
+    canonicalDocs: 0,
+    executionDocs: 0,
+    unmanagedDocs: 0
+  };
+  const visitMarkdown = (rel) => {
+    const abs = import_node_path4.default.resolve(cwd, rel);
+    let raw;
+    try {
+      raw = import_node_fs4.default.readFileSync(abs, "utf8");
+    } catch {
+      return;
+    }
+    let data = {};
+    let parsed = true;
+    try {
+      const result = (0, import_gray_matter3.default)(raw, {});
+      data = isPlainObject3(result.data) ? result.data : {};
+    } catch {
+      parsed = false;
+    }
+    const type = parsed && typeof data.type === "string" ? data.type : null;
+    if (type === null) {
+      scan.unmanagedDocs += 1;
+      return;
+    }
+    scan.canonicalDocs += 1;
+    if (EXECUTION_BOUND_TYPES.has(type)) {
+      scan.executionDocs += 1;
+      scan.manifestScopedIssues.push({
+        reason: "legacy-execution-doc",
+        path: rel,
+        detail: `type: ${type} has no durable Git form under Document Registry 3 (execution/verification artifacts live outside Git)`
+      });
+    }
+    if (parsed) {
+      scan.manifestScopedIssues.push(...relationIssues(rel, data.relations));
+    }
+  };
+  const visitDocsTree = (rel) => {
+    if (isUnderDir(rel, DOC_DRIVEN_DEV_DIR)) return;
+    if (rel.endsWith(".md") && !isIndexFileName(import_node_path4.default.basename(rel))) {
+      visitMarkdown(rel);
+      return;
+    }
+    if (isUnderDir(rel, "docs/impl")) {
+      scan.manifestScopedIssues.push({
+        reason: "legacy-execution-doc",
+        path: rel,
+        detail: `execution artifact under docs/impl has no durable Git form under Document Registry 3`
+      });
+    }
+  };
+  const roots = ["docs", ...managedRootAliases()];
+  const walked = /* @__PURE__ */ new Set();
+  for (const root of roots) {
+    const abs = import_node_path4.default.resolve(cwd, root);
+    let key = abs;
+    try {
+      key = import_node_fs4.default.realpathSync(abs);
+    } catch {
+    }
+    if (walked.has(key)) continue;
+    walked.add(key);
+    walkTree(cwd, root, (rel, isDir) => {
+      if (isDir) return;
+      if (root === "docs") visitDocsTree(rel);
+      else visitMarkdown(rel);
     });
   }
-  const byPath = /* @__PURE__ */ new Map();
-  const byId = /* @__PURE__ */ new Map();
-  for (const document3 of files) {
-    byPath.set(document3.path, document3);
-    if (!document3.id) continue;
-    const group = byId.get(document3.id) ?? [];
-    group.push(document3);
-    byId.set(document3.id, group);
-  }
-  const insideRoot = (absolute) => isInside(cwd, absolute);
-  const fileExistsInsideRoot = (absolute) => {
-    return isInsideCheckout(cwd, absolute) && import_node_fs4.default.existsSync(absolute) && import_node_fs4.default.statSync(absolute).isFile();
-  };
-  const splitTarget = (raw) => {
-    const trimmed = raw.trim();
-    const withoutFragment = trimmed.split("#", 2);
-    const pathname = withoutFragment[0].split("?", 1)[0];
-    let decoded = pathname;
-    try {
-      decoded = decodeURIComponent(pathname);
-    } catch {
-      decoded = pathname;
-    }
-    return { pathname: decoded, fragment: withoutFragment[1] ?? null };
-  };
-  const resolvePath = (from, rawTarget) => {
-    const value = rawTarget.trim();
-    if (isExternalReference(value)) return { status: "external", path: null, fragment: null, document: null };
-    const { pathname, fragment } = splitTarget(value);
-    if (!pathname) {
-      const self = from?.path ?? null;
-      return { status: "resolved", path: self, fragment, document: self ? byPath.get(self) ?? null : null };
-    }
-    const docRelative = pathname.startsWith("./") || pathname.startsWith("../") || pathname === "." || pathname === "..";
-    const candidates = docRelative ? [from ? import_node_path5.default.resolve(import_node_path5.default.dirname(from.absolutePath), pathname) : null, import_node_path5.default.resolve(cwd, pathname)] : [import_node_path5.default.resolve(cwd, pathname), from ? import_node_path5.default.resolve(import_node_path5.default.dirname(from.absolutePath), pathname) : null];
-    if (import_node_path5.default.isAbsolute(pathname) || isWindowsAbsolutePath(pathname)) {
-      candidates.length = 0;
-      candidates.push(import_node_path5.default.resolve(pathname));
-    }
-    let sawEscaped = false;
-    for (const candidate of candidates) {
-      if (!candidate) continue;
-      if (!insideRoot(candidate)) {
-        sawEscaped = true;
-        continue;
-      }
-      if (fileExistsInsideRoot(candidate)) {
-        const repoPath = toRepoPath(cwd, candidate);
-        return { status: "resolved", path: repoPath, fragment, document: byPath.get(repoPath) ?? null };
-      }
-    }
-    if (sawEscaped) {
-      return { status: "escaped", path: null, fragment, document: null };
-    }
-    const preferred = candidates.find((candidate) => Boolean(candidate)) ?? null;
-    return {
-      status: "unresolved",
-      path: preferred && insideRoot(preferred) ? toRepoPath(cwd, preferred) : null,
-      fragment,
-      document: null
-    };
-  };
-  const resolveRelationTarget = (from, rawTarget) => {
-    const value = rawTarget.trim();
-    const claimRef = parseClaimReference(value);
-    if (claimRef) {
-      const claimMatch = byId.get(claimRef.docId);
-      if (!claimMatch) return { status: "unresolved" };
-      const claimPrimaries = artifactPrimaries(claimMatch);
-      if (claimPrimaries.length === 1) return { status: "resolved", document: claimPrimaries[0] };
-      return { status: "ambiguous", candidates: claimPrimaries };
-    }
-    if (isExternalReference(value)) return { status: "external" };
-    const byIdMatch = byId.get(value);
-    if (byIdMatch) {
-      const primaries = artifactPrimaries(byIdMatch);
-      if (primaries.length === 1) return { status: "resolved", document: primaries[0] };
-      return { status: "ambiguous", candidates: primaries };
-    }
-    const resolved = resolvePath(from, value);
-    if (resolved.status === "resolved") {
-      if (resolved.document) return { status: "resolved", document: resolved.document };
-      return { status: "resolved-file", path: resolved.path };
-    }
-    if (resolved.status === "escaped") return { status: "escaped" };
-    return { status: "unresolved" };
-  };
-  for (const index2 of files.filter((file2) => file2.kind === "index")) {
-    const members2 = /* @__PURE__ */ new Set();
-    for (const link of index2.links) {
-      if (link.isImage) continue;
-      const resolved = resolvePath(index2, link.target);
-      if (resolved.status === "resolved" && resolved.path && byPath.has(resolved.path)) {
-        members2.add(resolved.path);
-      }
-    }
-    for (const memberPath of members2) {
-      const member = byPath.get(memberPath);
-      if (member && member.path !== index2.path) member.indexMembership.push(index2.path);
-    }
-  }
-  for (const document3 of files) {
-    document3.indexMembership.sort(compareStrings);
-  }
-  const repository = {
-    root: cwd,
-    files,
-    documents: files.filter((file2) => file2.kind !== "index"),
-    canonicalDocuments: files.filter((file2) => file2.kind === "canonical"),
-    legacyDocuments: files.filter((file2) => file2.kind === "legacy"),
-    unmanagedDocuments: files.filter((file2) => file2.kind === "unmanaged"),
-    indexes: files.filter((file2) => file2.kind === "index"),
-    byPath,
-    byId,
-    lookupById(id) {
-      const matches = byId.get(id.trim()) ?? [];
-      if (matches.length === 0) return { status: "none" };
-      const primaries = artifactPrimaries(matches);
-      if (primaries.length === 1) return { status: "unique", document: primaries[0] };
-      return { status: "ambiguous", candidates: primaries };
-    },
-    resolvePath,
-    resolveRelationTarget,
-    hasAnchor(document3, slug) {
-      return document3.headings.some((heading) => heading.slug === slug);
-    },
-    sameLogicalArtifact(aPath, bPath) {
-      return artifactKeyOf(aPath) === artifactKeyOf(bPath);
-    },
-    duplicateIds() {
-      return [...byId.entries()].filter(([, group]) => groupByArtifact(group).size > 1).map(([id, group]) => ({ id, paths: group.map((document3) => document3.path).sort(compareStrings) })).sort((a, b) => compareStrings(a.id, b.id));
-    }
-  };
-  return repository;
+  return scan;
 }
-
-// src/skills/lib/doc_provenance_lint.ts
-function lintProvenance(model, scope) {
-  const contract = contractForType(scope.type);
-  const findings = [];
-  for (const document3 of scope.documents) {
-    if (document3.parseError) continue;
-    const sources = document3.relations.source ?? [];
-    const usable = sources.filter((value) => value.trim().length > 0);
-    if (contract?.requiresSourceEvidence && usable.length === 0) {
-      findings.push(finding({
-        ruleId: "provenance-missing-source",
-        category: "provenance",
-        severity: "warning",
-        path: document3.path,
-        artifactId: document3.id,
-        message: `${scope.type} requires relations.source evidence`,
-        target: "source",
-        repair: "manual"
-      }));
-    }
-    for (const source of sources) {
-      const value = source.trim();
-      if (!value) {
-        findings.push(finding({
-          ruleId: "provenance-invalid-source",
-          category: "provenance",
-          severity: "warning",
-          path: document3.path,
-          artifactId: document3.id,
-          message: "relations.source contains an empty value",
-          target: source,
-          repair: "manual"
-        }));
-        continue;
+function scanManifestDir(cwd, issues) {
+  const abs = import_node_path4.default.resolve(cwd, DOC_DRIVEN_DEV_DIR);
+  if (!import_node_fs4.default.existsSync(abs)) return;
+  const walked = walkTree(cwd, DOC_DRIVEN_DEV_DIR, (rel, isDir) => {
+    const name = import_node_path4.default.basename(rel);
+    if (isDir) {
+      if (rel !== DOC_DRIVEN_DEV_DIR) {
+        issues.push({
+          reason: "legacy-state-file",
+          path: rel,
+          detail: `unaccounted-for directory inside ${DOC_DRIVEN_DEV_DIR}`
+        });
       }
-      if (isExternalReference(value)) continue;
-      const resolved = model.resolveRelationTarget(document3, value);
-      if (resolved.status === "resolved" || resolved.status === "resolved-file" || resolved.status === "external") continue;
-      if (resolved.status === "ambiguous") {
-        findings.push(finding({
-          ruleId: "provenance-invalid-source",
-          category: "provenance",
-          severity: "warning",
-          path: document3.path,
-          artifactId: document3.id,
-          message: `relations.source matches multiple artifacts: ${value}`,
-          target: value,
-          repair: "manual"
-        }));
-        continue;
-      }
-      if (resolved.status === "escaped") {
-        findings.push(finding({
-          ruleId: "provenance-invalid-source",
-          category: "provenance",
-          severity: "error",
-          path: document3.path,
-          artifactId: document3.id,
-          message: `relations.source escapes the repository root: ${value}`,
-          target: value,
-          repair: "manual"
-        }));
-        continue;
-      }
-      findings.push(finding({
-        ruleId: "provenance-unresolved-local-source",
-        category: "provenance",
-        severity: "warning",
-        path: document3.path,
-        artifactId: document3.id,
-        message: `relations.source points to a missing local file: ${value}`,
-        target: value,
-        repair: "manual"
-      }));
-    }
-  }
-  return findings;
-}
-function lintTraceability(model, scope) {
-  const contract = contractForType(scope.type);
-  if (!contract || contract.expectedUpstream.length === 0) return [];
-  const findings = [];
-  for (const document3 of scope.documents) {
-    if (document3.parseError) continue;
-    const status = document3.status ?? "";
-    for (const expectation of contract.expectedUpstream) {
-      if (expectation.skipStatuses?.includes(status)) continue;
-      const declared = expectation.fields.some((field) => (document3.relations[field] ?? []).some((target) => target.trim().length > 0));
-      if (declared) continue;
-      findings.push(finding({
-        ruleId: "traceability-missing-upstream",
-        category: "traceability",
-        severity: "warning",
-        blocking: true,
-        path: document3.path,
-        artifactId: document3.id,
-        message: `${scope.type} declares no upstream relation (expected one of: ${expectation.fields.join(", ")})`,
-        target: expectation.fields.join(", "),
-        repair: "manual"
-      }));
-    }
-  }
-  return findings;
-}
-function lintStaleUpstreams(model, scope) {
-  const findings = [];
-  for (const document3 of scope.documents) {
-    if (document3.parseError) continue;
-    for (const stale of staleUpstreamTargets(model, document3)) {
-      findings.push(finding({
-        ruleId: "stale-upstream",
-        category: "traceability",
-        severity: "warning",
-        path: document3.path,
-        artifactId: document3.id,
-        message: `In-flight document ${stale.field} a ${stale.upstream.status} upstream: ${stale.target} \u2014 re-point or close`,
-        target: stale.target,
-        repair: "manual"
-      }));
-    }
-  }
-  return findings;
-}
-
-// src/skills/lib/doc_structure_lint.ts
-var import_node_fs5 = __toESM(require("node:fs"));
-var import_node_path6 = __toESM(require("node:path"));
-
-// src/skills/lib/doc_index_tiers.ts
-var HEADING2 = /^##\s+(.*)$/;
-var SETTLED_HEADING = /^##\s+Settled\b/i;
-var TABLE_LINE = /^\|.*\|$/;
-var LIST_ITEM = /^[-*+]\s+/;
-var LINK = /\[[^\]]*\]\([^)]*\)/;
-function unescapeCell(value) {
-  return value.replace(/\\\|/g, "|").trim();
-}
-function parseManagedIndexLayout(content3) {
-  const layout = {
-    generated: content3.includes(GENERATED_INDEX_MARKER),
-    rows: [],
-    malformed: [],
-    settledHeadings: 0,
-    unmarkedSettledHeadings: 0,
-    unknownSectionTables: [],
-    extraTables: []
-  };
-  let tier = "active";
-  let sectionHeading = "";
-  let sectionTables = 0;
-  let inTable = false;
-  content3.split(/\r?\n/).forEach((line, offset) => {
-    const trimmed = line.trim();
-    const heading = HEADING2.exec(trimmed);
-    if (heading) {
-      if (SETTLED_HEADING.test(trimmed)) {
-        tier = "settled";
-        layout.settledHeadings += 1;
-        if (!trimmed.includes(GENERATED_SETTLED_MARKER)) layout.unmarkedSettledHeadings += 1;
-      } else {
-        tier = "unknown";
-      }
-      sectionHeading = heading[1].trim();
-      sectionTables = 0;
-      inTable = false;
       return;
     }
-    if (TABLE_LINE.test(trimmed)) {
-      if (!inTable) {
-        inTable = true;
-        sectionTables += 1;
-        if (tier === "unknown" && sectionTables === 1) {
-          layout.unknownSectionTables.push({ line: offset + 1, heading: sectionHeading });
+    if (MANIFEST_DIR_ALLOWED_FILES.has(name)) return;
+    if (/\.ya?ml$/i.test(name)) {
+      let legacy = false;
+      try {
+        const parsed = load(import_node_fs4.default.readFileSync(import_node_path4.default.resolve(cwd, rel), "utf8"));
+        if (isPlainObject3(parsed)) {
+          const version2 = parsed.schemaVersion;
+          legacy = typeof version2 === "number" && version2 < EXPECTED_COMPONENT_VERSIONS.graphDefinition || "nodes" in parsed && "edges" in parsed;
         }
-        if ((tier === "active" || tier === "settled") && sectionTables > 1) {
-          layout.extraTables.push({ line: offset + 1, tier });
-        }
+      } catch {
       }
-      const cells = trimmed.slice(1, -1).split(/(?<!\\)\|/).map(unescapeCell);
-      if (/^-{3,}/.test(cells[0]) || /^id$/i.test(cells[0])) return;
-      if (cells.length < 4) {
-        layout.malformed.push({ line: offset + 1, text: trimmed });
-        return;
-      }
-      const fileMatch = /\[([^\]]*)\]\(([^)]*)\)/.exec(cells[3]);
-      layout.rows.push({
-        tier,
-        line: offset + 1,
-        row: {
-          id: cells[0],
-          title: cells[1],
-          status: cells[2],
-          file: fileMatch ? fileMatch[2].trim() : cells[3]
-        }
+      issues.push({
+        reason: legacy ? "legacy-graph-state" : "legacy-state-file",
+        path: rel,
+        detail: legacy ? `graph/state YAML inside ${DOC_DRIVEN_DEV_DIR} predates Graph Definition ${EXPECTED_COMPONENT_VERSIONS.graphDefinition}` : `unaccounted-for file inside ${DOC_DRIVEN_DEV_DIR}`
       });
       return;
     }
-    inTable = false;
-    if (LIST_ITEM.test(trimmed) && !LINK.test(trimmed)) {
-      layout.malformed.push({ line: offset + 1, text: trimmed });
-    }
+    issues.push({
+      reason: "legacy-state-file",
+      path: rel,
+      detail: `unaccounted-for file inside ${DOC_DRIVEN_DEV_DIR}`
+    });
+  }, (rel) => {
+    issues.push({
+      reason: "legacy-state-file",
+      path: rel,
+      detail: `entry inside ${DOC_DRIVEN_DEV_DIR} escapes the checkout through a link`
+    });
   });
-  return layout;
+  if (!walked) {
+    let directory = false;
+    try {
+      directory = import_node_fs4.default.statSync(abs).isDirectory();
+    } catch {
+    }
+    issues.push({
+      reason: "scope-escape",
+      path: DOC_DRIVEN_DEV_DIR,
+      detail: directory ? `${DOC_DRIVEN_DEV_DIR} escapes the checkout through a link; the manifest boundary cannot be trusted` : `${DOC_DRIVEN_DEV_DIR} is not a directory; the manifest boundary cannot be verified`
+    });
+  }
 }
-
-// src/skills/lib/doc_structure_lint.ts
-function caseInsensitiveExists(model, absolute) {
-  const dir = import_node_path6.default.dirname(absolute);
-  const base = import_node_path6.default.basename(absolute).toLowerCase();
-  if (!import_node_fs5.default.existsSync(dir)) return null;
-  const match = import_node_fs5.default.readdirSync(dir).find((entry) => entry.toLowerCase() === base);
-  if (!match) return null;
-  const candidate = import_node_path6.default.join(dir, match);
-  return import_node_fs5.default.existsSync(candidate) && import_node_fs5.default.statSync(candidate).isFile() ? candidate : null;
-}
-function lintDocumentLinks(model, scope) {
-  const findings = [];
-  for (const document3 of scope.documents) {
-    if (document3.parseError) continue;
-    for (const link of document3.links) {
-      const resolved = model.resolvePath(document3, link.target);
-      if (resolved.status === "external") continue;
-      if (resolved.status === "escaped") {
-        findings.push(finding({
-          ruleId: "link-escapes-root",
-          category: "link",
-          severity: "error",
-          path: document3.path,
-          line: link.line,
-          artifactId: document3.id,
-          message: `Link target escapes the repository root: ${link.target}`,
-          target: link.target,
-          repair: "manual"
-        }));
-        continue;
+function scanExecutionState(cwd, issues) {
+  const abs = import_node_path4.default.resolve(cwd, EXECUTION_STATE_ROOT);
+  if (!import_node_fs4.default.existsSync(abs)) return;
+  const marker = (rel, detail) => {
+    issues.push({ reason: "legacy-execution-state", path: rel, detail });
+  };
+  const walked = walkTree(cwd, EXECUTION_STATE_ROOT, (rel, isDir) => {
+    const relUnderRoot = rel.slice(EXECUTION_STATE_ROOT.length).replace(/^\/+/, "");
+    const segments = relUnderRoot.split("/").filter(Boolean);
+    if (isDir) {
+      if (segments.length === 0) return;
+      if (segments[0] === "runs") return;
+      if (segments[0] === "evidence" && (segments.length === 1 || segments.length === 2 && segments[1] === "records")) {
+        return;
       }
-      if (resolved.status === "unresolved") {
-        const absolute = import_node_path6.default.resolve(model.root, resolved.path ?? link.target);
-        const caseMatch = resolved.path ? caseInsensitiveExists(model, absolute) : null;
-        if (caseMatch) {
-          findings.push(finding({
-            ruleId: "link-case-mismatch",
-            category: "link",
-            severity: "warning",
-            path: document3.path,
-            line: link.line,
-            artifactId: document3.id,
-            message: `Link target differs only by case: ${link.target} (actual: ${import_node_path6.default.basename(caseMatch)})`,
-            target: link.target,
-            repair: "safe"
-          }));
-          continue;
-        }
-        findings.push(finding({
-          ruleId: link.isImage ? "missing-image-link" : "broken-link",
-          category: "link",
-          severity: "error",
-          path: document3.path,
-          line: link.line,
-          artifactId: document3.id,
-          message: `${link.isImage ? "Image" : "Link"} target does not exist: ${link.target}`,
-          target: link.target,
-          repair: "manual"
-        }));
-        continue;
-      }
-      if (resolved.status === "resolved" && resolved.path) {
-        const targetBase = (() => {
-          try {
-            return decodeURIComponent(import_node_path6.default.posix.basename(link.target.split("#")[0].split("?")[0]));
-          } catch {
-            return import_node_path6.default.posix.basename(link.target.split("#")[0].split("?")[0]);
-          }
-        })();
-        const absolute = import_node_path6.default.resolve(model.root, resolved.path);
-        const dir = import_node_path6.default.dirname(absolute);
-        const actualBase = import_node_fs5.default.existsSync(dir) ? import_node_fs5.default.readdirSync(dir).find((entry) => entry.toLowerCase() === targetBase.toLowerCase()) : void 0;
-        if (actualBase && actualBase !== targetBase) {
-          findings.push(finding({
-            ruleId: "link-case-mismatch",
-            category: "link",
-            severity: "warning",
-            path: document3.path,
-            line: link.line,
-            artifactId: document3.id,
-            message: `Link target differs only by case: ${link.target} (actual: ${actualBase})`,
-            target: link.target,
-            repair: "safe"
-          }));
+      marker(rel, `unaccounted-for directory inside ${EXECUTION_STATE_ROOT}`);
+      return;
+    }
+    if (segments[0] === "evidence") {
+      const name2 = segments[segments.length - 1];
+      if (!EVIDENCE_TMP_PATTERN.test(name2)) {
+        const declared = segments.length === 2 && (segments[1] === "manifest.json" || segments[1] === "index.json") || segments.length === 3 && segments[1] === "records" && name2.endsWith(".json");
+        if (!declared) {
+          marker(rel, `content outside the evidence layout inside ${EXECUTION_STATE_ROOT}`);
+          return;
         }
       }
-      if (!resolved.fragment) continue;
-      const anchorDoc = resolved.document ?? document3;
-      const fragment = (() => {
+      if (segments.length === 2 && segments[1] === "manifest.json") {
+        let version2;
         try {
-          return decodeURIComponent(resolved.fragment);
+          version2 = JSON.parse(import_node_fs4.default.readFileSync(import_node_path4.default.resolve(cwd, rel), "utf8")).schemaVersion;
         } catch {
-          return resolved.fragment;
+          version2 = null;
         }
-      })();
-      if (anchorDoc && !model.hasAnchor(anchorDoc, fragment)) {
-        findings.push(finding({
-          ruleId: "broken-anchor",
-          category: "link",
-          severity: "warning",
-          path: document3.path,
-          line: link.line,
-          artifactId: document3.id,
-          message: `Link target ${link.target} has no heading anchor "${fragment}"`,
-          target: link.target,
-          repair: "manual"
-        }));
+        if (version2 !== 1) {
+          marker(rel, `evidence manifest schemaVersion is ${JSON.stringify(version2)}, expected 1`);
+        }
+      }
+      return;
+    }
+    if (segments[0] !== "runs" || segments.length < 3) {
+      marker(rel, `content outside runs/<run-id>/ inside ${EXECUTION_STATE_ROOT}`);
+      return;
+    }
+    const name = segments[segments.length - 1];
+    if (/^(run|manifest|run\.manifest|run-manifest)\.json$/i.test(name)) {
+      let version2;
+      try {
+        version2 = JSON.parse(import_node_fs4.default.readFileSync(import_node_path4.default.resolve(cwd, rel), "utf8")).schemaVersion;
+      } catch {
+        version2 = null;
+      }
+      if (version2 !== EXECUTION_RUN_SCHEMA_VERSION) {
+        marker(rel, `run manifest schemaVersion is ${JSON.stringify(version2)}, expected ${EXECUTION_RUN_SCHEMA_VERSION}`);
       }
     }
-  }
-  return findings;
-}
-var EXTERNAL_FETCH_TIMEOUT_MS = 8e3;
-var EXTERNAL_CONCURRENCY = 4;
-async function probeExternal(url2) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), EXTERNAL_FETCH_TIMEOUT_MS);
-  try {
-    const response = await fetch(url2, {
-      method: "HEAD",
-      redirect: "manual",
-      signal: controller.signal,
-      headers: { "user-agent": "doc-status-link-check" }
+  }, (rel) => {
+    marker(rel, `entry inside ${EXECUTION_STATE_ROOT} escapes the checkout through a link`);
+  });
+  if (!walked) {
+    let directory = false;
+    try {
+      directory = import_node_fs4.default.statSync(abs).isDirectory();
+    } catch {
+    }
+    issues.push({
+      reason: "scope-escape",
+      path: EXECUTION_STATE_ROOT,
+      detail: directory ? `${EXECUTION_STATE_ROOT} escapes the checkout through a link; execution state cannot be assessed` : `${EXECUTION_STATE_ROOT} is not a directory; execution state cannot be assessed`
     });
-    if (response.status === 404 || response.status === 410) {
-      return { status: "broken", detail: `HTTP ${response.status}` };
-    }
-    if ([301, 302, 303, 307, 308].includes(response.status)) {
-      const location = response.headers.get("location") ?? "";
-      return { status: "redirect", detail: `HTTP ${response.status} -> ${location}` };
-    }
-    if (response.status === 401 || response.status === 403 || response.status === 429) {
-      return { status: "unverifiable", detail: `HTTP ${response.status}` };
-    }
-    if (response.status >= 200 && response.status < 400) {
-      return { status: "ok", detail: `HTTP ${response.status}` };
-    }
-    return { status: "unverifiable", detail: `HTTP ${response.status}` };
+  }
+}
+function readManifest(cwd) {
+  const rel = SCHEMA_MANIFEST_PATH;
+  const abs = import_node_path4.default.resolve(cwd, rel);
+  if (!import_node_fs4.default.existsSync(abs)) return { state: "missing" };
+  if (!isInsideCheckout(cwd, abs)) return { state: "escaped" };
+  let raw;
+  try {
+    raw = import_node_fs4.default.readFileSync(abs, "utf8");
   } catch (error62) {
-    const message = error62 instanceof Error ? error62.message : String(error62);
-    return { status: "unverifiable", detail: message };
-  } finally {
-    clearTimeout(timer);
+    return { state: "unreadable", detail: error62 instanceof Error ? error62.message : String(error62) };
   }
-}
-async function lintExternalLinks(model, scope) {
-  const urls = /* @__PURE__ */ new Map();
-  const collect = (document3, target, line) => {
-    if (!/^https?:\/\//i.test(target.trim())) return;
-    const entries2 = urls.get(target) ?? [];
-    entries2.push({ document: document3, line });
-    urls.set(target, entries2);
-  };
-  for (const document3 of scope.documents) {
-    for (const link of document3.links) {
-      collect(document3, link.target, link.line);
-    }
-    for (const source of document3.relations.source ?? []) {
-      collect(document3, source.trim());
-    }
-  }
-  const findings = [];
-  const entries = [...urls.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  for (let index2 = 0; index2 < entries.length; index2 += EXTERNAL_CONCURRENCY) {
-    const batch = entries.slice(index2, index2 + EXTERNAL_CONCURRENCY);
-    const results = await Promise.all(batch.map(([url2]) => probeExternal(url2)));
-    for (let i = 0; i < batch.length; i += 1) {
-      const [url2, occurrences] = batch[i];
-      const result = results[i];
-      for (const occurrence of occurrences) {
-        if (result.status === "ok") continue;
-        findings.push(finding({
-          ruleId: result.status === "broken" ? "external-link-broken" : result.status === "redirect" ? "external-link-redirect" : "external-link-unverifiable",
-          category: "link",
-          severity: result.status === "broken" ? "error" : result.status === "redirect" ? "warning" : "info",
-          path: occurrence.document.path,
-          line: occurrence.line,
-          artifactId: occurrence.document.id,
-          message: `External link ${url2}: ${result.detail}`,
-          target: url2,
-          repair: "manual"
-        }));
-      }
-    }
-  }
-  return findings;
-}
-function inboundLinkCounts(model, options2 = {}) {
-  const includeIndexLinks = options2.includeIndexLinks ?? true;
-  const counts = /* @__PURE__ */ new Map();
-  for (const source of model.files) {
-    if (!includeIndexLinks && source.kind === "index") continue;
-    const seen = /* @__PURE__ */ new Set();
-    for (const link of source.links) {
-      if (link.isImage || isExternalReference(link.target)) continue;
-      const resolved = model.resolvePath(source, link.target);
-      if (resolved.status === "resolved" && resolved.path && resolved.path !== source.path) {
-        seen.add(resolved.path);
-      }
-    }
-    for (const target of seen) counts.set(target, (counts.get(target) ?? 0) + 1);
-  }
-  return counts;
-}
-function inboundRelationCounts(model) {
-  const bySourceArtifact = /* @__PURE__ */ new Map();
-  for (const source of model.files) {
-    if (source.kind === "index") continue;
-    const sourceKey = artifactKeyOf(source.path);
-    const targets = bySourceArtifact.get(sourceKey) ?? /* @__PURE__ */ new Set();
-    for (const relationTargets of Object.values(source.relations)) {
-      for (const target of relationTargets) {
-        const resolved = model.resolveRelationTarget(source, target);
-        if (resolved.status === "resolved" && resolved.document !== null && !model.sameLogicalArtifact(resolved.document.path, source.path)) {
-          targets.add(artifactKeyOf(resolved.document.path));
-        }
-      }
-    }
-    bySourceArtifact.set(sourceKey, targets);
-  }
-  const counts = /* @__PURE__ */ new Map();
-  for (const targets of bySourceArtifact.values()) {
-    for (const target of targets) counts.set(target, (counts.get(target) ?? 0) + 1);
-  }
-  return counts;
-}
-function lintOrphans(model, scope, profile = "materialized") {
-  const findings = [];
-  const linkCounts = inboundLinkCounts(model, { includeIndexLinks: profile !== "artifact" });
-  const relationCounts = inboundRelationCounts(model);
-  const contract = contractForType(scope.type);
-  const severity = contract?.allowsRootArtifact ? "info" : "warning";
-  const hasIndex = model.files.some((file2) => file2.kind === "index" && normalizeDir(import_node_path6.default.posix.dirname(file2.path)) === scope.directory);
-  for (const document3 of scope.documents) {
-    if (document3.parseError) continue;
-    if (profile !== "artifact" && hasIndex && document3.indexMembership.length === 0) {
-      findings.push(finding({
-        ruleId: "orphan-index",
-        category: "orphan",
-        severity,
-        path: document3.path,
-        artifactId: document3.id,
-        message: `Document is not listed in the directory index: ${document3.path}`,
-        target: document3.path,
-        repair: "safe"
-      }));
-    }
-    if ((linkCounts.get(document3.path) ?? 0) === 0) {
-      findings.push(finding({
-        ruleId: "orphan-navigation",
-        category: "orphan",
-        severity,
-        path: document3.path,
-        artifactId: document3.id,
-        message: `Document is not reachable from any Markdown link: ${document3.path}`,
-        target: document3.path,
-        repair: "manual"
-      }));
-    }
-    const outgoing = Object.values(document3.relations).some((targets) => targets.some((target) => {
-      const resolved = model.resolveRelationTarget(document3, target);
-      return resolved.status === "resolved" && resolved.document !== null && !model.sameLogicalArtifact(resolved.document.path, document3.path);
-    }));
-    if (!outgoing && (relationCounts.get(artifactKeyOf(document3.path)) ?? 0) === 0) {
-      findings.push(finding({
-        ruleId: "orphan-relation",
-        category: "orphan",
-        severity,
-        path: document3.path,
-        artifactId: document3.id,
-        message: `Document has no semantic relations in either direction: ${document3.path}`,
-        target: document3.path,
-        repair: "manual"
-      }));
-    }
-  }
-  return findings;
-}
-function lintIndexConsistency(model, scope, index2) {
-  const findings = [];
-  if (index2.parseError) {
-    findings.push(finding({
-      ruleId: "index-unparseable",
-      category: "index",
-      severity: "error",
-      path: index2.path,
-      message: `Index front matter is not valid YAML: ${index2.parseError}`,
-      target: index2.path,
-      repair: "manual"
-    }));
-    return findings;
-  }
-  const seen = /* @__PURE__ */ new Set();
-  const layout = parseManagedIndexLayout(index2.body);
-  const indexDir = normalizeDir(import_node_path6.default.posix.dirname(index2.path));
-  const residentTypes = residentTypesForDir(indexDir);
-  const indexPrimaryType = primaryIndexTypeForDir(
-    indexDir,
-    residentTypes.length > 0 ? residentTypes : [scope.type]
-  );
-  let lineOffset = 0;
+  let parsed;
   try {
-    lineOffset = frontMatterEndLine(import_node_fs5.default.readFileSync(import_node_path6.default.join(model.root, index2.path), "utf8"));
-  } catch {
-    lineOffset = 0;
+    parsed = JSON.parse(raw);
+  } catch (error62) {
+    return { state: "malformed", detail: `schema.json is not valid JSON: ${error62 instanceof Error ? error62.message : String(error62)}` };
   }
-  const structural = (message, line) => {
-    findings.push(finding({
-      ruleId: "index-unparseable",
-      category: "index",
-      severity: "warning",
-      path: index2.path,
-      line: line !== void 0 ? line + lineOffset : void 0,
-      message,
-      target: index2.path,
-      repair: "safe"
-    }));
-  };
-  if (layout.generated) {
-    if (layout.settledHeadings > 1) {
-      structural(`Index declares ## Settled ${layout.settledHeadings} times; expected at most one`);
-    }
-    if (layout.unmarkedSettledHeadings > 0) {
-      structural("Index has a ## Settled heading without the managed settled-index marker");
-    }
-    for (const table of layout.unknownSectionTables) {
-      structural(`Index has a table under unrecognized heading: ${table.heading}`, table.line);
-    }
-    for (const table of layout.extraTables) {
-      structural(`Index has more than one table in the ${table.tier} section`, table.line);
-    }
+  if (!isPlainObject3(parsed)) {
+    return { state: "malformed", detail: "schema.json must be a JSON object" };
   }
-  for (const item of layout.malformed) {
-    findings.push(finding({
-      ruleId: "index-unparseable",
-      category: "index",
-      severity: "warning",
-      path: index2.path,
-      line: item.line + lineOffset,
-      message: `Index entry is not a parseable table row: ${item.text}`,
-      target: index2.path,
-      repair: "safe"
-    }));
+  const versionIssues = [];
+  const schemaVersion = parsed.schemaVersion;
+  if (!Number.isInteger(schemaVersion) || schemaVersion <= 0) {
+    return { state: "malformed", detail: `schemaVersion must be a positive integer, got ${JSON.stringify(schemaVersion)}` };
   }
-  const tierFiles = { active: [], settled: [] };
-  const rowFiles = [];
-  for (const placed of layout.rows) {
-    const row = placed.row;
-    const resolved = model.resolvePath(index2, row.file);
-    if (resolved.status === "escaped") {
-      findings.push(finding({
-        ruleId: "index-escapes-root",
-        category: "index",
-        severity: "error",
-        path: index2.path,
-        message: `Index entry escapes the repository root: ${row.file}`,
-        target: row.file,
-        repair: "manual"
-      }));
-      continue;
-    }
-    if (resolved.status !== "resolved" || !resolved.path) {
-      findings.push(finding({
-        ruleId: "index-stale-entry",
-        category: "index",
-        severity: "warning",
-        path: index2.path,
-        message: `Index links a missing file: ${row.file}`,
-        target: row.file,
-        repair: "safe"
-      }));
-      continue;
-    }
-    if (seen.has(resolved.path)) {
-      findings.push(finding({
-        ruleId: "index-duplicate-entry",
-        category: "index",
-        severity: "warning",
-        path: index2.path,
-        message: `Index links ${row.file} more than once`,
-        target: row.file,
-        repair: "safe"
-      }));
-    }
-    seen.add(resolved.path);
-    const member = model.byPath.get(resolved.path);
-    const settled = member ? isSettledStatus(member.type ?? indexPrimaryType, member.status) : false;
-    rowFiles.push({ file: import_node_path6.default.posix.basename(resolved.path), settled });
-    if (placed.tier !== "unknown") tierFiles[placed.tier].push(import_node_path6.default.posix.basename(resolved.path));
-    if (member && member.kind === "canonical") {
-      const expected = [
-        ["id", member.id],
-        ["title", member.title],
-        ["status", member.status]
-      ];
-      for (const [field, value] of expected) {
-        if (value === null) continue;
-        const actual = field === "id" ? row.id : field === "title" ? row.title : row.status;
-        if (actual !== value) {
-          findings.push(finding({
-            ruleId: "index-metadata-mismatch",
-            category: "index",
-            severity: "warning",
-            path: index2.path,
-            artifactId: member.id,
-            message: `Index row for ${row.file} has ${field} "${actual}", expected "${value}"`,
-            target: row.file,
-            repair: "safe"
-          }));
-        }
-      }
-      if (layout.generated && placed.tier !== "unknown" && placed.tier === "settled" !== settled) {
-        findings.push(finding({
-          ruleId: "index-tier-mismatch",
-          category: "index",
-          severity: "warning",
-          path: index2.path,
-          line: placed.line + lineOffset,
-          artifactId: member.id,
-          message: settled ? `Index lists settled document ${row.file} in the active table` : `Index lists in-flight document ${row.file} in the settled table`,
-          target: row.file,
-          repair: "safe"
-        }));
-      }
-    }
-  }
-  const compareGroup = (left, right) => {
-    if (scope.type === "design") {
-      if (left === "overview.md") return -1;
-      if (right === "overview.md") return 1;
-    }
-    return left.localeCompare(right);
-  };
-  let misordered;
-  if (layout.generated) {
-    misordered = ["active", "settled"].some((tier) => {
-      const files = tierFiles[tier];
-      const expected = [...files].sort(compareGroup);
-      return files.length > 1 && files.some((file2, i) => file2 !== expected[i]);
+  if (schemaVersion > MANIFEST_SCHEMA_VERSION) {
+    versionIssues.push({
+      reason: "schema-version-unsupported",
+      path: rel,
+      detail: `manifest schemaVersion ${schemaVersion} is newer than supported ${MANIFEST_SCHEMA_VERSION} \u2014 upgrade the doc-driven-dev toolchain`
     });
-  } else {
-    const expected = [
-      ...rowFiles.filter((entry) => !entry.settled).map((entry) => entry.file).sort(compareGroup),
-      ...rowFiles.filter((entry) => entry.settled).map((entry) => entry.file).sort(compareGroup)
-    ];
-    const actual = rowFiles.map((entry) => entry.file);
-    misordered = actual.length > 1 && actual.some((file2, i) => file2 !== expected[i]);
   }
-  if (misordered) {
-    findings.push(finding({
-      ruleId: "index-ordering",
-      category: "index",
-      severity: "info",
-      path: index2.path,
-      message: "Index entries are not in the deterministic ordering rule",
-      target: index2.path,
-      repair: "safe"
-    }));
+  const declared = { schemaVersion };
+  for (const [key, expected] of Object.entries(EXPECTED_COMPONENT_VERSIONS)) {
+    const value = parsed[key];
+    if (value === void 0) {
+      return { state: "malformed", detail: `missing component version: ${key}` };
+    }
+    if (!Number.isInteger(value) || value <= 0) {
+      return { state: "malformed", detail: `${key} must be a positive integer, got ${JSON.stringify(value)}` };
+    }
+    declared[key] = value;
+    if (value > expected) {
+      versionIssues.push({
+        reason: "component-version-unsupported",
+        path: rel,
+        detail: `${key} ${value} is newer than supported ${expected} \u2014 upgrade the doc-driven-dev toolchain`
+      });
+    } else if (value < expected) {
+      versionIssues.push({
+        reason: "component-version-behind",
+        path: rel,
+        detail: `${key} ${value} is behind supported ${expected} \u2014 migration is required`
+      });
+    }
   }
-  return findings;
+  let migrationInProgress = false;
+  if (parsed.migration !== void 0) {
+    if (!isPlainObject3(parsed.migration)) {
+      return { state: "malformed", detail: "migration must be an object when present" };
+    }
+    const status = parsed.migration.status;
+    if (status !== void 0 && status !== "in-progress") {
+      return { state: "malformed", detail: `migration.status must be "in-progress" when present, got ${JSON.stringify(status)}` };
+    }
+    migrationInProgress = status === "in-progress";
+  }
+  return { state: "read", declared, migrationInProgress, versionIssues };
 }
-function lintStructure(model, scope, profile = "materialized") {
-  const dir = scope.directory;
-  const indexCandidates = model.files.filter((file2) => normalizeDir(import_node_path6.default.posix.dirname(file2.path)) === dir && /^(readme|index)\.md$/i.test(import_node_path6.default.posix.basename(file2.path)));
-  const index2 = indexCandidates.find((file2) => /^readme\.md$/i.test(import_node_path6.default.posix.basename(file2.path))) ?? indexCandidates[0];
-  const findings = [
-    ...lintDocumentLinks(model, scope),
-    ...lintOrphans(model, scope, profile)
-  ];
-  if (index2 && profile !== "artifact") findings.push(...lintIndexConsistency(model, scope, index2));
-  return findings;
+function journalPresent(cwd) {
+  return import_node_fs4.default.existsSync(import_node_path4.default.resolve(cwd, MIGRATION_JOURNAL_PATH));
+}
+function recommendedCommand(status, docCount) {
+  const maintenance = "node .apm/skills/doc-maintenance/scripts/doc_maintenance.js";
+  switch (status) {
+    case "current":
+      return null;
+    case "uninitialized":
+      return docCount === 0 ? { command: "node .apm/skills/doc-maintenance/scripts/scaffold_docs.js", note: "no manifest and no managed content \u2014 scaffold the doc tree, or declare the current schema via doc_maintenance.js migrate plan/apply" } : { command: `${maintenance} migrate plan --json`, note: "no schema manifest \u2014 run migrate plan to evaluate whether migration is needed, then migrate apply to declare the schema" };
+    case "migration-required":
+      return { command: `${maintenance} migrate plan --json`, note: "legacy artifacts or older declared versions \u2014 plan the migration, then run migrate apply --expect <planHash>" };
+    case "migration-incomplete":
+      return { command: `${maintenance} migrate recovery --json`, note: "a migration journal or in-progress marker is present \u2014 inspect and recover before normal execution resumes" };
+    case "unsupported-version":
+      return { command: null, note: "the manifest declares a newer schema generation than this toolchain supports \u2014 upgrade doc-driven-dev, do not downgrade by hand" };
+    case "invalid":
+      return { command: `${maintenance} migrate plan --json`, note: "manifest or repository state cannot be verified \u2014 run migrate plan for the full diagnostic" };
+  }
+}
+function statusSummary(report) {
+  switch (report.status) {
+    case "current":
+      return "schema manifest and repository content are consistent with the declared versions";
+    case "uninitialized":
+      return "no schema manifest; nothing provably pre-contract found";
+    case "migration-required":
+      return "legacy artifacts or older declared schema versions require migration";
+    case "migration-incomplete":
+      return "a migration journal or in-progress marker indicates a half-applied migration";
+    case "unsupported-version":
+      return "the manifest declares a schema generation newer than this toolchain";
+    case "invalid":
+      return "the manifest or repository state failed boundary validation";
+  }
+}
+function evaluateSchemaPreflight(cwd) {
+  const root = import_node_path4.default.resolve(cwd);
+  const scan = scanDocuments(root);
+  scanManifestDir(root, scan.issues);
+  scanExecutionState(root, scan.issues);
+  const manifest = readManifest(root);
+  const journal = journalPresent(root);
+  const escapes = scan.issues.filter((issue2) => issue2.reason === "scope-escape");
+  const finish = (status, issues, manifestInfo2) => {
+    const legacyMarkers = new Set(
+      [...issues, ...scan.manifestScopedIssues].filter((issue2) => issue2.reason.startsWith("legacy-")).map((issue2) => `${issue2.reason}:${issue2.path}`)
+    ).size;
+    const managedDocs = scan.canonicalDocs + scan.unmanagedDocs;
+    const generation = escapes.length > 0 ? "unknown" : legacyMarkers > 0 ? scan.canonicalDocs > scan.executionDocs ? "mixed" : "legacy" : managedDocs === 0 ? "empty" : "current";
+    const report = {
+      status,
+      issues,
+      manifest: manifestInfo2,
+      detected: {
+        generation,
+        canonicalDocs: scan.canonicalDocs,
+        executionDocs: scan.executionDocs,
+        unmanagedDocs: scan.unmanagedDocs,
+        legacyMarkers,
+        manifestMarkers: scan.manifestScopedIssues
+      },
+      recommended: recommendedCommand(status, managedDocs)
+    };
+    return report;
+  };
+  const readManifestInfo = manifest.state === "read" ? { path: SCHEMA_MANIFEST_PATH, state: "valid", declared: manifest.declared } : { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null };
+  if (escapes.length > 0) {
+    return finish("invalid", escapes, readManifestInfo);
+  }
+  if (manifest.state === "escaped") {
+    return finish("invalid", [{ reason: "manifest-escaped", path: SCHEMA_MANIFEST_PATH, detail: "schema.json resolves outside the checkout" }], { path: SCHEMA_MANIFEST_PATH, state: "escaped", declared: null });
+  }
+  if (manifest.state === "unreadable") {
+    return finish("invalid", [{ reason: "manifest-unreadable", path: SCHEMA_MANIFEST_PATH, detail: manifest.detail }], { path: SCHEMA_MANIFEST_PATH, state: "unreadable", declared: null });
+  }
+  if (manifest.state === "malformed") {
+    return finish("invalid", [{ reason: "manifest-malformed", path: SCHEMA_MANIFEST_PATH, detail: manifest.detail }], { path: SCHEMA_MANIFEST_PATH, state: "malformed", declared: null });
+  }
+  if (manifest.state === "missing") {
+    if (journal) {
+      return finish("migration-incomplete", [{ reason: "migration-journal-present", path: MIGRATION_JOURNAL_PATH, detail: "a migration journal exists without a finalized manifest \u2014 the apply did not complete" }], { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null });
+    }
+    const relevant = scan.issues.filter((issue2) => issue2.reason.startsWith("legacy-"));
+    if (relevant.length > 0) {
+      return finish("migration-required", relevant, { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null });
+    }
+    return finish("uninitialized", [], { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null });
+  }
+  const manifestIssues = manifest.versionIssues;
+  const unsupported = manifestIssues.filter((issue2) => issue2.reason === "schema-version-unsupported" || issue2.reason === "component-version-unsupported");
+  const manifestInfo = { path: SCHEMA_MANIFEST_PATH, state: "valid", declared: manifest.declared };
+  if (unsupported.length > 0) {
+    return finish("unsupported-version", unsupported, { ...manifestInfo, state: "unsupported" });
+  }
+  const inProgress = [];
+  if (manifest.migrationInProgress) {
+    inProgress.push({ reason: "manifest-migration-in-progress", path: SCHEMA_MANIFEST_PATH, detail: "manifest declares migration.status: in-progress" });
+  }
+  if (journal) {
+    inProgress.push({ reason: "migration-journal-present", path: MIGRATION_JOURNAL_PATH, detail: "a migration journal is present \u2014 the apply did not complete" });
+  }
+  if (inProgress.length > 0) {
+    return finish("migration-incomplete", inProgress, manifestInfo);
+  }
+  const behind = manifestIssues.filter((issue2) => issue2.reason === "component-version-behind");
+  const allIssues = [...scan.issues, ...scan.manifestScopedIssues, ...behind];
+  if (allIssues.length > 0) {
+    return finish("migration-required", allIssues, manifestInfo);
+  }
+  return finish("current", [], manifestInfo);
+}
+function normalExecutionAllowed(status) {
+  return status === "current" || status === "uninitialized";
+}
+function entrypointRefusal(report) {
+  return {
+    error: "schema-preflight-blocked",
+    exitCode: SCHEMA_PREFLIGHT_EXIT_CODE,
+    readOnly: true,
+    preflight: report
+  };
+}
+function schemaEntrypointGuard(cwd) {
+  const report = evaluateSchemaPreflight(cwd);
+  if (normalExecutionAllowed(report.status)) return true;
+  console.log(JSON.stringify(entrypointRefusal(report), null, 2));
+  const recommended = report.recommended?.command ?? "inspect docs/.doc-driven-dev/schema.json";
+  console.error(`schema preflight blocked (${report.status}): ${statusSummary(report)} \u2014 run ${recommended}`);
+  process.exitCode = SCHEMA_PREFLIGHT_EXIT_CODE;
+  return false;
 }
 
 // src/skills/lib/verification_checks.ts
@@ -38522,6 +37845,519 @@ function canonicalCheck(check2) {
 function checkDesignRevision(check2) {
   const canonical = JSON.stringify(canonicalCheck(check2));
   return `sha256:${(0, import_node_crypto.createHash)("sha256").update(canonical, "utf8").digest("hex")}`;
+}
+
+// src/skills/lib/doc_repository.ts
+var import_node_fs5 = __toESM(require("node:fs"));
+var import_node_path6 = __toESM(require("node:path"));
+function finding(input2) {
+  const severity = input2.severity ?? "error";
+  return {
+    ruleId: input2.ruleId,
+    category: input2.category,
+    severity,
+    blocking: input2.blocking ?? severity === "error",
+    path: input2.path ?? null,
+    line: input2.line ?? null,
+    artifactId: input2.artifactId ?? null,
+    message: input2.message,
+    target: input2.target ?? null,
+    repair: input2.repair ?? "manual"
+  };
+}
+function compareStrings(left, right) {
+  return left.localeCompare(right);
+}
+function compareFindings(left, right) {
+  return compareStrings(left.path ?? "", right.path ?? "") || (left.line ?? 0) - (right.line ?? 0) || compareStrings(left.ruleId, right.ruleId) || compareStrings(left.target ?? "", right.target ?? "") || compareStrings(left.message, right.message);
+}
+function sortFindings(findings) {
+  return [...findings].sort(compareFindings);
+}
+var REQUIRED_FRONT_MATTER_FIELDS = [
+  "id",
+  "type",
+  "status",
+  "lifecycle",
+  "title",
+  "created",
+  "updated",
+  "owners",
+  "relations"
+];
+var DEAD_UPSTREAM_STATUSES = /* @__PURE__ */ new Set([
+  "superseded",
+  "rejected",
+  "deprecated",
+  "archived",
+  "abandoned",
+  "wont-do",
+  "completed",
+  "done"
+]);
+var UPSTREAM_FIELDS = /* @__PURE__ */ new Set([
+  "motivates",
+  "decides-for",
+  "realizes"
+]);
+function lifecycleBucketOf(document3) {
+  if (document3.kind === "unmanaged") return "unmanaged";
+  return lifecycleBucketForType(document3.type);
+}
+function migrationOwnedDirs() {
+  const dirs = /* @__PURE__ */ new Set();
+  for (const type of executionTypes) {
+    for (const dir of ephemeralConfigs[type].formerDirs) dirs.add(normalizeDir(dir));
+  }
+  for (const entry of Object.values(legacyDocTypes)) {
+    for (const dir of entry.formerDirs) dirs.add(normalizeDir(dir));
+    for (const dir of entry.scopeDirs) dirs.add(normalizeDir(dir));
+  }
+  return [...dirs].sort(compareStrings);
+}
+function isSettled(document3) {
+  return isSettledEntry(lifecycleBucketOf(document3), document3.status, document3.lifecycle);
+}
+function staleUpstreamTargets(model, document3) {
+  if (isSettled(document3)) return [];
+  const stale = [];
+  for (const [field, targets] of Object.entries(document3.relations)) {
+    if (!UPSTREAM_FIELDS.has(field)) continue;
+    for (const target of targets) {
+      const resolved = model.resolveRelationTarget(document3, target);
+      if (resolved.status === "resolved" && resolved.document.status !== null && DEAD_UPSTREAM_STATUSES.has(resolved.document.status)) {
+        stale.push({ field, target, upstream: resolved.document });
+      }
+    }
+  }
+  return stale;
+}
+function contractForDocType(entry) {
+  return {
+    type: entry.type,
+    persistence: entry.persistence,
+    idPrefix: entry.idPrefix,
+    idPattern: new RegExp(`^${entry.idPrefix}-(?:\\d+|[0-9A-Za-z]{22})$`),
+    idExceptions: [...entry.idExceptions],
+    canonicalDir: entry.dir ?? "",
+    dirs: [...entry.dirs],
+    defaultStatus: entry.defaultStatus,
+    statusValues: [...entry.statusValues],
+    lifecycleValues: [...entry.lifecycleValues],
+    defaultLifecycle: entry.defaultLifecycle,
+    requiredFields: [...REQUIRED_FRONT_MATTER_FIELDS, ...entry.requiredFields],
+    fieldVocabularies: Object.fromEntries(
+      Object.entries(entry.fieldVocabularies).map(([field, values]) => [field, [...values]])
+    ),
+    requiredRelations: entry.requiredRelations.map((rule) => ({ ...rule, targetTypes: [...rule.targetTypes] })),
+    requiredDirectoryFiles: [...entry.requiredDirectoryFiles],
+    reservedFiles: [...entry.reservedFiles],
+    allowsRootArtifact: entry.allowsRootArtifact,
+    requiresSourceEvidence: entry.requiresSourceEvidence,
+    expectedUpstream: entry.expectedUpstream.map((expectation) => ({ ...expectation, fields: [...expectation.fields] })),
+    allowedRelations: Object.fromEntries(
+      entry.allowedRelations.map((relation) => [relation.field, [...relation.targetTypes]])
+    )
+  };
+}
+var contracts = Object.fromEntries(
+  docTypes.map((type) => [type, contractForDocType(configFor(type))])
+);
+function contractForType(type) {
+  return contracts[type] ?? null;
+}
+var markdownModules = null;
+async function loadMarkdownModules() {
+  if (!markdownModules) {
+    markdownModules = Promise.all([
+      Promise.resolve().then(() => (init_unified(), unified_exports)),
+      Promise.resolve().then(() => (init_remark_parse(), remark_parse_exports)),
+      Promise.resolve().then(() => (init_unist_util_visit(), unist_util_visit_exports))
+    ]).then(([unifiedModule, remarkParseModule, visitModule]) => ({
+      unified: unifiedModule.unified,
+      remarkParse: remarkParseModule.default || remarkParseModule,
+      visit: visitModule.visit
+    }));
+  }
+  return markdownModules;
+}
+function textFromNode(node3) {
+  if (typeof node3.value === "string") return node3.value;
+  return (node3.children || []).map(textFromNode).join("");
+}
+function slugifyAnchor(text3) {
+  return text3.trim().toLowerCase().replace(/[^\p{L}\p{N}_\- ]/gu, "").replace(/ /g, "-");
+}
+function frontMatterEndLine(content3) {
+  const lines = content3.split(/\r?\n/);
+  if (lines[0]?.trim() !== "---") return 0;
+  const closing = lines.findIndex((line, index2) => index2 > 0 && line.trim() === "---");
+  return closing > 0 ? closing + 1 : 0;
+}
+async function extractMarkdownStructure(body, lineOffset = 0) {
+  const { unified: unified2, remarkParse: remarkParse2, visit: visit3 } = await loadMarkdownModules();
+  const tree = unified2().use(remarkParse2).parse(body);
+  const definitions = /* @__PURE__ */ new Map();
+  visit3(tree, "definition", (node3) => {
+    if (typeof node3.identifier === "string" && typeof node3.url === "string") {
+      definitions.set(node3.identifier.toLowerCase(), node3.url);
+    }
+  });
+  const links = [];
+  const headings = [];
+  const usedSlugs = /* @__PURE__ */ new Map();
+  visit3(tree, (node3) => {
+    const line = (node3.position?.start?.line ?? 0) + lineOffset;
+    const column = node3.position?.start?.column ?? 0;
+    if (node3.type === "heading") {
+      const text3 = textFromNode(node3).replace(/\s+/g, " ").trim();
+      const base = slugifyAnchor(text3);
+      const seen = usedSlugs.get(base) ?? 0;
+      usedSlugs.set(base, seen + 1);
+      headings.push({ depth: node3.depth ?? 0, text: text3, slug: seen === 0 ? base : `${base}-${seen}`, line });
+      return;
+    }
+    if (node3.type === "link" || node3.type === "image") {
+      if (typeof node3.url === "string" && node3.url.trim()) {
+        links.push({ target: node3.url.trim(), line, column, isImage: node3.type === "image" });
+      }
+      return;
+    }
+    if (node3.type === "linkReference" || node3.type === "imageReference") {
+      const url2 = typeof node3.identifier === "string" ? definitions.get(node3.identifier.toLowerCase()) : void 0;
+      if (url2 && url2.trim()) {
+        links.push({ target: url2.trim(), line, column, isImage: node3.type === "imageReference" });
+      }
+    }
+  });
+  return { links, headings };
+}
+var SKIPPED_DIRS = /* @__PURE__ */ new Set([".git", "node_modules", ".pnpm-store"]);
+var EXTERNAL_REFERENCE = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
+var WINDOWS_ABSOLUTE_PATH = /^[a-z]:[\\/]/i;
+var LOCALE_FILE_PATTERN = /^(.+)\.([a-z]{2})\.md$/i;
+function isWindowsAbsolutePath(value) {
+  return WINDOWS_ABSOLUTE_PATH.test(value.trim());
+}
+function isExternalReference(value) {
+  const trimmed = value.trim();
+  if (isWindowsAbsolutePath(trimmed)) return false;
+  if (parseClaimReference(trimmed)) return false;
+  return EXTERNAL_REFERENCE.test(trimmed);
+}
+function walkMarkdownFiles2(root) {
+  if (!import_node_fs5.default.existsSync(root) || !import_node_fs5.default.statSync(root).isDirectory()) return [];
+  const files = [];
+  const visitDir = (dir) => {
+    const entries = import_node_fs5.default.readdirSync(dir, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name));
+    for (const entry of entries) {
+      const full = import_node_path6.default.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (!SKIPPED_DIRS.has(entry.name)) visitDir(full);
+      } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
+        files.push(full);
+      }
+    }
+  };
+  visitDir(root);
+  return files.sort(compareStrings);
+}
+function toRepoPath(cwd, absolute) {
+  return import_node_path6.default.relative(cwd, absolute).split(import_node_path6.default.sep).join("/");
+}
+function isUnderDir2(child, parent) {
+  const c = normalizeDir(child);
+  const p = normalizeDir(parent);
+  return c === p || c.startsWith(`${p}/`);
+}
+function artifactKeyOf(repoPath) {
+  const dir = import_node_path6.default.posix.dirname(repoPath);
+  const base = import_node_path6.default.posix.basename(repoPath).replace(/\.md$/i, "");
+  const locale = /^(.+)\.[a-z]{2}$/i.exec(base);
+  return `${dir}::${locale ? locale[1] : base}`;
+}
+function groupByArtifact(group) {
+  const buckets = /* @__PURE__ */ new Map();
+  for (const document3 of group) {
+    const key = artifactKeyOf(document3.path);
+    const bucket = buckets.get(key) ?? [];
+    bucket.push(document3);
+    buckets.set(key, bucket);
+  }
+  return buckets;
+}
+function primaryDocumentOf(group) {
+  const nonLocalized = group.filter(
+    (document3) => !LOCALE_FILE_PATTERN.test(import_node_path6.default.posix.basename(document3.path))
+  );
+  const pool = nonLocalized.length > 0 ? nonLocalized : group;
+  return [...pool].sort((a, b) => compareStrings(a.path, b.path))[0];
+}
+function artifactPrimaries(group) {
+  return [...groupByArtifact(group).values()].map(primaryDocumentOf).sort((a, b) => compareStrings(a.path, b.path));
+}
+function canonicalTypeMap() {
+  const byDir = /* @__PURE__ */ new Map();
+  for (const contract of Object.values(contracts)) {
+    for (const dir of contract.dirs) {
+      const normalized = normalizeDir(dir);
+      const types = byDir.get(normalized) ?? /* @__PURE__ */ new Set();
+      types.add(contract.type);
+      byDir.set(normalized, types);
+    }
+  }
+  return [...byDir.entries()].map(([dir, types]) => ({ dir, types: [...types].sort(compareStrings) })).sort((a, b) => b.dir.length - a.dir.length || compareStrings(a.dir, b.dir));
+}
+function expectedTypesFor(repoPath, typeMap) {
+  const dir = normalizeDir(import_node_path6.default.posix.dirname(repoPath));
+  const match = typeMap.find((entry) => isUnderDir2(dir, entry.dir));
+  return match ? match.types : [];
+}
+function extractRelations(data) {
+  const result = {};
+  const raw = data.relations;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return result;
+  for (const [key, value] of Object.entries(raw)) {
+    if (nonReferenceRelationKeys.has(key)) continue;
+    const items = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
+    const values = items.filter((item) => typeof item === "string" && Boolean(item.trim())).map((item) => item.trim());
+    if (values.length > 0) result[key] = [...new Set(values)].sort(compareStrings);
+  }
+  return result;
+}
+function stringField(data, field) {
+  const value = data[field];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+function localeSiblingsFor(repoPath, siblingsByDir) {
+  const dir = import_node_path6.default.posix.dirname(repoPath);
+  const base = import_node_path6.default.posix.basename(repoPath);
+  const peers = siblingsByDir.get(dir);
+  if (!peers) return [];
+  const localeMatch = LOCALE_FILE_PATTERN.exec(base);
+  if (localeMatch) {
+    const sibling = `${dir === "." ? "" : `${dir}/`}${localeMatch[1]}.md`;
+    return peers.has(localeMatch[1] + ".md") ? [sibling] : [];
+  }
+  const stem = base.replace(/\.md$/i, "");
+  return [...peers].filter((peer) => LOCALE_FILE_PATTERN.test(peer) && peer.replace(LOCALE_FILE_PATTERN, "$1") === stem).map((peer) => `${dir === "." ? "" : `${dir}/`}${peer}`).sort(compareStrings);
+}
+function defaultScanRoots(cwd) {
+  const roots = /* @__PURE__ */ new Set();
+  if (import_node_fs5.default.existsSync(import_node_path6.default.join(cwd, "docs"))) roots.add("docs");
+  for (const dir of managedDocDirs()) {
+    if (import_node_fs5.default.existsSync(import_node_path6.default.join(cwd, dir))) roots.add(dir);
+  }
+  return [...roots].sort(compareStrings);
+}
+function pruneNestedRoots(roots) {
+  const sorted = [...new Set(roots.map((root) => normalizeDir(root)))].sort(compareStrings);
+  return sorted.filter((root) => !sorted.some((other) => other !== root && isUnderDir2(root, other)));
+}
+async function scanRepository(options2) {
+  const cwd = import_node_path6.default.resolve(options2.cwd);
+  const roots = pruneNestedRoots(options2.roots?.length ? options2.roots : defaultScanRoots(cwd)).filter((root) => isInsideRealpath(cwd, import_node_path6.default.join(cwd, root)));
+  const typeMap = canonicalTypeMap();
+  const absoluteFiles = /* @__PURE__ */ new Set();
+  for (const root of roots) {
+    for (const file2 of walkMarkdownFiles2(import_node_path6.default.join(cwd, root))) absoluteFiles.add(file2);
+  }
+  if (options2.includeTopLevelMarkdown !== false) {
+    for (const entry of import_node_fs5.default.readdirSync(cwd, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name))) {
+      if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
+        absoluteFiles.add(import_node_path6.default.join(cwd, entry.name));
+      }
+    }
+  }
+  const siblingsByDir = /* @__PURE__ */ new Map();
+  for (const absolute of absoluteFiles) {
+    const repoPath = toRepoPath(cwd, absolute);
+    const dir = import_node_path6.default.posix.dirname(repoPath);
+    const peers = siblingsByDir.get(dir) ?? /* @__PURE__ */ new Set();
+    peers.add(import_node_path6.default.posix.basename(repoPath));
+    siblingsByDir.set(dir, peers);
+  }
+  const migrationDirs = migrationOwnedDirs();
+  const files = [];
+  for (const absolute of [...absoluteFiles].sort(compareStrings)) {
+    const repoPath = toRepoPath(cwd, absolute);
+    const expectedTypes = expectedTypesFor(repoPath, typeMap);
+    const canonical = expectedTypes.length > 0;
+    const docDirName = normalizeDir(import_node_path6.default.posix.dirname(repoPath));
+    const indexNamed = isIndexFileName(import_node_path6.default.posix.basename(repoPath));
+    const dirKind = canonical ? indexNamed ? "index" : "canonical" : migrationDirs.some((dir) => docDirName === dir || isUnderDir2(docDirName, dir)) ? indexNamed ? "index" : "legacy" : "unmanaged";
+    let content3 = "";
+    let readError = null;
+    try {
+      content3 = import_node_fs5.default.readFileSync(absolute, "utf8");
+    } catch (error62) {
+      readError = error62 instanceof Error ? error62.message : String(error62);
+    }
+    const parsed = readError ? { data: {}, body: "", error: readError } : parseDoc(content3);
+    const bodyStartLine = frontMatterEndLine(content3);
+    const structure = await extractMarkdownStructure(parsed.body, bodyStartLine);
+    const data = parsed.data;
+    const owners = Array.isArray(data.owners) ? data.owners.filter((owner) => typeof owner === "string" && Boolean(owner.trim())) : [];
+    const declaredType = stringField(data, "type");
+    const kind = dirKind === "canonical" && declaredType !== null && (resolveDocType(declaredType).kind === "ephemeral" || resolveDocType(declaredType).kind === "legacy") ? "legacy" : dirKind;
+    files.push({
+      path: repoPath,
+      absolutePath: absolute,
+      kind,
+      expectedTypes,
+      type: declaredType,
+      id: stringField(data, "id"),
+      status: stringField(data, "status"),
+      lifecycle: stringField(data, "lifecycle"),
+      title: stringField(data, "title"),
+      owners,
+      created: stringField(data, "created"),
+      updated: stringField(data, "updated"),
+      frontMatter: parsed.error ? {} : data,
+      parseError: parsed.error,
+      relations: extractRelations(data),
+      links: structure.links,
+      headings: structure.headings,
+      indexMembership: [],
+      localeSiblings: localeSiblingsFor(repoPath, siblingsByDir),
+      body: parsed.body,
+      bodyStartLine
+    });
+  }
+  const byPath = /* @__PURE__ */ new Map();
+  const byId = /* @__PURE__ */ new Map();
+  for (const document3 of files) {
+    byPath.set(document3.path, document3);
+    if (!document3.id) continue;
+    const group = byId.get(document3.id) ?? [];
+    group.push(document3);
+    byId.set(document3.id, group);
+  }
+  const insideRoot = (absolute) => isInside(cwd, absolute);
+  const fileExistsInsideRoot = (absolute) => {
+    return isInsideCheckout(cwd, absolute) && import_node_fs5.default.existsSync(absolute) && import_node_fs5.default.statSync(absolute).isFile();
+  };
+  const splitTarget = (raw) => {
+    const trimmed = raw.trim();
+    const withoutFragment = trimmed.split("#", 2);
+    const pathname = withoutFragment[0].split("?", 1)[0];
+    let decoded = pathname;
+    try {
+      decoded = decodeURIComponent(pathname);
+    } catch {
+      decoded = pathname;
+    }
+    return { pathname: decoded, fragment: withoutFragment[1] ?? null };
+  };
+  const resolvePath = (from, rawTarget) => {
+    const value = rawTarget.trim();
+    if (isExternalReference(value)) return { status: "external", path: null, fragment: null, document: null };
+    const { pathname, fragment } = splitTarget(value);
+    if (!pathname) {
+      const self = from?.path ?? null;
+      return { status: "resolved", path: self, fragment, document: self ? byPath.get(self) ?? null : null };
+    }
+    const docRelative = pathname.startsWith("./") || pathname.startsWith("../") || pathname === "." || pathname === "..";
+    const candidates = docRelative ? [from ? import_node_path6.default.resolve(import_node_path6.default.dirname(from.absolutePath), pathname) : null, import_node_path6.default.resolve(cwd, pathname)] : [import_node_path6.default.resolve(cwd, pathname), from ? import_node_path6.default.resolve(import_node_path6.default.dirname(from.absolutePath), pathname) : null];
+    if (import_node_path6.default.isAbsolute(pathname) || isWindowsAbsolutePath(pathname)) {
+      candidates.length = 0;
+      candidates.push(import_node_path6.default.resolve(pathname));
+    }
+    let sawEscaped = false;
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+      if (!insideRoot(candidate)) {
+        sawEscaped = true;
+        continue;
+      }
+      if (fileExistsInsideRoot(candidate)) {
+        const repoPath = toRepoPath(cwd, candidate);
+        return { status: "resolved", path: repoPath, fragment, document: byPath.get(repoPath) ?? null };
+      }
+    }
+    if (sawEscaped) {
+      return { status: "escaped", path: null, fragment, document: null };
+    }
+    const preferred = candidates.find((candidate) => Boolean(candidate)) ?? null;
+    return {
+      status: "unresolved",
+      path: preferred && insideRoot(preferred) ? toRepoPath(cwd, preferred) : null,
+      fragment,
+      document: null
+    };
+  };
+  const resolveRelationTarget = (from, rawTarget) => {
+    const value = rawTarget.trim();
+    const claimRef = parseClaimReference(value);
+    if (claimRef) {
+      const claimMatch = byId.get(claimRef.docId);
+      if (!claimMatch) return { status: "unresolved" };
+      const claimPrimaries = artifactPrimaries(claimMatch);
+      if (claimPrimaries.length === 1) return { status: "resolved", document: claimPrimaries[0] };
+      return { status: "ambiguous", candidates: claimPrimaries };
+    }
+    if (isExternalReference(value)) return { status: "external" };
+    const byIdMatch = byId.get(value);
+    if (byIdMatch) {
+      const primaries = artifactPrimaries(byIdMatch);
+      if (primaries.length === 1) return { status: "resolved", document: primaries[0] };
+      return { status: "ambiguous", candidates: primaries };
+    }
+    const resolved = resolvePath(from, value);
+    if (resolved.status === "resolved") {
+      if (resolved.document) return { status: "resolved", document: resolved.document };
+      return { status: "resolved-file", path: resolved.path };
+    }
+    if (resolved.status === "escaped") return { status: "escaped" };
+    return { status: "unresolved" };
+  };
+  for (const index2 of files.filter((file2) => file2.kind === "index")) {
+    const members2 = /* @__PURE__ */ new Set();
+    for (const link of index2.links) {
+      if (link.isImage) continue;
+      const resolved = resolvePath(index2, link.target);
+      if (resolved.status === "resolved" && resolved.path && byPath.has(resolved.path)) {
+        members2.add(resolved.path);
+      }
+    }
+    for (const memberPath of members2) {
+      const member = byPath.get(memberPath);
+      if (member && member.path !== index2.path) member.indexMembership.push(index2.path);
+    }
+  }
+  for (const document3 of files) {
+    document3.indexMembership.sort(compareStrings);
+  }
+  const repository = {
+    root: cwd,
+    files,
+    documents: files.filter((file2) => file2.kind !== "index"),
+    canonicalDocuments: files.filter((file2) => file2.kind === "canonical"),
+    legacyDocuments: files.filter((file2) => file2.kind === "legacy"),
+    unmanagedDocuments: files.filter((file2) => file2.kind === "unmanaged"),
+    indexes: files.filter((file2) => file2.kind === "index"),
+    byPath,
+    byId,
+    lookupById(id) {
+      const matches = byId.get(id.trim()) ?? [];
+      if (matches.length === 0) return { status: "none" };
+      const primaries = artifactPrimaries(matches);
+      if (primaries.length === 1) return { status: "unique", document: primaries[0] };
+      return { status: "ambiguous", candidates: primaries };
+    },
+    resolvePath,
+    resolveRelationTarget,
+    hasAnchor(document3, slug) {
+      return document3.headings.some((heading) => heading.slug === slug);
+    },
+    sameLogicalArtifact(aPath, bPath) {
+      return artifactKeyOf(aPath) === artifactKeyOf(bPath);
+    },
+    duplicateIds() {
+      return [...byId.entries()].filter(([, group]) => groupByArtifact(group).size > 1).map(([id, group]) => ({ id, paths: group.map((document3) => document3.path).sort(compareStrings) })).sort((a, b) => compareStrings(a.id, b.id));
+    }
+  };
+  return repository;
 }
 
 // src/skills/lib/knowledge_graph.ts
@@ -39269,20 +39105,823 @@ function projectKnowledgeGraph(model) {
   return { nodes, edges, derivedEdges, checkEdges, issues };
 }
 
+// src/skills/lib/verification_assessment/types.ts
+var ASSESSMENT_REASON_CODES = [
+  // The caller's target could not be named (unresolvable commit, no
+  // snapshot): nothing can be judged applicable.
+  "target-unverifiable",
+  // The record's own subject could not be digested (e.g. its commit no
+  // longer resolves) — applicability cannot be proven.
+  "subject-unverifiable",
+  // The record's subject digest differs from the target's — it measured a
+  // different commit or workspace.
+  "subject-mismatch",
+  // Claim/check reference failed to resolve in the live graph (detail
+  // carries the resolution status).
+  "claim-unresolved",
+  "check-unresolved",
+  // Resolved, but the pinned revision no longer matches the live document
+  // or check design — the evidence predates the current design.
+  "claim-revision-mismatch",
+  "check-revision-mismatch",
+  // The resolved check does not target the claim the record credits.
+  "check-target-mismatch",
+  // The recorded method differs from the check's designed method — the
+  // outcome is not a measurement of the designed check.
+  "method-mismatch",
+  // A declared artifact is known-inaccessible.
+  "artifact-unavailable",
+  // A declared artifact is past its expiresAt deadline.
+  "artifact-expired",
+  // A declared artifact was recorded but never fetched — its content was
+  // never digest-verified.
+  "artifact-unverified",
+  // The record declares no artifacts at all — the outcome is
+  // attestation-only, never digest-backed (integrity `unverified`).
+  "attestation-only",
+  // The recorded outcome is a measured failure of this target.
+  "outcome-failed",
+  // The recorded outcome is inconclusive/error/not-run — not a pass.
+  "outcome-not-passed"
+];
+var ASSESSMENT_REASON_SET = new Set(ASSESSMENT_REASON_CODES);
+var CHECK_STATUSES = [
+  // An applicable record assessed `sufficient` is the newest conclusive
+  // measurement for this target.
+  "satisfied",
+  // The newest conclusive applicable measurement is `insufficient` — a
+  // recorded failure for this target. Measured outcomes outrank any
+  // exemption: a failed check stays failed even under a valid waiver.
+  "failed",
+  // No conclusive evidence, but a validated waiver exempts the check.
+  "waived",
+  // No conclusive evidence, but a validated not-applicable verdict
+  // (impact-analysis basis) exempts the check.
+  "out-of-scope",
+  // In scope, no usable outcome and no valid exemption — unexecuted or
+  // indeterminate-only evidence. This is the bucket an unexecuted check
+  // lands in; it is never silently out-of-scope.
+  "undetermined",
+  // The check ref does not resolve in the live graph — coverage is
+  // unprovable, so the check gates as required.
+  "unresolved"
+];
+var CHECK_STATUS_SET = new Set(CHECK_STATUSES);
+var CLAIM_STATUSES = [
+  // Every in-scope required check is satisfied, waived, or out-of-scope.
+  "covered",
+  // At least one required check is covered, but not all.
+  "partial",
+  // No required check is covered — including the zero-required-checks
+  // coverage gap.
+  "uncovered",
+  // A required check measured a failure for this target.
+  "failed"
+];
+var CLAIM_STATUS_SET = new Set(CLAIM_STATUSES);
+
+// src/skills/lib/doc_evidence_lint.ts
+function executionOwnedDirs() {
+  const dirs = /* @__PURE__ */ new Set();
+  for (const type of executionTypes) {
+    for (const dir of ephemeralConfigs[type].formerDirs) dirs.add(normalizeDir(dir));
+  }
+  return [...dirs];
+}
+var EXECUTION_DIRS = executionOwnedDirs();
+var MIGRATE_HINT = "run doc_maintenance.js migrate plan --json";
+var MIGRATION_DIRS = migrationOwnedDirs();
+var EVIDENCE_REASON_RULES = {
+  "claim-unresolved": { ruleId: "unresolved-evidence-claim", severity: "warning", blocking: true, message: "evidence claim ref no longer resolves in the Knowledge Graph" },
+  "check-unresolved": { ruleId: "unresolved-evidence-check", severity: "warning", blocking: true, message: "evidence check ref no longer resolves in the Knowledge Graph" },
+  "claim-revision-mismatch": { ruleId: "stale-evidence-revision", severity: "warning", blocking: true, message: "claim document revision moved since the evidence was recorded" },
+  "check-revision-mismatch": { ruleId: "stale-evidence-revision", severity: "warning", blocking: true, message: "check design revision moved since the evidence was recorded" },
+  "check-target-mismatch": { ruleId: "evidence-check-target-mismatch", severity: "warning", blocking: true, message: "the resolved check does not verify the claim the record credits" },
+  "method-mismatch": { ruleId: "evidence-method-mismatch", severity: "warning", blocking: true, message: "recorded method is not the method the check designs" },
+  "subject-mismatch": { ruleId: "stale-evidence-subject", severity: "warning", blocking: true, message: "evidence measured a different subject than the checkout's HEAD" },
+  "subject-unverifiable": { ruleId: "unverifiable-evidence-subject", severity: "info", blocking: false, message: "the record's own subject cannot be digest-verified in this checkout" },
+  "target-unverifiable": { ruleId: "unverifiable-evidence-target", severity: "info", blocking: false, message: "the audit target (HEAD) cannot be digest-resolved in this checkout" },
+  "artifact-unavailable": { ruleId: "evidence-artifact-unavailable", severity: "warning", blocking: true, message: "a declared evidence artifact is known-inaccessible" },
+  "artifact-expired": { ruleId: "evidence-artifact-expired", severity: "warning", blocking: true, message: "a declared evidence artifact is past its retention deadline" },
+  "artifact-unverified": { ruleId: "unverified-evidence-artifact", severity: "warning", blocking: false, message: "a declared evidence artifact was never digest-verified" },
+  "attestation-only": { ruleId: "attestation-only-evidence", severity: "info", blocking: false, message: "recorded outcome declares no fetchable artifacts \u2014 attestation-only" },
+  "outcome-failed": { ruleId: "failed-evidence", severity: "warning", blocking: true, message: "an applicable evidence record measured a failed outcome" },
+  "outcome-not-passed": { ruleId: "inconclusive-evidence", severity: "info", blocking: false, message: "recorded outcome is not a conclusive pass/fail measurement" }
+};
+var EVIDENCE_RULE_IDS = new Set(
+  Object.values(EVIDENCE_REASON_RULES).map((rule) => rule.ruleId)
+);
+var EVIDENCE_STORE_RULE_IDS = /* @__PURE__ */ new Set([
+  "corrupt-evidence-store",
+  "unmanifested-evidence-store"
+]);
+var CORPUS_DOC_RULE_IDS = /* @__PURE__ */ new Set([
+  "legacy-corpus-doc",
+  "tracked-execution-doc",
+  "tracked-legacy-doc"
+]);
+var REPO_LEVEL_RULE_IDS = /* @__PURE__ */ new Set([
+  ...CORPUS_DOC_RULE_IDS,
+  ...EVIDENCE_RULE_IDS,
+  ...EVIDENCE_STORE_RULE_IDS
+]);
+
 // src/skills/lib/doc_lint.ts
-function isUnderDir2(child, parent) {
+var import_node_fs7 = __toESM(require("node:fs"));
+var import_node_path8 = __toESM(require("node:path"));
+
+// src/skills/lib/doc_provenance_lint.ts
+function lintProvenance(model, scope) {
+  const contract = contractForType(scope.type);
+  const findings = [];
+  for (const document3 of scope.documents) {
+    if (document3.parseError) continue;
+    const sources = document3.relations.source ?? [];
+    const usable = sources.filter((value) => value.trim().length > 0);
+    if (contract?.requiresSourceEvidence && usable.length === 0) {
+      findings.push(finding({
+        ruleId: "provenance-missing-source",
+        category: "provenance",
+        severity: "warning",
+        path: document3.path,
+        artifactId: document3.id,
+        message: `${scope.type} requires relations.source evidence`,
+        target: "source",
+        repair: "manual"
+      }));
+    }
+    for (const source of sources) {
+      const value = source.trim();
+      if (!value) {
+        findings.push(finding({
+          ruleId: "provenance-invalid-source",
+          category: "provenance",
+          severity: "warning",
+          path: document3.path,
+          artifactId: document3.id,
+          message: "relations.source contains an empty value",
+          target: source,
+          repair: "manual"
+        }));
+        continue;
+      }
+      if (isExternalReference(value)) continue;
+      const resolved = model.resolveRelationTarget(document3, value);
+      if (resolved.status === "resolved" || resolved.status === "resolved-file" || resolved.status === "external") continue;
+      if (resolved.status === "ambiguous") {
+        findings.push(finding({
+          ruleId: "provenance-invalid-source",
+          category: "provenance",
+          severity: "warning",
+          path: document3.path,
+          artifactId: document3.id,
+          message: `relations.source matches multiple artifacts: ${value}`,
+          target: value,
+          repair: "manual"
+        }));
+        continue;
+      }
+      if (resolved.status === "escaped") {
+        findings.push(finding({
+          ruleId: "provenance-invalid-source",
+          category: "provenance",
+          severity: "error",
+          path: document3.path,
+          artifactId: document3.id,
+          message: `relations.source escapes the repository root: ${value}`,
+          target: value,
+          repair: "manual"
+        }));
+        continue;
+      }
+      findings.push(finding({
+        ruleId: "provenance-unresolved-local-source",
+        category: "provenance",
+        severity: "warning",
+        path: document3.path,
+        artifactId: document3.id,
+        message: `relations.source points to a missing local file: ${value}`,
+        target: value,
+        repair: "manual"
+      }));
+    }
+  }
+  return findings;
+}
+function lintTraceability(model, scope) {
+  const contract = contractForType(scope.type);
+  if (!contract || contract.expectedUpstream.length === 0) return [];
+  const findings = [];
+  for (const document3 of scope.documents) {
+    if (document3.parseError) continue;
+    const status = document3.status ?? "";
+    for (const expectation of contract.expectedUpstream) {
+      if (expectation.skipStatuses?.includes(status)) continue;
+      const declared = expectation.fields.some((field) => (document3.relations[field] ?? []).some((target) => target.trim().length > 0));
+      if (declared) continue;
+      findings.push(finding({
+        ruleId: "traceability-missing-upstream",
+        category: "traceability",
+        severity: "warning",
+        blocking: true,
+        path: document3.path,
+        artifactId: document3.id,
+        message: `${scope.type} declares no upstream relation (expected one of: ${expectation.fields.join(", ")})`,
+        target: expectation.fields.join(", "),
+        repair: "manual"
+      }));
+    }
+  }
+  return findings;
+}
+function lintStaleUpstreams(model, scope) {
+  const findings = [];
+  for (const document3 of scope.documents) {
+    if (document3.parseError) continue;
+    for (const stale of staleUpstreamTargets(model, document3)) {
+      findings.push(finding({
+        ruleId: "stale-upstream",
+        category: "traceability",
+        severity: "warning",
+        path: document3.path,
+        artifactId: document3.id,
+        message: `In-flight document ${stale.field} a ${stale.upstream.status} upstream: ${stale.target} \u2014 re-point or close`,
+        target: stale.target,
+        repair: "manual"
+      }));
+    }
+  }
+  return findings;
+}
+
+// src/skills/lib/doc_structure_lint.ts
+var import_node_fs6 = __toESM(require("node:fs"));
+var import_node_path7 = __toESM(require("node:path"));
+
+// src/skills/lib/doc_index_tiers.ts
+var HEADING2 = /^##\s+(.*)$/;
+var SETTLED_HEADING = /^##\s+Settled\b/i;
+var TABLE_LINE = /^\|.*\|$/;
+var LIST_ITEM = /^[-*+]\s+/;
+var LINK = /\[[^\]]*\]\([^)]*\)/;
+function unescapeCell(value) {
+  return value.replace(/\\\|/g, "|").trim();
+}
+function parseManagedIndexLayout(content3) {
+  const layout = {
+    generated: content3.includes(GENERATED_INDEX_MARKER),
+    rows: [],
+    malformed: [],
+    settledHeadings: 0,
+    unmarkedSettledHeadings: 0,
+    unknownSectionTables: [],
+    extraTables: []
+  };
+  let tier = "active";
+  let sectionHeading = "";
+  let sectionTables = 0;
+  let inTable = false;
+  content3.split(/\r?\n/).forEach((line, offset) => {
+    const trimmed = line.trim();
+    const heading = HEADING2.exec(trimmed);
+    if (heading) {
+      if (SETTLED_HEADING.test(trimmed)) {
+        tier = "settled";
+        layout.settledHeadings += 1;
+        if (!trimmed.includes(GENERATED_SETTLED_MARKER)) layout.unmarkedSettledHeadings += 1;
+      } else {
+        tier = "unknown";
+      }
+      sectionHeading = heading[1].trim();
+      sectionTables = 0;
+      inTable = false;
+      return;
+    }
+    if (TABLE_LINE.test(trimmed)) {
+      if (!inTable) {
+        inTable = true;
+        sectionTables += 1;
+        if (tier === "unknown" && sectionTables === 1) {
+          layout.unknownSectionTables.push({ line: offset + 1, heading: sectionHeading });
+        }
+        if ((tier === "active" || tier === "settled") && sectionTables > 1) {
+          layout.extraTables.push({ line: offset + 1, tier });
+        }
+      }
+      const cells = trimmed.slice(1, -1).split(/(?<!\\)\|/).map(unescapeCell);
+      if (/^-{3,}/.test(cells[0]) || /^id$/i.test(cells[0])) return;
+      if (cells.length < 4) {
+        layout.malformed.push({ line: offset + 1, text: trimmed });
+        return;
+      }
+      const fileMatch = /\[([^\]]*)\]\(([^)]*)\)/.exec(cells[3]);
+      layout.rows.push({
+        tier,
+        line: offset + 1,
+        row: {
+          id: cells[0],
+          title: cells[1],
+          status: cells[2],
+          file: fileMatch ? fileMatch[2].trim() : cells[3]
+        }
+      });
+      return;
+    }
+    inTable = false;
+    if (LIST_ITEM.test(trimmed) && !LINK.test(trimmed)) {
+      layout.malformed.push({ line: offset + 1, text: trimmed });
+    }
+  });
+  return layout;
+}
+
+// src/skills/lib/doc_structure_lint.ts
+function caseInsensitiveExists(model, absolute) {
+  const dir = import_node_path7.default.dirname(absolute);
+  const base = import_node_path7.default.basename(absolute).toLowerCase();
+  if (!import_node_fs6.default.existsSync(dir)) return null;
+  const match = import_node_fs6.default.readdirSync(dir).find((entry) => entry.toLowerCase() === base);
+  if (!match) return null;
+  const candidate = import_node_path7.default.join(dir, match);
+  return import_node_fs6.default.existsSync(candidate) && import_node_fs6.default.statSync(candidate).isFile() ? candidate : null;
+}
+function lintDocumentLinks(model, scope) {
+  const findings = [];
+  for (const document3 of scope.documents) {
+    if (document3.parseError) continue;
+    for (const link of document3.links) {
+      const resolved = model.resolvePath(document3, link.target);
+      if (resolved.status === "external") continue;
+      if (resolved.status === "escaped") {
+        findings.push(finding({
+          ruleId: "link-escapes-root",
+          category: "link",
+          severity: "error",
+          path: document3.path,
+          line: link.line,
+          artifactId: document3.id,
+          message: `Link target escapes the repository root: ${link.target}`,
+          target: link.target,
+          repair: "manual"
+        }));
+        continue;
+      }
+      if (resolved.status === "unresolved") {
+        const absolute = import_node_path7.default.resolve(model.root, resolved.path ?? link.target);
+        const caseMatch = resolved.path ? caseInsensitiveExists(model, absolute) : null;
+        if (caseMatch) {
+          findings.push(finding({
+            ruleId: "link-case-mismatch",
+            category: "link",
+            severity: "warning",
+            path: document3.path,
+            line: link.line,
+            artifactId: document3.id,
+            message: `Link target differs only by case: ${link.target} (actual: ${import_node_path7.default.basename(caseMatch)})`,
+            target: link.target,
+            repair: "safe"
+          }));
+          continue;
+        }
+        findings.push(finding({
+          ruleId: link.isImage ? "missing-image-link" : "broken-link",
+          category: "link",
+          severity: "error",
+          path: document3.path,
+          line: link.line,
+          artifactId: document3.id,
+          message: `${link.isImage ? "Image" : "Link"} target does not exist: ${link.target}`,
+          target: link.target,
+          repair: "manual"
+        }));
+        continue;
+      }
+      if (resolved.status === "resolved" && resolved.path) {
+        const targetBase = (() => {
+          try {
+            return decodeURIComponent(import_node_path7.default.posix.basename(link.target.split("#")[0].split("?")[0]));
+          } catch {
+            return import_node_path7.default.posix.basename(link.target.split("#")[0].split("?")[0]);
+          }
+        })();
+        const absolute = import_node_path7.default.resolve(model.root, resolved.path);
+        const dir = import_node_path7.default.dirname(absolute);
+        const actualBase = import_node_fs6.default.existsSync(dir) ? import_node_fs6.default.readdirSync(dir).find((entry) => entry.toLowerCase() === targetBase.toLowerCase()) : void 0;
+        if (actualBase && actualBase !== targetBase) {
+          findings.push(finding({
+            ruleId: "link-case-mismatch",
+            category: "link",
+            severity: "warning",
+            path: document3.path,
+            line: link.line,
+            artifactId: document3.id,
+            message: `Link target differs only by case: ${link.target} (actual: ${actualBase})`,
+            target: link.target,
+            repair: "safe"
+          }));
+        }
+      }
+      if (!resolved.fragment) continue;
+      const anchorDoc = resolved.document ?? document3;
+      const fragment = (() => {
+        try {
+          return decodeURIComponent(resolved.fragment);
+        } catch {
+          return resolved.fragment;
+        }
+      })();
+      if (anchorDoc && !model.hasAnchor(anchorDoc, fragment)) {
+        findings.push(finding({
+          ruleId: "broken-anchor",
+          category: "link",
+          severity: "warning",
+          path: document3.path,
+          line: link.line,
+          artifactId: document3.id,
+          message: `Link target ${link.target} has no heading anchor "${fragment}"`,
+          target: link.target,
+          repair: "manual"
+        }));
+      }
+    }
+  }
+  return findings;
+}
+var EXTERNAL_FETCH_TIMEOUT_MS = 8e3;
+var EXTERNAL_CONCURRENCY = 4;
+async function probeExternal(url2) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), EXTERNAL_FETCH_TIMEOUT_MS);
+  try {
+    const response = await fetch(url2, {
+      method: "HEAD",
+      redirect: "manual",
+      signal: controller.signal,
+      headers: { "user-agent": "doc-status-link-check" }
+    });
+    if (response.status === 404 || response.status === 410) {
+      return { status: "broken", detail: `HTTP ${response.status}` };
+    }
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      const location = response.headers.get("location") ?? "";
+      return { status: "redirect", detail: `HTTP ${response.status} -> ${location}` };
+    }
+    if (response.status === 401 || response.status === 403 || response.status === 429) {
+      return { status: "unverifiable", detail: `HTTP ${response.status}` };
+    }
+    if (response.status >= 200 && response.status < 400) {
+      return { status: "ok", detail: `HTTP ${response.status}` };
+    }
+    return { status: "unverifiable", detail: `HTTP ${response.status}` };
+  } catch (error62) {
+    const message = error62 instanceof Error ? error62.message : String(error62);
+    return { status: "unverifiable", detail: message };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+async function lintExternalLinks(model, scope) {
+  const urls = /* @__PURE__ */ new Map();
+  const collect = (document3, target, line) => {
+    if (!/^https?:\/\//i.test(target.trim())) return;
+    const entries2 = urls.get(target) ?? [];
+    entries2.push({ document: document3, line });
+    urls.set(target, entries2);
+  };
+  for (const document3 of scope.documents) {
+    for (const link of document3.links) {
+      collect(document3, link.target, link.line);
+    }
+    for (const source of document3.relations.source ?? []) {
+      collect(document3, source.trim());
+    }
+  }
+  const findings = [];
+  const entries = [...urls.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  for (let index2 = 0; index2 < entries.length; index2 += EXTERNAL_CONCURRENCY) {
+    const batch = entries.slice(index2, index2 + EXTERNAL_CONCURRENCY);
+    const results = await Promise.all(batch.map(([url2]) => probeExternal(url2)));
+    for (let i = 0; i < batch.length; i += 1) {
+      const [url2, occurrences] = batch[i];
+      const result = results[i];
+      for (const occurrence of occurrences) {
+        if (result.status === "ok") continue;
+        findings.push(finding({
+          ruleId: result.status === "broken" ? "external-link-broken" : result.status === "redirect" ? "external-link-redirect" : "external-link-unverifiable",
+          category: "link",
+          severity: result.status === "broken" ? "error" : result.status === "redirect" ? "warning" : "info",
+          path: occurrence.document.path,
+          line: occurrence.line,
+          artifactId: occurrence.document.id,
+          message: `External link ${url2}: ${result.detail}`,
+          target: url2,
+          repair: "manual"
+        }));
+      }
+    }
+  }
+  return findings;
+}
+function inboundLinkCounts(model, options2 = {}) {
+  const includeIndexLinks = options2.includeIndexLinks ?? true;
+  const counts = /* @__PURE__ */ new Map();
+  for (const source of model.files) {
+    if (!includeIndexLinks && source.kind === "index") continue;
+    const seen = /* @__PURE__ */ new Set();
+    for (const link of source.links) {
+      if (link.isImage || isExternalReference(link.target)) continue;
+      const resolved = model.resolvePath(source, link.target);
+      if (resolved.status === "resolved" && resolved.path && resolved.path !== source.path) {
+        seen.add(resolved.path);
+      }
+    }
+    for (const target of seen) counts.set(target, (counts.get(target) ?? 0) + 1);
+  }
+  return counts;
+}
+function inboundRelationCounts(model) {
+  const bySourceArtifact = /* @__PURE__ */ new Map();
+  for (const source of model.files) {
+    if (source.kind === "index") continue;
+    const sourceKey = artifactKeyOf(source.path);
+    const targets = bySourceArtifact.get(sourceKey) ?? /* @__PURE__ */ new Set();
+    for (const relationTargets of Object.values(source.relations)) {
+      for (const target of relationTargets) {
+        const resolved = model.resolveRelationTarget(source, target);
+        if (resolved.status === "resolved" && resolved.document !== null && !model.sameLogicalArtifact(resolved.document.path, source.path)) {
+          targets.add(artifactKeyOf(resolved.document.path));
+        }
+      }
+    }
+    bySourceArtifact.set(sourceKey, targets);
+  }
+  const counts = /* @__PURE__ */ new Map();
+  for (const targets of bySourceArtifact.values()) {
+    for (const target of targets) counts.set(target, (counts.get(target) ?? 0) + 1);
+  }
+  return counts;
+}
+function lintOrphans(model, scope, profile = "materialized") {
+  const findings = [];
+  const linkCounts = inboundLinkCounts(model, { includeIndexLinks: profile !== "artifact" });
+  const relationCounts = inboundRelationCounts(model);
+  const contract = contractForType(scope.type);
+  const severity = contract?.allowsRootArtifact ? "info" : "warning";
+  const hasIndex = model.files.some((file2) => file2.kind === "index" && normalizeDir(import_node_path7.default.posix.dirname(file2.path)) === scope.directory);
+  for (const document3 of scope.documents) {
+    if (document3.parseError) continue;
+    if (profile !== "artifact" && hasIndex && document3.indexMembership.length === 0) {
+      findings.push(finding({
+        ruleId: "orphan-index",
+        category: "orphan",
+        severity,
+        path: document3.path,
+        artifactId: document3.id,
+        message: `Document is not listed in the directory index: ${document3.path}`,
+        target: document3.path,
+        repair: "safe"
+      }));
+    }
+    if ((linkCounts.get(document3.path) ?? 0) === 0) {
+      findings.push(finding({
+        ruleId: "orphan-navigation",
+        category: "orphan",
+        severity,
+        path: document3.path,
+        artifactId: document3.id,
+        message: `Document is not reachable from any Markdown link: ${document3.path}`,
+        target: document3.path,
+        repair: "manual"
+      }));
+    }
+    const outgoing = Object.values(document3.relations).some((targets) => targets.some((target) => {
+      const resolved = model.resolveRelationTarget(document3, target);
+      return resolved.status === "resolved" && resolved.document !== null && !model.sameLogicalArtifact(resolved.document.path, document3.path);
+    }));
+    if (!outgoing && (relationCounts.get(artifactKeyOf(document3.path)) ?? 0) === 0) {
+      findings.push(finding({
+        ruleId: "orphan-relation",
+        category: "orphan",
+        severity,
+        path: document3.path,
+        artifactId: document3.id,
+        message: `Document has no semantic relations in either direction: ${document3.path}`,
+        target: document3.path,
+        repair: "manual"
+      }));
+    }
+  }
+  return findings;
+}
+function lintIndexConsistency(model, scope, index2) {
+  const findings = [];
+  if (index2.parseError) {
+    findings.push(finding({
+      ruleId: "index-unparseable",
+      category: "index",
+      severity: "error",
+      path: index2.path,
+      message: `Index front matter is not valid YAML: ${index2.parseError}`,
+      target: index2.path,
+      repair: "manual"
+    }));
+    return findings;
+  }
+  const seen = /* @__PURE__ */ new Set();
+  const layout = parseManagedIndexLayout(index2.body);
+  const indexDir = normalizeDir(import_node_path7.default.posix.dirname(index2.path));
+  const residentTypes = residentTypesForDir(indexDir);
+  const indexPrimaryType = primaryIndexTypeForDir(
+    indexDir,
+    residentTypes.length > 0 ? residentTypes : [scope.type]
+  );
+  let lineOffset = 0;
+  try {
+    lineOffset = frontMatterEndLine(import_node_fs6.default.readFileSync(import_node_path7.default.join(model.root, index2.path), "utf8"));
+  } catch {
+    lineOffset = 0;
+  }
+  const structural = (message, line) => {
+    findings.push(finding({
+      ruleId: "index-unparseable",
+      category: "index",
+      severity: "warning",
+      path: index2.path,
+      line: line !== void 0 ? line + lineOffset : void 0,
+      message,
+      target: index2.path,
+      repair: "safe"
+    }));
+  };
+  if (layout.generated) {
+    if (layout.settledHeadings > 1) {
+      structural(`Index declares ## Settled ${layout.settledHeadings} times; expected at most one`);
+    }
+    if (layout.unmarkedSettledHeadings > 0) {
+      structural("Index has a ## Settled heading without the managed settled-index marker");
+    }
+    for (const table of layout.unknownSectionTables) {
+      structural(`Index has a table under unrecognized heading: ${table.heading}`, table.line);
+    }
+    for (const table of layout.extraTables) {
+      structural(`Index has more than one table in the ${table.tier} section`, table.line);
+    }
+  }
+  for (const item of layout.malformed) {
+    findings.push(finding({
+      ruleId: "index-unparseable",
+      category: "index",
+      severity: "warning",
+      path: index2.path,
+      line: item.line + lineOffset,
+      message: `Index entry is not a parseable table row: ${item.text}`,
+      target: index2.path,
+      repair: "safe"
+    }));
+  }
+  const tierFiles = { active: [], settled: [] };
+  const rowFiles = [];
+  for (const placed of layout.rows) {
+    const row = placed.row;
+    const resolved = model.resolvePath(index2, row.file);
+    if (resolved.status === "escaped") {
+      findings.push(finding({
+        ruleId: "index-escapes-root",
+        category: "index",
+        severity: "error",
+        path: index2.path,
+        message: `Index entry escapes the repository root: ${row.file}`,
+        target: row.file,
+        repair: "manual"
+      }));
+      continue;
+    }
+    if (resolved.status !== "resolved" || !resolved.path) {
+      findings.push(finding({
+        ruleId: "index-stale-entry",
+        category: "index",
+        severity: "warning",
+        path: index2.path,
+        message: `Index links a missing file: ${row.file}`,
+        target: row.file,
+        repair: "safe"
+      }));
+      continue;
+    }
+    if (seen.has(resolved.path)) {
+      findings.push(finding({
+        ruleId: "index-duplicate-entry",
+        category: "index",
+        severity: "warning",
+        path: index2.path,
+        message: `Index links ${row.file} more than once`,
+        target: row.file,
+        repair: "safe"
+      }));
+    }
+    seen.add(resolved.path);
+    const member = model.byPath.get(resolved.path);
+    const settled = member ? isSettledStatus(member.type ?? indexPrimaryType, member.status) : false;
+    rowFiles.push({ file: import_node_path7.default.posix.basename(resolved.path), settled });
+    if (placed.tier !== "unknown") tierFiles[placed.tier].push(import_node_path7.default.posix.basename(resolved.path));
+    if (member && member.kind === "canonical") {
+      const expected = [
+        ["id", member.id],
+        ["title", member.title],
+        ["status", member.status]
+      ];
+      for (const [field, value] of expected) {
+        if (value === null) continue;
+        const actual = field === "id" ? row.id : field === "title" ? row.title : row.status;
+        if (actual !== value) {
+          findings.push(finding({
+            ruleId: "index-metadata-mismatch",
+            category: "index",
+            severity: "warning",
+            path: index2.path,
+            artifactId: member.id,
+            message: `Index row for ${row.file} has ${field} "${actual}", expected "${value}"`,
+            target: row.file,
+            repair: "safe"
+          }));
+        }
+      }
+      if (layout.generated && placed.tier !== "unknown" && placed.tier === "settled" !== settled) {
+        findings.push(finding({
+          ruleId: "index-tier-mismatch",
+          category: "index",
+          severity: "warning",
+          path: index2.path,
+          line: placed.line + lineOffset,
+          artifactId: member.id,
+          message: settled ? `Index lists settled document ${row.file} in the active table` : `Index lists in-flight document ${row.file} in the settled table`,
+          target: row.file,
+          repair: "safe"
+        }));
+      }
+    }
+  }
+  const compareGroup = (left, right) => {
+    if (scope.type === "design") {
+      if (left === "overview.md") return -1;
+      if (right === "overview.md") return 1;
+    }
+    return left.localeCompare(right);
+  };
+  let misordered;
+  if (layout.generated) {
+    misordered = ["active", "settled"].some((tier) => {
+      const files = tierFiles[tier];
+      const expected = [...files].sort(compareGroup);
+      return files.length > 1 && files.some((file2, i) => file2 !== expected[i]);
+    });
+  } else {
+    const expected = [
+      ...rowFiles.filter((entry) => !entry.settled).map((entry) => entry.file).sort(compareGroup),
+      ...rowFiles.filter((entry) => entry.settled).map((entry) => entry.file).sort(compareGroup)
+    ];
+    const actual = rowFiles.map((entry) => entry.file);
+    misordered = actual.length > 1 && actual.some((file2, i) => file2 !== expected[i]);
+  }
+  if (misordered) {
+    findings.push(finding({
+      ruleId: "index-ordering",
+      category: "index",
+      severity: "info",
+      path: index2.path,
+      message: "Index entries are not in the deterministic ordering rule",
+      target: index2.path,
+      repair: "safe"
+    }));
+  }
+  return findings;
+}
+function lintStructure(model, scope, profile = "materialized") {
+  const dir = scope.directory;
+  const indexCandidates = model.files.filter((file2) => normalizeDir(import_node_path7.default.posix.dirname(file2.path)) === dir && /^(readme|index)\.md$/i.test(import_node_path7.default.posix.basename(file2.path)));
+  const index2 = indexCandidates.find((file2) => /^readme\.md$/i.test(import_node_path7.default.posix.basename(file2.path))) ?? indexCandidates[0];
+  const findings = [
+    ...lintDocumentLinks(model, scope),
+    ...lintOrphans(model, scope, profile)
+  ];
+  if (index2 && profile !== "artifact") findings.push(...lintIndexConsistency(model, scope, index2));
+  return findings;
+}
+
+// src/skills/lib/doc_lint.ts
+function isUnderDir3(child, parent) {
   const c = normalizeDir(child);
   const p = normalizeDir(parent);
   return c === p || c.startsWith(`${p}/`);
 }
 function relativeToDir(directory, repoPath) {
-  const relative = import_node_path7.default.posix.relative(normalizeDir(directory), repoPath);
-  return relative === "" ? import_node_path7.default.posix.basename(repoPath) : relative;
+  const relative = import_node_path8.default.posix.relative(normalizeDir(directory), repoPath);
+  return relative === "" ? import_node_path8.default.posix.basename(repoPath) : relative;
 }
 function scopeFor(model, type, directory) {
   const dir = normalizeDir(directory);
   const files = model.files.filter(
-    (file2) => isUnderDir2(file2.path, dir) && !isIndexFileName(import_node_path7.default.posix.basename(file2.path))
+    (file2) => isUnderDir3(file2.path, dir) && !isIndexFileName(import_node_path8.default.posix.basename(file2.path))
   );
   const documents = files.filter(
     (file2) => !isForeignDocType(file2.type, type, dir)
@@ -39325,11 +39964,31 @@ var GRAPH_ISSUE_RULES = {
   "check-anchor-mismatch": { ruleId: "check-anchor-mismatch", category: "relation", severity: "warning", blocking: true, repair: "manual" },
   "misplaced-check-anchor": { ruleId: "misplaced-check-anchor", category: "relation", severity: "warning", blocking: true, repair: "manual" }
 };
+function lintMisplacedLegacyDocs(scope) {
+  const findings = [];
+  for (const document3 of scope.files) {
+    if (typeof document3.type !== "string") continue;
+    const resolved = resolveDocType(document3.type);
+    if (resolved.kind === "durable" || resolved.kind === "unknown") continue;
+    findings.push(finding({
+      ruleId: "legacy-doc-in-durable-dir",
+      category: "migration",
+      severity: "warning",
+      blocking: true,
+      path: document3.path,
+      artifactId: document3.id,
+      message: `${resolved.kind === "ephemeral" ? "execution-bound" : "legacy"} ${document3.type} document declares a type with no durable Git form under Document Registry 3 \u2014 it is migration corpus in a durable directory, never a ${scope.type} document or index row; ${MIGRATE_HINT} to plan the migration`,
+      target: document3.type,
+      repair: "migration"
+    }));
+  }
+  return findings;
+}
 function lintKnowledgeGraph(model, scope) {
   const graph = projectKnowledgeGraph(model);
   const findings = [];
   for (const issue2 of graph.issues) {
-    if (!isUnderDir2(issue2.path, scope.directory)) continue;
+    if (!isUnderDir3(issue2.path, scope.directory)) continue;
     const rule = GRAPH_ISSUE_RULES[issue2.code];
     findings.push(finding({
       ruleId: rule.ruleId,
@@ -39622,8 +40281,8 @@ function lintDirectory(model, scope, profile) {
     }
   }
   if (profile === "artifact") return findings;
-  const indexCandidates = model.files.filter((file2) => normalizeDir(import_node_path7.default.posix.dirname(file2.path)) === dir && /^(readme|index)\.md$/i.test(import_node_path7.default.posix.basename(file2.path)));
-  const index2 = indexCandidates.find((file2) => /^readme\.md$/i.test(import_node_path7.default.posix.basename(file2.path))) ?? indexCandidates[0];
+  const indexCandidates = model.files.filter((file2) => normalizeDir(import_node_path8.default.posix.dirname(file2.path)) === dir && /^(readme|index)\.md$/i.test(import_node_path8.default.posix.basename(file2.path)));
+  const index2 = indexCandidates.find((file2) => /^readme\.md$/i.test(import_node_path8.default.posix.basename(file2.path))) ?? indexCandidates[0];
   if (!index2) {
     findings.push(finding({
       ruleId: "missing-index",
@@ -39675,12 +40334,12 @@ function legacyIdPrefixes() {
   return new Set(allIdPrefixes());
 }
 function experimentNumbers(root) {
-  const expDir = import_node_path7.default.join(root, IMPL_EXP_DIR);
-  if (!import_node_fs6.default.existsSync(expDir)) return /* @__PURE__ */ new Map();
+  const expDir = import_node_path8.default.join(root, IMPL_EXP_DIR);
+  if (!import_node_fs7.default.existsSync(expDir)) return /* @__PURE__ */ new Map();
   if (!isInsideRealpath(root, expDir)) return /* @__PURE__ */ new Map();
   const counts = /* @__PURE__ */ new Map();
-  for (const name of import_node_fs6.default.readdirSync(expDir)) {
-    if (isSymlinkPath(import_node_path7.default.join(expDir, name))) continue;
+  for (const name of import_node_fs7.default.readdirSync(expDir)) {
+    if (isSymlinkPath(import_node_path8.default.join(expDir, name))) continue;
     const match = NUMBERED_EXPERIMENT_FILE.exec(name);
     if (match) counts.set(match[1], (counts.get(match[1]) ?? 0) + 1);
   }
@@ -39688,7 +40347,7 @@ function experimentNumbers(root) {
 }
 function isSymlinkPath(p) {
   try {
-    return import_node_fs6.default.lstatSync(p).isSymbolicLink();
+    return import_node_fs7.default.lstatSync(p).isSymbolicLink();
   } catch {
     return false;
   }
@@ -39762,6 +40421,7 @@ function lintScope(model, type, directory, profile = "materialized") {
       findings.push(...lintUnmanagedRelations(model, document3));
     }
   }
+  findings.push(...lintMisplacedLegacyDocs(scope));
   findings.push(...lintKnowledgeGraph(model, scope));
   findings.push(...lintLegacyIdReferences(model, scope.files));
   findings.push(...lintDuplicateIds(model, scope));
@@ -39784,14 +40444,27 @@ var ARTIFACT_GATES = [
   "provenance",
   "traceability"
 ];
+var REPO_LEVEL_GATES = [
+  "execution-boundary",
+  "evidence"
+];
 var MATERIALIZED_ONLY_GATES = [
   "index-presence",
   "index-membership",
   "index-consistency",
   "orphan-index-membership"
 ];
-function profileGates(profile) {
-  return profile === "artifact" ? { ran: [...ARTIFACT_GATES], skipped: [...MATERIALIZED_ONLY_GATES] } : { ran: [...ARTIFACT_GATES, ...MATERIALIZED_ONLY_GATES], skipped: [] };
+function profileGates(profile, repoLevel = true) {
+  const ran = [
+    ...ARTIFACT_GATES,
+    ...repoLevel ? REPO_LEVEL_GATES : [],
+    ...profile === "materialized" ? MATERIALIZED_ONLY_GATES : []
+  ];
+  const skipped = [
+    ...repoLevel ? [] : REPO_LEVEL_GATES,
+    ...profile === "artifact" ? MATERIALIZED_ONLY_GATES : []
+  ];
+  return { ran: [...ran], skipped: [...skipped] };
 }
 
 // src/skills/lib/doc_audit.ts
@@ -39799,7 +40472,7 @@ function scanRoots(relativeDirs) {
   return [...new Set(["docs", ...relativeDirs, ...managedDocDirs()].map((dir) => normalizeDir(dir)))];
 }
 function toLegacyFinding(directory, finding2) {
-  const file2 = finding2.path ? import_node_path8.default.posix.relative(normalizeDir(directory), finding2.path) || import_node_path8.default.posix.basename(finding2.path) : null;
+  const file2 = finding2.path ? import_node_path9.default.posix.relative(normalizeDir(directory), finding2.path) || import_node_path9.default.posix.basename(finding2.path) : null;
   return {
     severity: finding2.severity,
     file: file2,
@@ -39813,8 +40486,8 @@ async function buildModel(cwd, relativeDirs) {
 }
 async function auditWithModel(model, cwd, type, explicitDir, options2) {
   const relativeDir = docDir(cwd, type, explicitDir);
-  const fullDir = import_node_path8.default.join(cwd, relativeDir);
-  const files = import_node_fs7.default.existsSync(fullDir) && isInsideRealpath(cwd, fullDir) ? docFiles(fullDir) : [];
+  const fullDir = import_node_path9.default.join(cwd, relativeDir);
+  const files = import_node_fs8.default.existsSync(fullDir) && isInsideRealpath(cwd, fullDir) ? docFiles(fullDir) : [];
   const profile = options2?.profile ?? "materialized";
   const findings = lintScope(model, type, relativeDir, profile);
   if (options2?.externalLinks) {
@@ -39822,7 +40495,7 @@ async function auditWithModel(model, cwd, type, explicitDir, options2) {
     findings.sort(compareFindings);
   }
   const legacy = findings.map((finding2) => toLegacyFinding(relativeDir, finding2));
-  return { directory: relativeDir, files: files.length, findings: legacy, profile, gates: profileGates(profile) };
+  return { directory: relativeDir, files: files.length, findings: legacy, profile, gates: profileGates(profile, false) };
 }
 async function auditDocuments(cwd, type, explicitDir, options2) {
   const relativeDir = docDir(cwd, type, explicitDir);
@@ -39831,8 +40504,8 @@ async function auditDocuments(cwd, type, explicitDir, options2) {
 }
 
 // src/skills/impl-doc/scripts/lib/impl_doc_utils.ts
-var import_node_fs8 = __toESM(require("node:fs"));
-var import_node_path9 = __toESM(require("node:path"));
+var import_node_fs9 = __toESM(require("node:fs"));
+var import_node_path10 = __toESM(require("node:path"));
 var implStatuses = ["draft", "in-progress", "completed", "blocked", "abandoned", "superseded"];
 var experimentEventTypes = ["start", "observation", "hypothesis", "change", "validation", "error", "decision", "summary"];
 var relationFields3 = [
@@ -39902,7 +40575,7 @@ var experimentEventBaseSchema = external_exports.object({
   ts: external_exports.string().min(1)
 }).passthrough();
 function posixRelative(from, to) {
-  return import_node_path9.default.relative(from, to).replace(/\\/g, "/");
+  return import_node_path10.default.relative(from, to).replace(/\\/g, "/");
 }
 function normalizeFilePath(input2) {
   return input2.replace(/\\/g, "/");
@@ -39919,11 +40592,11 @@ function implDir(cwd, kind, explicitDir) {
   return resolved;
 }
 function listFiles(dir, ext) {
-  if (!import_node_fs8.default.existsSync(dir)) return [];
-  return import_node_fs8.default.readdirSync(dir).filter((file2) => file2.endsWith(ext)).filter((file2) => ext !== ".md" || !/^readme\.md$/i.test(file2) && !/^index\.md$/i.test(file2)).filter((file2) => !import_node_fs8.default.lstatSync(import_node_path9.default.join(dir, file2)).isSymbolicLink()).sort();
+  if (!import_node_fs9.default.existsSync(dir)) return [];
+  return import_node_fs9.default.readdirSync(dir).filter((file2) => file2.endsWith(ext)).filter((file2) => ext !== ".md" || !/^readme\.md$/i.test(file2) && !/^index\.md$/i.test(file2)).filter((file2) => !import_node_fs9.default.lstatSync(import_node_path10.default.join(dir, file2)).isSymbolicLink()).sort();
 }
 function normalizeExperimentPath(cwd, filePath) {
-  return normalizeFilePath(posixRelative(cwd, import_node_path9.default.resolve(filePath)));
+  return normalizeFilePath(posixRelative(cwd, import_node_path10.default.resolve(filePath)));
 }
 var SETTLED_HEADING2 = `## Settled ${GENERATED_SETTLED_MARKER}`;
 var [IR_HEADER_LINE, IR_SEPARATOR_LINE] = INDEX_TABLE_HEADER_4COL.split("\n");
@@ -40046,10 +40719,10 @@ function parseImplIndexRows(content3, kind) {
 }
 function implIndexEntries(dirAbs, relativeDir, files) {
   return files.flatMap((file2) => {
-    const parsed = parseDoc(import_node_fs8.default.readFileSync(import_node_path9.default.join(dirAbs, file2), "utf8"));
+    const parsed = parseDoc(import_node_fs9.default.readFileSync(import_node_path10.default.join(dirAbs, file2), "utf8"));
     if (parsed.error) return [];
     if (isForeignDocType(parsed.data.type, "impl", relativeDir)) return [];
-    const title = typeof parsed.data.title === "string" && parsed.data.title.trim() ? parsed.data.title.trim() : /^#\s+(.+)$/m.exec(parsed.body)?.[1] || import_node_path9.default.basename(file2, ".md");
+    const title = typeof parsed.data.title === "string" && parsed.data.title.trim() ? parsed.data.title.trim() : /^#\s+(.+)$/m.exec(parsed.body)?.[1] || import_node_path10.default.basename(file2, ".md");
     const id = typeof parsed.data.id === "string" ? parsed.data.id : null;
     const status = typeof parsed.data.status === "string" ? parsed.data.status : null;
     return [{ file: file2, id, status, title, type: typeof parsed.data.type === "string" ? parsed.data.type : null }];
@@ -40088,10 +40761,10 @@ function sameStringSequence(left, right) {
   return left.length === right.length && left.every((value, index2) => value === right[index2]);
 }
 function auditManagedIndex(kind, dirAbs, relativeDir, files, findings) {
-  const indexPath = import_node_path9.default.join(dirAbs, "README.md");
+  const indexPath = import_node_path10.default.join(dirAbs, "README.md");
   let stats = null;
   try {
-    stats = import_node_fs8.default.lstatSync(indexPath);
+    stats = import_node_fs9.default.lstatSync(indexPath);
   } catch {
     stats = null;
   }
@@ -40103,7 +40776,7 @@ function auditManagedIndex(kind, dirAbs, relativeDir, files, findings) {
     push2("index-not-managed", "is a symbolic link or not a regular file", "warning");
     return;
   }
-  const content3 = import_node_fs8.default.readFileSync(indexPath, "utf8");
+  const content3 = import_node_fs9.default.readFileSync(indexPath, "utf8");
   const parsed = parseImplIndexRows(content3, kind);
   if (!parsed.ok) {
     const code = parsed.code === "missing-marker" || parsed.code === "ambiguous-marker" ? "index-not-managed" : parsed.code === "duplicate-row" ? "index-duplicate-entry" : parsed.code === "escaping-row" ? "index-escapes-root" : "index-unparseable";
@@ -40138,10 +40811,10 @@ function auditManagedIndex(kind, dirAbs, relativeDir, files, findings) {
 }
 function resolvesLocalTarget(cwd, fromFile, target) {
   const candidates = [
-    import_node_path9.default.resolve(cwd, target),
-    import_node_path9.default.resolve(import_node_path9.default.dirname(fromFile), target)
+    import_node_path10.default.resolve(cwd, target),
+    import_node_path10.default.resolve(import_node_path10.default.dirname(fromFile), target)
   ];
-  return candidates.some((candidate) => import_node_fs8.default.existsSync(candidate));
+  return candidates.some((candidate) => import_node_fs9.default.existsSync(candidate));
 }
 function relationLinks(relations) {
   return relationFields3.flatMap((field) => {
@@ -40150,12 +40823,12 @@ function relationLinks(relations) {
   });
 }
 function auditImplementationRecords(cwd, relativeDir) {
-  const dir = import_node_path9.default.join(cwd, relativeDir);
+  const dir = import_node_path10.default.join(cwd, relativeDir);
   const files = listFiles(dir, ".md");
   const findings = [];
   for (const file2 of files) {
-    const fullPath = import_node_path9.default.join(dir, file2);
-    const content3 = import_node_fs8.default.readFileSync(fullPath, "utf8");
+    const fullPath = import_node_path10.default.join(dir, file2);
+    const content3 = import_node_fs9.default.readFileSync(fullPath, "utf8");
     const parsed = parseDoc(content3);
     if (parsed.error) {
       findings.push({
@@ -40212,10 +40885,10 @@ function auditImplementationRecords(cwd, relativeDir) {
       }
     }
   }
-  const indexPath = import_node_path9.default.join(dir, "README.md");
+  const indexPath = import_node_path10.default.join(dir, "README.md");
   let indexStats = null;
   try {
-    indexStats = import_node_fs8.default.lstatSync(indexPath);
+    indexStats = import_node_fs9.default.lstatSync(indexPath);
   } catch {
     indexStats = null;
   }
@@ -40227,12 +40900,12 @@ function auditImplementationRecords(cwd, relativeDir) {
   return { directory: relativeDir, files: files.length, findings };
 }
 function auditExperimentLogs(cwd, relativeDir) {
-  const dir = import_node_path9.default.join(cwd, relativeDir);
+  const dir = import_node_path10.default.join(cwd, relativeDir);
   const files = listFiles(dir, ".jsonl");
   const findings = [];
   for (const file2 of files) {
-    const fullPath = import_node_path9.default.join(dir, file2);
-    const content3 = import_node_fs8.default.readFileSync(fullPath, "utf8");
+    const fullPath = import_node_path10.default.join(dir, file2);
+    const content3 = import_node_fs9.default.readFileSync(fullPath, "utf8");
     const lines = content3.split(/\r?\n/).filter((line) => line.trim());
     let previousSeq = 0;
     const seen = /* @__PURE__ */ new Set();
@@ -40304,10 +40977,10 @@ function auditExperimentLogs(cwd, relativeDir) {
       previousSeq = seq;
     }
   }
-  const indexPath = import_node_path9.default.join(dir, "README.md");
+  const indexPath = import_node_path10.default.join(dir, "README.md");
   let indexStats = null;
   try {
-    indexStats = import_node_fs8.default.lstatSync(indexPath);
+    indexStats = import_node_fs9.default.lstatSync(indexPath);
   } catch {
     indexStats = null;
   }
@@ -40321,8 +40994,8 @@ function auditExperimentLogs(cwd, relativeDir) {
 
 // src/skills/impl-doc/scripts/lib/impl_index_sync.ts
 var import_node_crypto2 = require("node:crypto");
-var import_node_fs9 = __toESM(require("node:fs"));
-var import_node_path10 = __toESM(require("node:path"));
+var import_node_fs10 = __toESM(require("node:fs"));
+var import_node_path11 = __toESM(require("node:path"));
 var INDEX_TITLES = {
   ir: "Implementation Records",
   exp: "Experiment Logs"
@@ -40331,7 +41004,7 @@ function sha256Text(content3) {
   return (0, import_node_crypto2.createHash)("sha256").update(content3, "utf8").digest("hex");
 }
 function sha256File(file2) {
-  return (0, import_node_crypto2.createHash)("sha256").update(import_node_fs9.default.readFileSync(file2)).digest("hex");
+  return (0, import_node_crypto2.createHash)("sha256").update(import_node_fs10.default.readFileSync(file2)).digest("hex");
 }
 function cellsEqual2(left, right) {
   return left.length === right.length && left.every((cell, index2) => cell === right[index2]);
@@ -40448,17 +41121,17 @@ function computeDrift(kind, currentRows, expectedRows) {
 }
 function computeImplIndexSync(cwd, kind, explicitDir) {
   const directory = implDir(cwd, kind, explicitDir);
-  const dirAbs = import_node_path10.default.join(cwd, directory);
+  const dirAbs = import_node_path11.default.join(cwd, directory);
   const ext = kind === "ir" ? ".md" : ".jsonl";
   const files = listFiles(dirAbs, ext);
   const sources = {};
   for (const file2 of files) {
-    sources[file2] = sha256File(import_node_path10.default.join(dirAbs, file2));
+    sources[file2] = sha256File(import_node_path11.default.join(dirAbs, file2));
   }
-  const indexAbs = import_node_path10.default.join(dirAbs, "README.md");
+  const indexAbs = import_node_path11.default.join(dirAbs, "README.md");
   let indexStats = null;
   try {
-    indexStats = import_node_fs9.default.lstatSync(indexAbs);
+    indexStats = import_node_fs10.default.lstatSync(indexAbs);
   } catch {
     indexStats = null;
   }
@@ -40469,7 +41142,7 @@ function computeImplIndexSync(cwd, kind, explicitDir) {
   let indexPin = null;
   if (indexIsFile) {
     try {
-      existing = import_node_fs9.default.readFileSync(indexAbs, "utf8");
+      existing = import_node_fs10.default.readFileSync(indexAbs, "utf8");
       indexPin = sha256Text(existing);
     } catch {
       existing = null;
@@ -40539,17 +41212,17 @@ function planImplIndexSync(cwd, kind, explicitDir) {
 }
 function verifyCurrentState(cwd, plan) {
   try {
-    const dirAbs = import_node_path10.default.join(cwd, plan.directory);
+    const dirAbs = import_node_path11.default.join(cwd, plan.directory);
     const ext = plan.kind === "ir" ? ".md" : ".jsonl";
     const files = listFiles(dirAbs, ext);
     if (!sameSequence(files, plan.pins.fileList)) return false;
     for (const file2 of files) {
-      if (sha256File(import_node_path10.default.join(dirAbs, file2)) !== plan.pins.sources[file2]) return false;
+      if (sha256File(import_node_path11.default.join(dirAbs, file2)) !== plan.pins.sources[file2]) return false;
     }
-    const indexAbs = import_node_path10.default.join(dirAbs, "README.md");
+    const indexAbs = import_node_path11.default.join(dirAbs, "README.md");
     let indexStats = null;
     try {
-      indexStats = import_node_fs9.default.lstatSync(indexAbs);
+      indexStats = import_node_fs10.default.lstatSync(indexAbs);
     } catch {
       indexStats = null;
     }
@@ -40575,23 +41248,23 @@ function applyImplIndexSync(cwd, kind, explicitDir, options2) {
     plan.reason = plan.reason ? `${plan.reason}; index sources changed since the plan was computed` : "index sources changed since the plan was computed";
     return { plan, written: false };
   }
-  const indexAbs = import_node_path10.default.join(cwd, plan.directory, "README.md");
+  const indexAbs = import_node_path11.default.join(cwd, plan.directory, "README.md");
   try {
-    if (import_node_fs9.default.lstatSync(indexAbs).isSymbolicLink()) {
+    if (import_node_fs10.default.lstatSync(indexAbs).isSymbolicLink()) {
       plan.reason = "index README.md became a symbolic link; refusing to write through it";
       return { plan, written: false };
     }
   } catch {
   }
   const merged = existing === null ? generated : mergeManagedIndex(existing, generated);
-  import_node_fs9.default.mkdirSync(import_node_path10.default.dirname(indexAbs), { recursive: true });
-  const tmpPath = import_node_path10.default.join(import_node_path10.default.dirname(indexAbs), `.README.md.tmp-${process.pid}-${Date.now()}`);
+  import_node_fs10.default.mkdirSync(import_node_path11.default.dirname(indexAbs), { recursive: true });
+  const tmpPath = import_node_path11.default.join(import_node_path11.default.dirname(indexAbs), `.README.md.tmp-${process.pid}-${Date.now()}`);
   try {
-    import_node_fs9.default.writeFileSync(tmpPath, merged, "utf8");
-    import_node_fs9.default.renameSync(tmpPath, indexAbs);
+    import_node_fs10.default.writeFileSync(tmpPath, merged, "utf8");
+    import_node_fs10.default.renameSync(tmpPath, indexAbs);
   } catch (error62) {
     try {
-      import_node_fs9.default.rmSync(tmpPath, { force: true });
+      import_node_fs10.default.rmSync(tmpPath, { force: true });
     } catch {
     }
     const message = error62 instanceof Error ? error62.message : String(error62);
@@ -40623,11 +41296,11 @@ function numberedTargetName(fileName) {
 }
 var SKIPPED_DIRS2 = /* @__PURE__ */ new Set([".git", "node_modules", ".pnpm-store"]);
 function walkFiles(baseDir, extensions) {
-  if (!import_node_fs10.default.existsSync(baseDir)) return [];
-  const entries = import_node_fs10.default.readdirSync(baseDir, { withFileTypes: true });
+  if (!import_node_fs11.default.existsSync(baseDir)) return [];
+  const entries = import_node_fs11.default.readdirSync(baseDir, { withFileTypes: true });
   return entries.flatMap((entry) => {
     if (entry.isSymbolicLink()) return [];
-    const fullPath = import_node_path11.default.join(baseDir, entry.name);
+    const fullPath = import_node_path12.default.join(baseDir, entry.name);
     if (entry.isDirectory()) {
       return SKIPPED_DIRS2.has(entry.name) ? [] : walkFiles(fullPath, extensions);
     }
@@ -40639,8 +41312,8 @@ function canonicalDirs(cwd) {
   const dirs = [];
   for (const era of gitEraDocTypes()) {
     for (const candidate of era.dirs) {
-      const full = import_node_path11.default.join(cwd, candidate);
-      if (!import_node_fs10.default.existsSync(full) || !isInsideRealpath(cwd, full)) continue;
+      const full = import_node_path12.default.join(cwd, candidate);
+      if (!import_node_fs11.default.existsSync(full) || !isInsideRealpath(cwd, full)) continue;
       if (seen.has(candidate)) continue;
       seen.add(candidate);
       dirs.push({ dir: candidate, type: era.type === "exp" ? "impl-exp" : era.type });
@@ -40648,34 +41321,34 @@ function canonicalDirs(cwd) {
   }
   return dirs;
 }
-function isUnderDir3(child, parent) {
+function isUnderDir4(child, parent) {
   const c = normalizeDir(child);
   const p = normalizeDir(parent);
   return c === p || c.startsWith(`${p}/`);
 }
 function distributionDocRoots(cwd) {
   const candidates = [".apm"];
-  const packagesDir = import_node_path11.default.join(cwd, "packages");
-  if (import_node_fs10.default.existsSync(packagesDir) && import_node_fs10.default.statSync(packagesDir).isDirectory()) {
-    for (const entry of import_node_fs10.default.readdirSync(packagesDir, { withFileTypes: true })) {
+  const packagesDir = import_node_path12.default.join(cwd, "packages");
+  if (import_node_fs11.default.existsSync(packagesDir) && import_node_fs11.default.statSync(packagesDir).isDirectory()) {
+    for (const entry of import_node_fs11.default.readdirSync(packagesDir, { withFileTypes: true })) {
       if (entry.isDirectory()) candidates.push(`packages/${entry.name}/.apm`);
     }
   }
   return candidates.filter((candidate) => {
-    const full = import_node_path11.default.join(cwd, candidate);
-    return import_node_fs10.default.existsSync(full) && import_node_fs10.default.statSync(full).isDirectory() && isInsideRealpath(cwd, full);
+    const full = import_node_path12.default.join(cwd, candidate);
+    return import_node_fs11.default.existsSync(full) && import_node_fs11.default.statSync(full).isDirectory() && isInsideRealpath(cwd, full);
   });
 }
 function resolveExtraRoots(cwd, extraRoots, blockers) {
   const resolved = [];
   for (const extra of extraRoots) {
-    const absolute = import_node_path11.default.resolve(cwd, extra);
-    const rel = normalizeDir(import_node_path11.default.relative(cwd, absolute));
+    const absolute = import_node_path12.default.resolve(cwd, extra);
+    const rel = normalizeDir(import_node_path12.default.relative(cwd, absolute));
     if (rel === "" || rel === ".") {
       resolved.push(".");
       continue;
     }
-    if (!import_node_fs10.default.existsSync(absolute) || !import_node_fs10.default.statSync(absolute).isDirectory()) {
+    if (!import_node_fs11.default.existsSync(absolute) || !import_node_fs11.default.statSync(absolute).isDirectory()) {
       blockers.push({
         code: "invalid-extra-root",
         file: null,
@@ -40697,25 +41370,25 @@ function resolveExtraRoots(cwd, extraRoots, blockers) {
 }
 function contentRoots(cwd, dirs, extraRoots = []) {
   const roots = [];
-  const docsRoot = import_node_path11.default.join(cwd, "docs");
-  if (import_node_fs10.default.existsSync(docsRoot) && isInsideRealpath(cwd, docsRoot)) roots.push("docs");
+  const docsRoot = import_node_path12.default.join(cwd, "docs");
+  if (import_node_fs11.default.existsSync(docsRoot) && isInsideRealpath(cwd, docsRoot)) roots.push("docs");
   for (const { dir } of dirs) {
-    if (!isUnderDir3(dir, "docs")) roots.push(dir);
+    if (!isUnderDir4(dir, "docs")) roots.push(dir);
   }
   for (const root of [...distributionDocRoots(cwd), ...extraRoots]) {
-    if (!roots.some((existing) => isUnderDir3(root, existing))) roots.push(root);
+    if (!roots.some((existing) => isUnderDir4(root, existing))) roots.push(root);
   }
   return roots;
 }
 function rootContentFiles(cwd) {
-  return import_node_fs10.default.readdirSync(cwd, { withFileTypes: true }).filter((entry) => entry.isFile() && /\.(md|jsonl)$/i.test(entry.name)).map((entry) => entry.name).sort();
+  return import_node_fs11.default.readdirSync(cwd, { withFileTypes: true }).filter((entry) => entry.isFile() && /\.(md|jsonl)$/i.test(entry.name)).map((entry) => entry.name).sort();
 }
 function contentFilesUnder(cwd, roots, extraFiles = []) {
   const seen = /* @__PURE__ */ new Set();
   const files = [];
   for (const root of roots) {
-    for (const fullPath of walkFiles(import_node_path11.default.join(cwd, root), [".md", ".jsonl"])) {
-      const relPath = import_node_path11.default.relative(cwd, fullPath).replace(/\\/g, "/");
+    for (const fullPath of walkFiles(import_node_path12.default.join(cwd, root), [".md", ".jsonl"])) {
+      const relPath = import_node_path12.default.relative(cwd, fullPath).replace(/\\/g, "/");
       if (seen.has(relPath)) continue;
       seen.add(relPath);
       files.push(relPath);
@@ -40739,16 +41412,16 @@ function prefixForFile(file2) {
 function discover(cwd, dirs, blockers) {
   const files = [];
   for (const { dir, type: dirType } of dirs) {
-    const fullDir = import_node_path11.default.join(cwd, dir);
-    const names = dir === IMPL_EXP_DIR2 ? import_node_fs10.default.readdirSync(fullDir).filter((name) => {
+    const fullDir = import_node_path12.default.join(cwd, dir);
+    const names = dir === IMPL_EXP_DIR2 ? import_node_fs11.default.readdirSync(fullDir).filter((name) => {
       const lower = name.toLowerCase();
       if (!(lower.endsWith(".jsonl") || lower.endsWith(".md") && !isIndexFileName(name))) return false;
-      return !import_node_fs10.default.lstatSync(import_node_path11.default.join(fullDir, name)).isSymbolicLink();
+      return !import_node_fs11.default.lstatSync(import_node_path12.default.join(fullDir, name)).isSymbolicLink();
     }).sort() : docFiles(fullDir);
     for (const name of names) {
       const relPath = `${dir}/${name}`;
-      const fullPath = import_node_path11.default.join(cwd, relPath);
-      const baseName = import_node_path11.default.basename(name);
+      const fullPath = import_node_path12.default.join(cwd, relPath);
+      const baseName = import_node_path12.default.basename(name);
       const isMarkdown = baseName.toLowerCase().endsWith(".md");
       const numbered = NUMBERED_FILE.exec(baseName)?.[1] || null;
       const base = {
@@ -40765,7 +41438,7 @@ function discover(cwd, dirs, blockers) {
         files.push(base);
         continue;
       }
-      const parsed = parseDoc(import_node_fs10.default.readFileSync(fullPath, "utf8"));
+      const parsed = parseDoc(import_node_fs11.default.readFileSync(fullPath, "utf8"));
       if (parsed.error) {
         blockers.push({
           code: "unparseable-front-matter",
@@ -40827,13 +41500,13 @@ function worktreeDirty(cwd) {
 function planRenames(cwd, files, blockers) {
   const renames = [];
   const renameSources = new Set(
-    files.filter((file2) => numberedTargetName(import_node_path11.default.basename(file2.path)) !== null).map((file2) => file2.path)
+    files.filter((file2) => numberedTargetName(import_node_path12.default.basename(file2.path)) !== null).map((file2) => file2.path)
   );
   const targetOwners = /* @__PURE__ */ new Map();
   for (const file2 of files) {
-    const targetName = numberedTargetName(import_node_path11.default.basename(file2.path));
+    const targetName = numberedTargetName(import_node_path12.default.basename(file2.path));
     if (!targetName) continue;
-    const to = `${normalizeDir(import_node_path11.default.dirname(file2.path))}/${targetName}`;
+    const to = `${normalizeDir(import_node_path12.default.dirname(file2.path))}/${targetName}`;
     const owner = targetOwners.get(to);
     if (owner && owner !== file2.path) {
       blockers.push({
@@ -40844,8 +41517,8 @@ function planRenames(cwd, files, blockers) {
       continue;
     }
     targetOwners.set(to, file2.path);
-    const targetFull = import_node_path11.default.join(cwd, to);
-    if (import_node_fs10.default.existsSync(targetFull) && !renameSources.has(to)) {
+    const targetFull = import_node_path12.default.join(cwd, to);
+    if (import_node_fs11.default.existsSync(targetFull) && !renameSources.has(to)) {
       blockers.push({
         code: "rename-collision",
         file: file2.path,
@@ -40857,7 +41530,7 @@ function planRenames(cwd, files, blockers) {
   }
   for (const rename of renames) {
     const tmpPath = `${rename.from}${MIGRATE_TMP_SUFFIX}`;
-    if (import_node_fs10.default.existsSync(import_node_path11.default.join(cwd, tmpPath))) {
+    if (import_node_fs11.default.existsSync(import_node_path12.default.join(cwd, tmpPath))) {
       blockers.push({
         code: "rename-temp-collision",
         file: rename.from,
@@ -40907,7 +41580,7 @@ function rewriteContent(content3, mappings, renames, experimentTargets) {
   }
   if (renames.length > 0) {
     const targets = new Map(
-      renames.map((rename) => [import_node_path11.default.basename(rename.from), import_node_path11.default.basename(rename.to)])
+      renames.map((rename) => [import_node_path12.default.basename(rename.from), import_node_path12.default.basename(rename.to)])
     );
     const pattern = new RegExp(
       `(?<![0-9A-Za-z-])(?:${[...targets.keys()].sort((a, b) => b.length - a.length).map(escapeRegExp).join("|")})(?![0-9A-Za-z])`,
@@ -40926,7 +41599,7 @@ function injectMissingId(content3, newId) {
 }
 function isSymlinkPath2(p) {
   try {
-    return import_node_fs10.default.lstatSync(p).isSymbolicLink();
+    return import_node_fs11.default.lstatSync(p).isSymbolicLink();
   } catch {
     return false;
   }
@@ -40935,7 +41608,7 @@ async function regenerateIndexes(cwd, dirs, touchedDirs) {
   const results = [];
   for (const dir of [...touchedDirs].sort()) {
     const dirType = dirs.find((candidate) => candidate.dir === dir)?.type || null;
-    const readmePath = import_node_path11.default.join(cwd, dir, "README.md");
+    const readmePath = import_node_path12.default.join(cwd, dir, "README.md");
     const relReadme = `${dir}/README.md`;
     if (isSymlinkPath2(readmePath)) {
       results.push({ action: "skipped", index: relReadme });
@@ -40943,7 +41616,7 @@ async function regenerateIndexes(cwd, dirs, touchedDirs) {
     }
     if (dirType === "impl" || dirType === "impl-exp") {
       const kind = dirType === "impl" ? "ir" : "exp";
-      const existing2 = import_node_fs10.default.existsSync(readmePath) ? import_node_fs10.default.readFileSync(readmePath, "utf8") : null;
+      const existing2 = import_node_fs11.default.existsSync(readmePath) ? import_node_fs11.default.readFileSync(readmePath, "utf8") : null;
       if (existing2 !== null && !existing2.includes(GENERATED_INDEX_MARKER)) {
         results.push({ action: "skipped", index: relReadme, reason: "hand-curated" });
         continue;
@@ -40968,7 +41641,7 @@ async function regenerateIndexes(cwd, dirs, touchedDirs) {
     if (dirType === "adr") {
       try {
         const content3 = await buildIndex2(cwd, dir);
-        const result = writeIndexFile(import_node_path11.default.join(cwd, dir), content3, false);
+        const result = writeIndexFile(import_node_path12.default.join(cwd, dir), content3, false);
         results.push(result.written ? { action: "regenerated", index: relReadme } : { action: "skipped", index: relReadme, reason: "hand-curated" });
       } catch (error62) {
         results.push({
@@ -40979,11 +41652,11 @@ async function regenerateIndexes(cwd, dirs, touchedDirs) {
       }
       continue;
     }
-    if (!import_node_fs10.default.existsSync(readmePath)) {
+    if (!import_node_fs11.default.existsSync(readmePath)) {
       results.push({ action: "skipped", index: relReadme, reason: "missing-index" });
       continue;
     }
-    const existing = import_node_fs10.default.readFileSync(readmePath, "utf8");
+    const existing = import_node_fs11.default.readFileSync(readmePath, "utf8");
     if (!existing.includes(GENERATED_INDEX_MARKER)) {
       results.push({ action: "skipped", index: relReadme, reason: "hand-curated" });
       continue;
@@ -40999,9 +41672,9 @@ async function regenerateIndexes(cwd, dirs, touchedDirs) {
   return results;
 }
 function regenerateLegacySharedIndex(cwd, dir, dirType) {
-  const fullDir = import_node_path11.default.join(cwd, dir);
+  const fullDir = import_node_path12.default.join(cwd, dir);
   const rows = docFiles(fullDir).map((file2) => {
-    const content4 = import_node_fs10.default.readFileSync(import_node_path11.default.join(fullDir, file2), "utf8");
+    const content4 = import_node_fs11.default.readFileSync(import_node_path12.default.join(fullDir, file2), "utf8");
     const parsed = parseDoc(content4);
     const data = parsed.data;
     const heading = /^#\s+(.+)$/m.exec(parsed.body)?.[1]?.trim();
@@ -41010,7 +41683,7 @@ function regenerateLegacySharedIndex(cwd, dir, dirType) {
       id: typeof data.id === "string" && data.id.trim() ? data.id.trim() : null,
       lifecycle: typeof data.lifecycle === "string" ? data.lifecycle : null,
       status: typeof data.status === "string" ? data.status : null,
-      title: typeof data.title === "string" && data.title.trim() || heading || import_node_path11.default.basename(file2, ".md"),
+      title: typeof data.title === "string" && data.title.trim() || heading || import_node_path12.default.basename(file2, ".md"),
       type: typeof data.type === "string" ? data.type : null
     };
   });
@@ -41025,19 +41698,19 @@ Directory: \`${normalized}\`
 
 ${renderIndexBody(rows, { settledType: dirType ?? void 0 })}
 `;
-  const readmePath = import_node_path11.default.join(cwd, dir, "README.md");
-  const existing = import_node_fs10.default.existsSync(readmePath) ? import_node_fs10.default.readFileSync(readmePath, "utf8") : null;
+  const readmePath = import_node_path12.default.join(cwd, dir, "README.md");
+  const existing = import_node_fs11.default.existsSync(readmePath) ? import_node_fs11.default.readFileSync(readmePath, "utf8") : null;
   const content3 = existing !== null && existing.includes(GENERATED_INDEX_MARKER) ? mergeManagedIndex(existing, generated) : generated;
-  import_node_fs10.default.writeFileSync(readmePath, content3, "utf8");
+  import_node_fs11.default.writeFileSync(readmePath, content3, "utf8");
 }
 async function validate2(cwd, dirs, prefixes, extraRoots) {
   const remainingLegacyIds = /* @__PURE__ */ new Set();
   const idFiles = /* @__PURE__ */ new Map();
   for (const { dir } of dirs) {
-    const fullDir = import_node_path11.default.join(cwd, dir);
+    const fullDir = import_node_path12.default.join(cwd, dir);
     for (const name of docFiles(fullDir)) {
       const relPath = `${dir}/${name}`;
-      const parsed = parseDoc(import_node_fs10.default.readFileSync(import_node_path11.default.join(fullDir, name), "utf8"));
+      const parsed = parseDoc(import_node_fs11.default.readFileSync(import_node_path12.default.join(fullDir, name), "utf8"));
       const id = typeof parsed.data.id === "string" ? parsed.data.id.trim() : null;
       if (!id) continue;
       if (isLegacyArtifactId(id)) remainingLegacyIds.add(id);
@@ -41048,9 +41721,9 @@ async function validate2(cwd, dirs, prefixes, extraRoots) {
   }
   const siblingKeys = /* @__PURE__ */ new Map();
   for (const { dir } of dirs) {
-    for (const name of docFiles(import_node_path11.default.join(cwd, dir))) {
-      const key = `${dir}::${stemKeyOf(import_node_path11.default.basename(name))}`;
-      const parsed = parseDoc(import_node_fs10.default.readFileSync(import_node_path11.default.join(cwd, dir, name), "utf8"));
+    for (const name of docFiles(import_node_path12.default.join(cwd, dir))) {
+      const key = `${dir}::${stemKeyOf(import_node_path12.default.basename(name))}`;
+      const parsed = parseDoc(import_node_fs11.default.readFileSync(import_node_path12.default.join(cwd, dir, name), "utf8"));
       const id = typeof parsed.data.id === "string" ? parsed.data.id.trim() : null;
       if (!id) continue;
       const set2 = siblingKeys.get(id) || /* @__PURE__ */ new Set();
@@ -41061,7 +41734,7 @@ async function validate2(cwd, dirs, prefixes, extraRoots) {
   const duplicateIds = [...idFiles.entries()].filter(([id, files]) => files.length > 1 && (siblingKeys.get(id)?.size || 0) > 1).map(([id]) => id);
   const unresolved = /* @__PURE__ */ new Set();
   for (const relPath of contentFilesUnder(cwd, contentRoots(cwd, dirs, extraRoots), rootContentFiles(cwd))) {
-    const content3 = import_node_fs10.default.readFileSync(import_node_path11.default.join(cwd, relPath), "utf8");
+    const content3 = import_node_fs11.default.readFileSync(import_node_path12.default.join(cwd, relPath), "utf8");
     for (const token of legacyTokens(content3, prefixes)) {
       unresolved.add(token);
     }
@@ -41099,7 +41772,7 @@ async function validate2(cwd, dirs, prefixes, extraRoots) {
   };
 }
 async function migrateArtifactIds(options2) {
-  const cwd = import_node_path11.default.resolve(options2.cwd);
+  const cwd = import_node_path12.default.resolve(options2.cwd);
   const blockers = [];
   const dirs = canonicalDirs(cwd);
   const files = discover(cwd, dirs, blockers);
@@ -41145,7 +41818,7 @@ async function migrateArtifactIds(options2) {
   );
   const mappedIds = new Set(mappings.keys());
   for (const relPath of contentFiles) {
-    const content3 = import_node_fs10.default.readFileSync(import_node_path11.default.join(cwd, relPath), "utf8");
+    const content3 = import_node_fs11.default.readFileSync(import_node_path12.default.join(cwd, relPath), "utf8");
     for (const token of new Set(legacyTokens(content3, prefixes))) {
       if (mappedIds.has(token) || experimentRefs.targets.has(token)) continue;
       const expNumber = token.startsWith(`${EXPERIMENT_ID_PREFIX2}-`) ? token.slice(EXPERIMENT_ID_PREFIX2.length + 1) : null;
@@ -41201,8 +41874,8 @@ async function migrateArtifactIds(options2) {
   }
   const rewrites = [];
   for (const relPath of contentFiles) {
-    const fullPath = import_node_path11.default.join(cwd, relPath);
-    const original = import_node_fs10.default.readFileSync(fullPath, "utf8");
+    const fullPath = import_node_path12.default.join(cwd, relPath);
+    const original = import_node_fs11.default.readFileSync(fullPath, "utf8");
     let { content: content3, replacements } = rewriteContent(original, mappings, renames, experimentRefs.targets);
     const injected = injectedIds.get(relPath);
     if (injected && !original.includes(`id: "${injected}"`)) {
@@ -41212,19 +41885,19 @@ async function migrateArtifactIds(options2) {
     }
     if (replacements === 0) continue;
     rewrites.push({ file: relPath, replacements });
-    if (options2.apply) import_node_fs10.default.writeFileSync(fullPath, content3, "utf8");
+    if (options2.apply) import_node_fs11.default.writeFileSync(fullPath, content3, "utf8");
   }
   const indexes = [];
   if (options2.apply) {
     for (const rename of renames) {
-      import_node_fs10.default.renameSync(import_node_path11.default.join(cwd, rename.from), import_node_path11.default.join(cwd, `${rename.from}${MIGRATE_TMP_SUFFIX}`));
+      import_node_fs11.default.renameSync(import_node_path12.default.join(cwd, rename.from), import_node_path12.default.join(cwd, `${rename.from}${MIGRATE_TMP_SUFFIX}`));
     }
     for (const rename of renames) {
-      import_node_fs10.default.renameSync(import_node_path11.default.join(cwd, `${rename.from}${MIGRATE_TMP_SUFFIX}`), import_node_path11.default.join(cwd, rename.to));
+      import_node_fs11.default.renameSync(import_node_path12.default.join(cwd, `${rename.from}${MIGRATE_TMP_SUFFIX}`), import_node_path12.default.join(cwd, rename.to));
     }
     const touchedDirs = /* @__PURE__ */ new Set([
       ...files.filter((file2) => file2.synthesizedId || file2.id && isLegacyArtifactId(file2.id)).map((file2) => file2.dir),
-      ...renames.map((rename) => normalizeDir(import_node_path11.default.dirname(rename.from)))
+      ...renames.map((rename) => normalizeDir(import_node_path12.default.dirname(rename.from)))
     ]);
     indexes.push(...await regenerateIndexes(cwd, dirs, touchedDirs));
   }
@@ -41242,518 +41915,6 @@ async function migrateArtifactIds(options2) {
     rewrites,
     validation
   };
-}
-
-// src/skills/lib/schema_preflight.ts
-var import_node_fs11 = __toESM(require("node:fs"));
-var import_node_path12 = __toESM(require("node:path"));
-var import_gray_matter3 = __toESM(require_gray_matter());
-var DOC_DRIVEN_DEV_DIR = "docs/.doc-driven-dev";
-var SCHEMA_MANIFEST_PATH = `${DOC_DRIVEN_DEV_DIR}/schema.json`;
-var MIGRATION_JOURNAL_PATH = `${DOC_DRIVEN_DEV_DIR}/migration.journal.json`;
-var EXECUTION_STATE_ROOT = ".apm/state/doc-driven-dev";
-var MANIFEST_SCHEMA_VERSION = 1;
-var EVIDENCE_TMP_PATTERN = /\.tmp-\d+-\d+$/;
-var EXPECTED_COMPONENT_VERSIONS = {
-  documentRegistry: 3,
-  knowledgeRelations: 1,
-  verificationDesign: 1,
-  evidenceRecord: 1,
-  graphDefinition: 3
-};
-var EXECUTION_RUN_SCHEMA_VERSION = 1;
-var SCHEMA_PREFLIGHT_EXIT_CODE = 2;
-var EXECUTION_BOUND_TYPES = new Set(executionBoundTypeNames());
-var KNOWLEDGE_RELATIONS_V1 = new Set(knowledgeRelationFields());
-var MANIFEST_DIR_ALLOWED_FILES = /* @__PURE__ */ new Set([
-  "schema.json",
-  "migration.journal.json"
-]);
-function toRepoRelative2(cwd, absolute) {
-  return import_node_path12.default.relative(import_node_path12.default.resolve(cwd), absolute).split(import_node_path12.default.sep).join("/");
-}
-function isUnderDir4(relPath, dir) {
-  return relPath === dir || relPath.startsWith(`${dir}/`);
-}
-function isPlainObject5(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function managedRootAliases() {
-  return managedDocDirs().filter((dir) => !dir.startsWith("docs/"));
-}
-function walkTree(cwd, relRoot, visit3, onEscape) {
-  const absRoot = import_node_path12.default.resolve(cwd, relRoot);
-  if (!import_node_fs11.default.existsSync(absRoot) || !import_node_fs11.default.statSync(absRoot).isDirectory()) return false;
-  if (!isInsideCheckout(cwd, absRoot)) return false;
-  const stack = [absRoot];
-  while (stack.length > 0) {
-    const dir = stack.pop();
-    let entries;
-    try {
-      entries = import_node_fs11.default.readdirSync(dir, { withFileTypes: true });
-    } catch {
-      continue;
-    }
-    for (const entry of entries) {
-      const abs = import_node_path12.default.join(dir, entry.name);
-      const rel = toRepoRelative2(cwd, abs);
-      if (entry.isDirectory()) {
-        if (!isInsideCheckout(cwd, abs)) {
-          onEscape?.(rel, "dir");
-          continue;
-        }
-        visit3(rel, true);
-        stack.push(abs);
-      } else if (entry.isFile() || entry.isSymbolicLink()) {
-        if (!isInsideCheckout(cwd, abs)) {
-          onEscape?.(rel, "entry");
-          continue;
-        }
-        visit3(rel, false);
-      }
-    }
-  }
-  return true;
-}
-function relationIssues(relPath, relations) {
-  const scoped = [];
-  if (relations === void 0) return scoped;
-  if (!isPlainObject5(relations)) {
-    scoped.push({
-      reason: "legacy-relations",
-      path: relPath,
-      detail: "relations: is not a map of relation keys to target lists"
-    });
-    return scoped;
-  }
-  for (const [key, value] of Object.entries(relations)) {
-    if (nonReferenceRelationKeys.has(key) || PROVENANCE_RELATION_KEYS.includes(key)) continue;
-    const populated = typeof value === "string" ? value.trim() !== "" : Array.isArray(value) && value.length > 0;
-    const wellFormed = typeof value === "string" || Array.isArray(value) && value.every((item) => typeof item === "string");
-    if (!wellFormed) {
-      scoped.push({
-        reason: "legacy-relations",
-        path: relPath,
-        detail: `relations.${key} is not a string or list of strings`
-      });
-      continue;
-    }
-    if (!populated) continue;
-    if (!KNOWLEDGE_RELATIONS_V1.has(key)) {
-      scoped.push({
-        reason: "legacy-relations",
-        path: relPath,
-        detail: `relations.${key} is outside the Knowledge Relations v1 vocabulary (stored forward set: ${[...KNOWLEDGE_RELATIONS_V1].join(", ")})`
-      });
-    }
-  }
-  return scoped;
-}
-function scanDocuments(cwd) {
-  const scan = {
-    issues: [],
-    manifestScopedIssues: [],
-    canonicalDocs: 0,
-    executionDocs: 0,
-    unmanagedDocs: 0
-  };
-  const visitMarkdown = (rel) => {
-    const abs = import_node_path12.default.resolve(cwd, rel);
-    let raw;
-    try {
-      raw = import_node_fs11.default.readFileSync(abs, "utf8");
-    } catch {
-      return;
-    }
-    let data = {};
-    let parsed = true;
-    try {
-      const result = (0, import_gray_matter3.default)(raw, {});
-      data = isPlainObject5(result.data) ? result.data : {};
-    } catch {
-      parsed = false;
-    }
-    const type = parsed && typeof data.type === "string" ? data.type : null;
-    if (type === null) {
-      scan.unmanagedDocs += 1;
-      return;
-    }
-    scan.canonicalDocs += 1;
-    if (EXECUTION_BOUND_TYPES.has(type)) {
-      scan.executionDocs += 1;
-      scan.manifestScopedIssues.push({
-        reason: "legacy-execution-doc",
-        path: rel,
-        detail: `type: ${type} has no durable Git form under Document Registry 3 (execution/verification artifacts live outside Git)`
-      });
-    }
-    if (parsed) {
-      scan.manifestScopedIssues.push(...relationIssues(rel, data.relations));
-    }
-  };
-  const visitDocsTree = (rel) => {
-    if (isUnderDir4(rel, DOC_DRIVEN_DEV_DIR)) return;
-    if (rel.endsWith(".md") && !isIndexFileName(import_node_path12.default.basename(rel))) {
-      visitMarkdown(rel);
-      return;
-    }
-    if (isUnderDir4(rel, "docs/impl")) {
-      scan.manifestScopedIssues.push({
-        reason: "legacy-execution-doc",
-        path: rel,
-        detail: `execution artifact under docs/impl has no durable Git form under Document Registry 3`
-      });
-    }
-  };
-  const roots = ["docs", ...managedRootAliases()];
-  const walked = /* @__PURE__ */ new Set();
-  for (const root of roots) {
-    const abs = import_node_path12.default.resolve(cwd, root);
-    let key = abs;
-    try {
-      key = import_node_fs11.default.realpathSync(abs);
-    } catch {
-    }
-    if (walked.has(key)) continue;
-    walked.add(key);
-    walkTree(cwd, root, (rel, isDir) => {
-      if (isDir) return;
-      if (root === "docs") visitDocsTree(rel);
-      else visitMarkdown(rel);
-    });
-  }
-  return scan;
-}
-function scanManifestDir(cwd, issues) {
-  const abs = import_node_path12.default.resolve(cwd, DOC_DRIVEN_DEV_DIR);
-  if (!import_node_fs11.default.existsSync(abs)) return;
-  const walked = walkTree(cwd, DOC_DRIVEN_DEV_DIR, (rel, isDir) => {
-    const name = import_node_path12.default.basename(rel);
-    if (isDir) {
-      if (rel !== DOC_DRIVEN_DEV_DIR) {
-        issues.push({
-          reason: "legacy-state-file",
-          path: rel,
-          detail: `unaccounted-for directory inside ${DOC_DRIVEN_DEV_DIR}`
-        });
-      }
-      return;
-    }
-    if (MANIFEST_DIR_ALLOWED_FILES.has(name)) return;
-    if (/\.ya?ml$/i.test(name)) {
-      let legacy = false;
-      try {
-        const parsed = load(import_node_fs11.default.readFileSync(import_node_path12.default.resolve(cwd, rel), "utf8"));
-        if (isPlainObject5(parsed)) {
-          const version2 = parsed.schemaVersion;
-          legacy = typeof version2 === "number" && version2 < EXPECTED_COMPONENT_VERSIONS.graphDefinition || "nodes" in parsed && "edges" in parsed;
-        }
-      } catch {
-      }
-      issues.push({
-        reason: legacy ? "legacy-graph-state" : "legacy-state-file",
-        path: rel,
-        detail: legacy ? `graph/state YAML inside ${DOC_DRIVEN_DEV_DIR} predates Graph Definition ${EXPECTED_COMPONENT_VERSIONS.graphDefinition}` : `unaccounted-for file inside ${DOC_DRIVEN_DEV_DIR}`
-      });
-      return;
-    }
-    issues.push({
-      reason: "legacy-state-file",
-      path: rel,
-      detail: `unaccounted-for file inside ${DOC_DRIVEN_DEV_DIR}`
-    });
-  }, (rel) => {
-    issues.push({
-      reason: "legacy-state-file",
-      path: rel,
-      detail: `entry inside ${DOC_DRIVEN_DEV_DIR} escapes the checkout through a link`
-    });
-  });
-  if (!walked) {
-    let directory = false;
-    try {
-      directory = import_node_fs11.default.statSync(abs).isDirectory();
-    } catch {
-    }
-    issues.push({
-      reason: "scope-escape",
-      path: DOC_DRIVEN_DEV_DIR,
-      detail: directory ? `${DOC_DRIVEN_DEV_DIR} escapes the checkout through a link; the manifest boundary cannot be trusted` : `${DOC_DRIVEN_DEV_DIR} is not a directory; the manifest boundary cannot be verified`
-    });
-  }
-}
-function scanExecutionState(cwd, issues) {
-  const abs = import_node_path12.default.resolve(cwd, EXECUTION_STATE_ROOT);
-  if (!import_node_fs11.default.existsSync(abs)) return;
-  const marker = (rel, detail) => {
-    issues.push({ reason: "legacy-execution-state", path: rel, detail });
-  };
-  const walked = walkTree(cwd, EXECUTION_STATE_ROOT, (rel, isDir) => {
-    const relUnderRoot = rel.slice(EXECUTION_STATE_ROOT.length).replace(/^\/+/, "");
-    const segments = relUnderRoot.split("/").filter(Boolean);
-    if (isDir) {
-      if (segments.length === 0) return;
-      if (segments[0] === "runs") return;
-      if (segments[0] === "evidence" && (segments.length === 1 || segments.length === 2 && segments[1] === "records")) {
-        return;
-      }
-      marker(rel, `unaccounted-for directory inside ${EXECUTION_STATE_ROOT}`);
-      return;
-    }
-    if (segments[0] === "evidence") {
-      const name2 = segments[segments.length - 1];
-      if (!EVIDENCE_TMP_PATTERN.test(name2)) {
-        const declared = segments.length === 2 && (segments[1] === "manifest.json" || segments[1] === "index.json") || segments.length === 3 && segments[1] === "records" && name2.endsWith(".json");
-        if (!declared) {
-          marker(rel, `content outside the evidence layout inside ${EXECUTION_STATE_ROOT}`);
-          return;
-        }
-      }
-      if (segments.length === 2 && segments[1] === "manifest.json") {
-        let version2;
-        try {
-          version2 = JSON.parse(import_node_fs11.default.readFileSync(import_node_path12.default.resolve(cwd, rel), "utf8")).schemaVersion;
-        } catch {
-          version2 = null;
-        }
-        if (version2 !== 1) {
-          marker(rel, `evidence manifest schemaVersion is ${JSON.stringify(version2)}, expected 1`);
-        }
-      }
-      return;
-    }
-    if (segments[0] !== "runs" || segments.length < 3) {
-      marker(rel, `content outside runs/<run-id>/ inside ${EXECUTION_STATE_ROOT}`);
-      return;
-    }
-    const name = segments[segments.length - 1];
-    if (/^(run|manifest|run\.manifest|run-manifest)\.json$/i.test(name)) {
-      let version2;
-      try {
-        version2 = JSON.parse(import_node_fs11.default.readFileSync(import_node_path12.default.resolve(cwd, rel), "utf8")).schemaVersion;
-      } catch {
-        version2 = null;
-      }
-      if (version2 !== EXECUTION_RUN_SCHEMA_VERSION) {
-        marker(rel, `run manifest schemaVersion is ${JSON.stringify(version2)}, expected ${EXECUTION_RUN_SCHEMA_VERSION}`);
-      }
-    }
-  }, (rel) => {
-    marker(rel, `entry inside ${EXECUTION_STATE_ROOT} escapes the checkout through a link`);
-  });
-  if (!walked) {
-    let directory = false;
-    try {
-      directory = import_node_fs11.default.statSync(abs).isDirectory();
-    } catch {
-    }
-    issues.push({
-      reason: "scope-escape",
-      path: EXECUTION_STATE_ROOT,
-      detail: directory ? `${EXECUTION_STATE_ROOT} escapes the checkout through a link; execution state cannot be assessed` : `${EXECUTION_STATE_ROOT} is not a directory; execution state cannot be assessed`
-    });
-  }
-}
-function readManifest(cwd) {
-  const rel = SCHEMA_MANIFEST_PATH;
-  const abs = import_node_path12.default.resolve(cwd, rel);
-  if (!import_node_fs11.default.existsSync(abs)) return { state: "missing" };
-  if (!isInsideCheckout(cwd, abs)) return { state: "escaped" };
-  let raw;
-  try {
-    raw = import_node_fs11.default.readFileSync(abs, "utf8");
-  } catch (error62) {
-    return { state: "unreadable", detail: error62 instanceof Error ? error62.message : String(error62) };
-  }
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (error62) {
-    return { state: "malformed", detail: `schema.json is not valid JSON: ${error62 instanceof Error ? error62.message : String(error62)}` };
-  }
-  if (!isPlainObject5(parsed)) {
-    return { state: "malformed", detail: "schema.json must be a JSON object" };
-  }
-  const versionIssues = [];
-  const schemaVersion = parsed.schemaVersion;
-  if (!Number.isInteger(schemaVersion) || schemaVersion <= 0) {
-    return { state: "malformed", detail: `schemaVersion must be a positive integer, got ${JSON.stringify(schemaVersion)}` };
-  }
-  if (schemaVersion > MANIFEST_SCHEMA_VERSION) {
-    versionIssues.push({
-      reason: "schema-version-unsupported",
-      path: rel,
-      detail: `manifest schemaVersion ${schemaVersion} is newer than supported ${MANIFEST_SCHEMA_VERSION} \u2014 upgrade the doc-driven-dev toolchain`
-    });
-  }
-  const declared = { schemaVersion };
-  for (const [key, expected] of Object.entries(EXPECTED_COMPONENT_VERSIONS)) {
-    const value = parsed[key];
-    if (value === void 0) {
-      return { state: "malformed", detail: `missing component version: ${key}` };
-    }
-    if (!Number.isInteger(value) || value <= 0) {
-      return { state: "malformed", detail: `${key} must be a positive integer, got ${JSON.stringify(value)}` };
-    }
-    declared[key] = value;
-    if (value > expected) {
-      versionIssues.push({
-        reason: "component-version-unsupported",
-        path: rel,
-        detail: `${key} ${value} is newer than supported ${expected} \u2014 upgrade the doc-driven-dev toolchain`
-      });
-    } else if (value < expected) {
-      versionIssues.push({
-        reason: "component-version-behind",
-        path: rel,
-        detail: `${key} ${value} is behind supported ${expected} \u2014 migration is required`
-      });
-    }
-  }
-  let migrationInProgress = false;
-  if (parsed.migration !== void 0) {
-    if (!isPlainObject5(parsed.migration)) {
-      return { state: "malformed", detail: "migration must be an object when present" };
-    }
-    const status = parsed.migration.status;
-    if (status !== void 0 && status !== "in-progress") {
-      return { state: "malformed", detail: `migration.status must be "in-progress" when present, got ${JSON.stringify(status)}` };
-    }
-    migrationInProgress = status === "in-progress";
-  }
-  return { state: "read", declared, migrationInProgress, versionIssues };
-}
-function journalPresent(cwd) {
-  return import_node_fs11.default.existsSync(import_node_path12.default.resolve(cwd, MIGRATION_JOURNAL_PATH));
-}
-function recommendedCommand(status, docCount) {
-  const maintenance = "node .apm/skills/doc-maintenance/scripts/doc_maintenance.js";
-  switch (status) {
-    case "current":
-      return null;
-    case "uninitialized":
-      return docCount === 0 ? { command: "node .apm/skills/doc-maintenance/scripts/scaffold_docs.js", note: "no manifest and no managed content \u2014 scaffold the doc tree, or declare the current schema via doc_maintenance.js migrate plan/apply" } : { command: `${maintenance} migrate plan --json`, note: "no schema manifest \u2014 run migrate plan to evaluate whether migration is needed, then migrate apply to declare the schema" };
-    case "migration-required":
-      return { command: `${maintenance} migrate plan --json`, note: "legacy artifacts or older declared versions \u2014 plan the migration, then run migrate apply --expect <planHash>" };
-    case "migration-incomplete":
-      return { command: `${maintenance} migrate recovery --json`, note: "a migration journal or in-progress marker is present \u2014 inspect and recover before normal execution resumes" };
-    case "unsupported-version":
-      return { command: null, note: "the manifest declares a newer schema generation than this toolchain supports \u2014 upgrade doc-driven-dev, do not downgrade by hand" };
-    case "invalid":
-      return { command: `${maintenance} migrate plan --json`, note: "manifest or repository state cannot be verified \u2014 run migrate plan for the full diagnostic" };
-  }
-}
-function statusSummary(report) {
-  switch (report.status) {
-    case "current":
-      return "schema manifest and repository content are consistent with the declared versions";
-    case "uninitialized":
-      return "no schema manifest; nothing provably pre-contract found";
-    case "migration-required":
-      return "legacy artifacts or older declared schema versions require migration";
-    case "migration-incomplete":
-      return "a migration journal or in-progress marker indicates a half-applied migration";
-    case "unsupported-version":
-      return "the manifest declares a schema generation newer than this toolchain";
-    case "invalid":
-      return "the manifest or repository state failed boundary validation";
-  }
-}
-function evaluateSchemaPreflight(cwd) {
-  const root = import_node_path12.default.resolve(cwd);
-  const scan = scanDocuments(root);
-  scanManifestDir(root, scan.issues);
-  scanExecutionState(root, scan.issues);
-  const manifest = readManifest(root);
-  const journal = journalPresent(root);
-  const escapes = scan.issues.filter((issue2) => issue2.reason === "scope-escape");
-  const finish = (status, issues, manifestInfo2) => {
-    const legacyMarkers = new Set(
-      [...issues, ...scan.manifestScopedIssues].filter((issue2) => issue2.reason.startsWith("legacy-")).map((issue2) => `${issue2.reason}:${issue2.path}`)
-    ).size;
-    const managedDocs = scan.canonicalDocs + scan.unmanagedDocs;
-    const generation = escapes.length > 0 ? "unknown" : legacyMarkers > 0 ? scan.canonicalDocs > scan.executionDocs ? "mixed" : "legacy" : managedDocs === 0 ? "empty" : "current";
-    const report = {
-      status,
-      issues,
-      manifest: manifestInfo2,
-      detected: {
-        generation,
-        canonicalDocs: scan.canonicalDocs,
-        executionDocs: scan.executionDocs,
-        unmanagedDocs: scan.unmanagedDocs,
-        legacyMarkers,
-        manifestMarkers: scan.manifestScopedIssues
-      },
-      recommended: recommendedCommand(status, managedDocs)
-    };
-    return report;
-  };
-  const readManifestInfo = manifest.state === "read" ? { path: SCHEMA_MANIFEST_PATH, state: "valid", declared: manifest.declared } : { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null };
-  if (escapes.length > 0) {
-    return finish("invalid", escapes, readManifestInfo);
-  }
-  if (manifest.state === "escaped") {
-    return finish("invalid", [{ reason: "manifest-escaped", path: SCHEMA_MANIFEST_PATH, detail: "schema.json resolves outside the checkout" }], { path: SCHEMA_MANIFEST_PATH, state: "escaped", declared: null });
-  }
-  if (manifest.state === "unreadable") {
-    return finish("invalid", [{ reason: "manifest-unreadable", path: SCHEMA_MANIFEST_PATH, detail: manifest.detail }], { path: SCHEMA_MANIFEST_PATH, state: "unreadable", declared: null });
-  }
-  if (manifest.state === "malformed") {
-    return finish("invalid", [{ reason: "manifest-malformed", path: SCHEMA_MANIFEST_PATH, detail: manifest.detail }], { path: SCHEMA_MANIFEST_PATH, state: "malformed", declared: null });
-  }
-  if (manifest.state === "missing") {
-    if (journal) {
-      return finish("migration-incomplete", [{ reason: "migration-journal-present", path: MIGRATION_JOURNAL_PATH, detail: "a migration journal exists without a finalized manifest \u2014 the apply did not complete" }], { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null });
-    }
-    const relevant = scan.issues.filter((issue2) => issue2.reason.startsWith("legacy-"));
-    if (relevant.length > 0) {
-      return finish("migration-required", relevant, { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null });
-    }
-    return finish("uninitialized", [], { path: SCHEMA_MANIFEST_PATH, state: "missing", declared: null });
-  }
-  const manifestIssues = manifest.versionIssues;
-  const unsupported = manifestIssues.filter((issue2) => issue2.reason === "schema-version-unsupported" || issue2.reason === "component-version-unsupported");
-  const manifestInfo = { path: SCHEMA_MANIFEST_PATH, state: "valid", declared: manifest.declared };
-  if (unsupported.length > 0) {
-    return finish("unsupported-version", unsupported, { ...manifestInfo, state: "unsupported" });
-  }
-  const inProgress = [];
-  if (manifest.migrationInProgress) {
-    inProgress.push({ reason: "manifest-migration-in-progress", path: SCHEMA_MANIFEST_PATH, detail: "manifest declares migration.status: in-progress" });
-  }
-  if (journal) {
-    inProgress.push({ reason: "migration-journal-present", path: MIGRATION_JOURNAL_PATH, detail: "a migration journal is present \u2014 the apply did not complete" });
-  }
-  if (inProgress.length > 0) {
-    return finish("migration-incomplete", inProgress, manifestInfo);
-  }
-  const behind = manifestIssues.filter((issue2) => issue2.reason === "component-version-behind");
-  const allIssues = [...scan.issues, ...scan.manifestScopedIssues, ...behind];
-  if (allIssues.length > 0) {
-    return finish("migration-required", allIssues, manifestInfo);
-  }
-  return finish("current", [], manifestInfo);
-}
-function normalExecutionAllowed(status) {
-  return status === "current" || status === "uninitialized";
-}
-function entrypointRefusal(report) {
-  return {
-    error: "schema-preflight-blocked",
-    exitCode: SCHEMA_PREFLIGHT_EXIT_CODE,
-    readOnly: true,
-    preflight: report
-  };
-}
-function schemaEntrypointGuard(cwd) {
-  const report = evaluateSchemaPreflight(cwd);
-  if (normalExecutionAllowed(report.status)) return true;
-  console.log(JSON.stringify(entrypointRefusal(report), null, 2));
-  const recommended = report.recommended?.command ?? "inspect docs/.doc-driven-dev/schema.json";
-  console.error(`schema preflight blocked (${report.status}): ${statusSummary(report)} \u2014 run ${recommended}`);
-  process.exitCode = SCHEMA_PREFLIGHT_EXIT_CODE;
-  return false;
 }
 
 // src/skills/doc-maintenance/scripts/migrate_ids.ts

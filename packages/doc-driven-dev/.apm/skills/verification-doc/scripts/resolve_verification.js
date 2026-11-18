@@ -16539,12 +16539,12 @@ function configFor(type) {
   if (entry?.persistence === "durable") return entry;
   if (entry?.persistence === "ephemeral") {
     throw new Error(
-      `Document type "${type}" is execution-bound (persistence: ephemeral): it has no durable Git form under Document Registry 3 \u2014 plan/task state lives in the Execution Store`
+      `Document type "${type}" is execution-bound (persistence: ephemeral): it has no durable Git form under Document Registry 3 \u2014 plan/task state lives in the Execution Store; to inventory a tracked legacy corpus run doc_maintenance.js migrate plan --json`
     );
   }
   if (legacyAliases.has(type)) {
     throw new Error(
-      `Document type "${type}" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document`
+      `Document type "${type}" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document \u2014 run doc_maintenance.js migrate plan --json to plan the migration`
     );
   }
   throw new Error(`Unknown document type: ${type}`);
@@ -37332,7 +37332,7 @@ async function scanRepository(options2) {
     const canonical = expectedTypes.length > 0;
     const docDirName = normalizeDir(import_node_path4.default.posix.dirname(repoPath));
     const indexNamed = isIndexFileName(import_node_path4.default.posix.basename(repoPath));
-    const kind = canonical ? indexNamed ? "index" : "canonical" : migrationDirs.some((dir) => docDirName === dir || isUnderDir2(docDirName, dir)) ? indexNamed ? "index" : "legacy" : "unmanaged";
+    const dirKind = canonical ? indexNamed ? "index" : "canonical" : migrationDirs.some((dir) => docDirName === dir || isUnderDir2(docDirName, dir)) ? indexNamed ? "index" : "legacy" : "unmanaged";
     let content3 = "";
     let readError = null;
     try {
@@ -37345,12 +37345,14 @@ async function scanRepository(options2) {
     const structure = await extractMarkdownStructure(parsed.body, bodyStartLine);
     const data = parsed.data;
     const owners = Array.isArray(data.owners) ? data.owners.filter((owner) => typeof owner === "string" && Boolean(owner.trim())) : [];
+    const declaredType = stringField(data, "type");
+    const kind = dirKind === "canonical" && declaredType !== null && (resolveDocType(declaredType).kind === "ephemeral" || resolveDocType(declaredType).kind === "legacy") ? "legacy" : dirKind;
     files.push({
       path: repoPath,
       absolutePath: absolute,
       kind,
       expectedTypes,
-      type: stringField(data, "type"),
+      type: declaredType,
       id: stringField(data, "id"),
       status: stringField(data, "status"),
       lifecycle: stringField(data, "lifecycle"),

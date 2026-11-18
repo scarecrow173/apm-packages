@@ -50,6 +50,12 @@ scan → plan → preview → explicit apply → rescan → doc-status validatio
 
 whitelist 外の finding は `manual` または `migration` 理由付きの skipped
 として報告され、呼び出し側が人間または migration へ振り分けられる。
+repo-level の `doc-status` findings —— `tracked-execution-doc`、
+`tracked-legacy-doc`、および全 Evidence Store 軸 —— は contract 上
+skip 専用である。tracked な plan/task や legacy の Markdown は
+`migrate` フローが所有する migration inventory であり、Evidence
+record は immutable である —— この skill が修復・書き換え・durable
+Markdown へのコピーを行うことは一切ない。
 
 ## コマンド
 
@@ -63,14 +69,17 @@ node scripts/doc_maintenance.js apply --force-index --json
 - `plan` — action と skipped finding を preview する。書き込まない。
 - `apply` — whitelist 済み action を適用し、再scan して検証サマリ
   （`findings before` / `findings after`）を出力する。
-- オプション: `--type`, `--dir`, `--force-index`, `--json`。
+- オプション: `--type`（durable 型 `idea`、`brainstorm`、`discovery`、
+  `spec`、`design`、`adr`、`knowledge`、`verification`、または `all`）、
+  `--dir`, `--force-index`, `--json`。
 
 `index` は managed index を明示的に materialize するエントリポイント —
 INDEX のみを対象とし、全 durable オーナーを横断する。`plan`/`apply`
 と異なり managed index コンテンツ以外には一切触れず（link 正規化や
 ソース修復は行わない）、各書き込みをオーナー writer に分派する。
-shared-4col ディレクトリは共有 renderer/merge、`docs/adr` は ADR
-managed writer 経由で書き込む。resident が execution-bound
+shared-4col ディレクトリ（`docs/knowledge` と `docs/verification` を
+含む）は共有 renderer/merge、`docs/adr` は ADR managed writer 経由で
+書き込む。resident が execution-bound
 （`docs/plans`、`docs/tasks`、`docs/implementation-plans`、
 `docs/work-items`）または legacy（`docs/test-spec`、`docs/test-specs`、
 `docs/impl`、`docs/impl/ir`、`docs/impl/exp`）のディレクトリは

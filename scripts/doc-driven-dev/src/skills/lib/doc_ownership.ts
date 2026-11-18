@@ -225,7 +225,7 @@ function scopeTypesForQuery(directory: string | null, requestedType: string | un
   if (directory === null) return [...docTypes];
   const residents = sharedTypesResidentIn(directory);
   if (residents.length === 0) {
-    throw new Error(`Scope mismatch: no shared-suite document types are resident in ${describeOwnership(directory)}`);
+    throw new Error(`Scope mismatch: no shared-suite document types are resident in ${describeOwnership(directory)} — migration-owned dirs are audited only by migration tooling; run doc_maintenance.js migrate plan --json`);
   }
   return residents;
 }
