@@ -296,175 +296,175 @@
     },
     {
       "flow": "briefing-flow",
-      "skillBytes": 18349,
-      "alwaysOnChars": 17925,
+      "skillBytes": 20329,
+      "alwaysOnChars": 19873,
       "directives": [
         {
           "kind": "skill-invoke",
           "target": "doc-driven-dev-graph",
-          "line": 28,
+          "line": 36,
           "optional": false
         },
         {
           "kind": "sdp-artifact",
           "target": ".sdp/briefing-flow-default/briefing-profile.json",
-          "line": 86,
+          "line": 102,
           "optional": false
         },
         {
           "kind": "sdp-artifact",
           "target": ".sdp/briefing-flow-default/briefing-profile.json",
-          "line": 88,
+          "line": 104,
           "optional": false
         },
         {
           "kind": "adapter",
           "target": "<skill-root>/briefing-flow/assets/adapters/briefing-adapter.yaml",
-          "line": 96,
+          "line": 112,
           "optional": true
         },
         {
           "kind": "skill-invoke",
           "target": "skill-discovery-protocol",
-          "line": 96,
+          "line": 112,
           "optional": true
         },
         {
           "kind": "skill-invoke",
           "target": "skill-discovery-protocol",
-          "line": 98,
-          "optional": true
-        },
-        {
-          "kind": "adapter",
-          "target": "<skill-root>/briefing-flow/assets/adapters/briefing-adapter.yaml",
-          "line": 108,
-          "optional": false
-        },
-        {
-          "kind": "sdp-artifact",
-          "target": ".sdp/briefing-flow-default/briefing-profile.json",
-          "line": 110,
-          "optional": false
-        },
-        {
-          "kind": "sdp-artifact",
-          "target": ".sdp/skill-reference-inferences.json",
-          "line": 111,
-          "optional": false
-        },
-        {
-          "kind": "sdp-artifact",
-          "target": ".sdp/skill-reference-inferences.json",
           "line": 114,
-          "optional": false
+          "optional": true
         },
         {
-          "kind": "skill-invoke",
-          "target": "skill-discovery-protocol",
-          "line": 115,
-          "optional": false
-        },
-        {
-          "kind": "skill-invoke",
-          "target": "skill-discovery-protocol",
-          "line": 119,
-          "optional": false
-        },
-        {
-          "kind": "reference",
-          "target": "../skill-discovery-protocol/references/progressive-loading-contract.md",
+          "kind": "adapter",
+          "target": "<skill-root>/briefing-flow/assets/adapters/briefing-adapter.yaml",
           "line": 124,
           "optional": false
         },
         {
           "kind": "sdp-artifact",
           "target": ".sdp/briefing-flow-default/briefing-profile.json",
+          "line": 126,
+          "optional": false
+        },
+        {
+          "kind": "sdp-artifact",
+          "target": ".sdp/skill-reference-inferences.json",
+          "line": 127,
+          "optional": false
+        },
+        {
+          "kind": "sdp-artifact",
+          "target": ".sdp/skill-reference-inferences.json",
           "line": 130,
           "optional": false
         },
         {
-          "kind": "sdp-artifact",
-          "target": ".sdp/briefing-flow-default/briefing-profile.json",
-          "line": 132,
+          "kind": "skill-invoke",
+          "target": "skill-discovery-protocol",
+          "line": 131,
           "optional": false
         },
         {
           "kind": "skill-invoke",
           "target": "skill-discovery-protocol",
-          "line": 132,
+          "line": 135,
           "optional": false
         },
         {
-          "kind": "sdp-artifact",
-          "target": ".sdp/briefing-flow-default/briefing-profile.json",
-          "line": 138,
-          "optional": false
-        },
-        {
-          "kind": "skill-invoke",
-          "target": "skill-discovery-protocol",
-          "line": 138,
-          "optional": false
-        },
-        {
-          "kind": "sdp-artifact",
-          "target": ".sdp/briefing-flow-default/briefing-profile.json",
-          "line": 139,
-          "optional": false
-        },
-        {
-          "kind": "skill-invoke",
-          "target": "skill-discovery-protocol",
-          "line": 139,
-          "optional": false
-        },
-        {
-          "kind": "skill-invoke",
-          "target": "skill-discovery-protocol",
+          "kind": "reference",
+          "target": "../skill-discovery-protocol/references/progressive-loading-contract.md",
           "line": 140,
+          "optional": false
+        },
+        {
+          "kind": "sdp-artifact",
+          "target": ".sdp/briefing-flow-default/briefing-profile.json",
+          "line": 146,
+          "optional": false
+        },
+        {
+          "kind": "sdp-artifact",
+          "target": ".sdp/briefing-flow-default/briefing-profile.json",
+          "line": 148,
+          "optional": false
+        },
+        {
+          "kind": "skill-invoke",
+          "target": "skill-discovery-protocol",
+          "line": 148,
+          "optional": false
+        },
+        {
+          "kind": "sdp-artifact",
+          "target": ".sdp/briefing-flow-default/briefing-profile.json",
+          "line": 154,
+          "optional": false
+        },
+        {
+          "kind": "skill-invoke",
+          "target": "skill-discovery-protocol",
+          "line": 154,
+          "optional": false
+        },
+        {
+          "kind": "sdp-artifact",
+          "target": ".sdp/briefing-flow-default/briefing-profile.json",
+          "line": 155,
+          "optional": false
+        },
+        {
+          "kind": "skill-invoke",
+          "target": "skill-discovery-protocol",
+          "line": 155,
+          "optional": false
+        },
+        {
+          "kind": "skill-invoke",
+          "target": "skill-discovery-protocol",
+          "line": 156,
           "optional": false
         },
         {
           "kind": "adapter",
           "target": "assets/adapters/briefing-adapter.yaml",
-          "line": 160,
+          "line": 176,
           "optional": false
         },
         {
           "kind": "reference",
           "target": "../doc-driven-dev-graph/references/delegate-execution-policy.md",
-          "line": 186,
+          "line": 207,
           "optional": false
         },
         {
           "kind": "script",
           "target": "<skill-root>/briefing-flow/scripts/audit_briefing.js",
-          "line": 249,
+          "line": 270,
           "optional": false
         },
         {
           "kind": "adapter",
           "target": "<skill-root>/briefing-flow/assets/adapters/briefing-adapter.yaml",
-          "line": 310,
+          "line": 336,
           "optional": true
         },
         {
           "kind": "skill-invoke",
           "target": "skill-discovery-protocol",
-          "line": 310,
+          "line": 336,
           "optional": true
         },
         {
           "kind": "skill-invoke",
           "target": "doc-driven-dev-graph",
-          "line": 359,
+          "line": 385,
           "optional": false
         },
         {
           "kind": "reference",
           "target": "../doc-driven-dev-graph/references/execution-outcome-contract.md",
-          "line": 360,
+          "line": 386,
           "optional": false
         }
       ],
@@ -482,12 +482,12 @@
         {
           "path": "briefing-flow/assets/adapters/briefing-adapter.yaml",
           "exists": true,
-          "bytes": 4412
+          "bytes": 4672
         },
         {
           "path": "briefing-flow/scripts/audit_briefing.js",
           "exists": true,
-          "bytes": 1372519
+          "bytes": 1421360
         },
         {
           "path": "doc-driven-dev-graph/references/delegate-execution-policy.md",
@@ -517,7 +517,7 @@
       ],
       "totals": {
         "directives": 28,
-        "referencedBytes": 1437179,
+        "referencedBytes": 1486280,
         "missing": 0
       }
     },
@@ -679,7 +679,7 @@
         {
           "path": "briefing-flow/SKILL.md",
           "exists": true,
-          "bytes": 18349
+          "bytes": 20329
         },
         {
           "path": "discovery-doc/references/discovery-conventions.md",
@@ -694,7 +694,7 @@
       ],
       "totals": {
         "directives": 8,
-        "referencedBytes": 1145016,
+        "referencedBytes": 1146996,
         "missing": 0
       }
     },
@@ -1061,7 +1061,7 @@
         {
           "path": "briefing-flow/SKILL.md",
           "exists": true,
-          "bytes": 18349
+          "bytes": 20329
         },
         {
           "path": "design-doc/SKILL.md",
@@ -1191,7 +1191,7 @@
       ],
       "totals": {
         "directives": 51,
-        "referencedBytes": 8049552,
+        "referencedBytes": 8051532,
         "missing": 0
       }
     },
@@ -2824,49 +2824,49 @@
     },
     {
       "flow": "test-spec-doc",
-      "skillBytes": 6604,
-      "alwaysOnChars": 6347,
+      "skillBytes": 6788,
+      "alwaysOnChars": 6410,
       "directives": [
         {
           "kind": "script",
           "target": "scripts/new_test_spec.js",
-          "line": 21,
+          "line": 24,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/new_test_spec.js",
-          "line": 53,
+          "line": 56,
           "optional": false
         },
         {
           "kind": "script",
           "target": "../verification-doc/scripts/new_verification.js",
-          "line": 59,
+          "line": 62,
           "optional": false
         },
         {
           "kind": "reference",
           "target": "references/test-spec-conventions.md",
-          "line": 63,
+          "line": 66,
           "optional": false
         },
         {
           "kind": "reference",
           "target": "references/test-spec-conventions.md",
-          "line": 67,
+          "line": 70,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/new_test_spec.js",
-          "line": 127,
+          "line": 130,
           "optional": false
         },
         {
           "kind": "reference",
           "target": "references/test-spec-conventions.md",
-          "line": 130,
+          "line": 133,
           "optional": false
         }
       ],
@@ -2990,10 +2990,10 @@
   ],
   "totals": {
     "flows": 20,
-    "skillBytes": 199333,
-    "alwaysOnChars": 192418,
+    "skillBytes": 201497,
+    "alwaysOnChars": 194429,
     "directives": 337,
-    "referencedBytes": 56330617,
+    "referencedBytes": 56383678,
     "missing": 0
   }
 }

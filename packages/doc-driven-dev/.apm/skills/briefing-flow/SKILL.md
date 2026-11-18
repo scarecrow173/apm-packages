@@ -15,11 +15,19 @@ Orchestrates information gathering and organization by dynamically discovering
 and routing to the skills that the active profile marks as applicable in the
 current environment. This is the **briefing phase orchestrator** — it
 determines which skills apply, configures the skill stack based on information
-state, and enforces spec-doc and adr-doc completion before progression.
+state, and enforces spec and ADR sufficiency before progression.
 
 This is a **meta skill**: it produces no documents directly. Instead it governs
 skill discovery, configuration, sequencing, and the gate loop that connects
-information gathering to downstream document creation.
+information gathering to downstream document work.
+
+**Existing documents come first.** Briefing is a sufficiency contract, not a
+generation contract: before creating or updating any spec/ADR/knowledge
+document, audit what already exists. When the focused spec and ADR already
+satisfy requirement sufficiency — acceptance criteria, considered options,
+and Knowledge Relations v1 pair evidence — the flow reuses them and creates
+nothing. Document skills run only to close a measured gap, never to mint
+duplicate Markdown.
 
 ## When to Use
 
@@ -32,7 +40,7 @@ information gathering to downstream document creation.
 
 ## The Rule
 
-**Before writing spec-doc / adr-doc, complete the Assess and Configure phases below.**
+**Before accepting spec/ADR evidence — reusing existing or writing new — complete the Assess and Configure phases below.**
 Use the skills that the generated profile marks as applicable by default,
 unless the user explicitly overrides the routing decision. If a dispatch-
 specific override or emergency override is used, record a one-line reason
@@ -50,7 +58,7 @@ Phase A: Assess  →  Phase B: Configure  →  Phase C: Gather & Generate  →  
 | ----- | ------- | ------ |
 | A. Assess | Understand the request, determine information state | Entry Decision recorded + characteristics identified |
 | B. Configure | Discover skills, build/load skill stack for briefing | Active skill stack declared |
-| C. Gather & Generate | Gather information and produce documents sequentially or in stages | discovery-doc (optional) + spec-doc + adr-doc generated |
+| C. Gather & Generate | Gather information and produce documents sequentially or in stages | discovery-doc (optional) + sufficient spec/ADR pair (reused or produced) |
 | D. Gate | Verify completion conditions, confirm readiness for next phase | Gate pass/fail decision |
 
 ---
@@ -59,6 +67,14 @@ Phase A: Assess  →  Phase B: Configure  →  Phase C: Gather & Generate  →  
 
 Receive a request or problem and determine information state:
 
+0. **Audit existing documents first** — inspect the focused spec, ADR, and
+   knowledge documents for requirement sufficiency before routing any
+   creation. A sufficient existing spec/ADR pair (live status, acceptance
+   criteria, considered options, and Knowledge Relations v1 pair evidence via
+   `adr decides-for → spec` or a shared discovery/brainstorm anchor) is reused
+   as-is: record "reuse: <paths>" as the Entry Decision evidence and skip
+   straight to sufficiency confirmation in Phase D. Documents that nearly
+   suffice are updated in place — never duplicated under a new filename.
 1. **Understand the request** — identify purpose, background, constraints, stakeholders.
 2. **Classify information state** — use the Entry Decision table to determine path:
 
@@ -181,6 +197,11 @@ Apply each skill in the active stack according to its priority:
 
 ### Dispatch Conditions
 
+Document skills fire only when the Phase A sufficiency audit measured a gap:
+a missing document, an incomplete section, or absent pair evidence. When the
+existing spec/ADR pair is already sufficient no document skill runs — the
+flow proceeds to Phase D with the existing paths.
+
 Spec and ADR share the same problem's constraints, options, and acceptance
 criteria — they are produced **as same-context skills inside this delegate by
 default** (`shared-judgment` under the [delegate execution-mode policy](../doc-driven-dev-graph/references/delegate-execution-policy.md)). Sub-agent
@@ -188,8 +209,8 @@ dispatch is reserved for genuinely independent work.
 
 | Trigger | Fire Condition | Execution |
 | ------- | -------------- | --------- |
-| spec-doc | Purpose, scope, acceptance criteria, and exclusions are available | Same-context skill (default) |
-| adr-doc | Chosen approach, alternatives, rationale, and impact are available | Same-context skill (default); may follow spec-doc immediately in the same context |
+| spec-doc | Purpose, scope, acceptance criteria, and exclusions are available AND the existing spec is missing or insufficient | Same-context skill (default) — update in place when an existing spec nearly suffices |
+| adr-doc | Chosen approach, alternatives, rationale, and impact are available AND the existing ADR is missing or insufficient | Same-context skill (default); may follow spec-doc immediately in the same context — update in place when an existing ADR nearly suffices |
 | discovery-doc | Problem space is ambiguous, alternatives exist, or significant research was done | Same-context or delegated per the execution-mode policy — independent research/separated edit scope may justify `subagent-as-tool` |
 | Independent research | External verification, black-box review, or context-heavy exploration | Delegated mode per the policy only; never default for spec/adr |
 
@@ -216,8 +237,8 @@ Phase C iterates until ALL of the following stop conditions are met:
 - For key use cases, input/processing/expected results can be explained.
 - Critical constraints (technical, operational, timeline, quality) are made explicit.
 - Open items are classified as "pre-implementation blocker" or "manageable downstream".
-- `spec-doc` has been generated (the dispatched effect has completed).
-- `adr-doc` has been generated (the dispatched effect has completed).
+- A sufficient spec exists — reused unchanged or produced/updated by `spec-doc`.
+- A sufficient ADR exists — reused unchanged or produced/updated by `adr-doc`.
 
 If stop conditions are not met:
 
@@ -259,10 +280,15 @@ It checks the required counts, typed pair evidence in canonical graph records,
 relevant relation resolution and duplicate IDs, and existence of local Markdown
 link/image destinations in the two documents. `##` checks accept canonical or
 declared localized heading aliases; headings inside fenced code blocks never
-count as sections. Pair evidence can be a direct
-relation, a shared discovery anchor, or a shared approved design. The audit
-checks both documents and all shared discovery anchors; when neither direct
-nor discovery evidence exists, it checks all supporting designs instead. It
+count as sections. Pair evidence uses only the stored Knowledge Relations v1
+vocabulary: a direct `adr decides-for → spec` edge, a shared
+discovery/brainstorm anchor whose `motivates`/`informs` edges reach both
+artifacts, or a shared approved design (`design realizes → spec` plus
+`adr decides-for → design`). Legacy spellings (`derives-from`, `derived-by`,
+`refines`, `refined-by`) are migration-domain findings — they fail the audit
+rather than satisfying it. The audit
+checks both documents and all shared anchors; when neither direct
+nor anchor evidence exists, it checks all supporting designs instead. It
 does not validate plans or select a downstream chain; design/plan focus
 ambiguity belongs to the graph's focus gate. External URLs, fragment targets
 and destination contents are not checked; placeholders are warnings. The

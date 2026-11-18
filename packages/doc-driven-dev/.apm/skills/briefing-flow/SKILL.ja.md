@@ -13,9 +13,16 @@ license: MIT
 active profile が現在の環境で applicable と示したスキルを動的に発見して
 ルーティングし、情報収集と整理を行う。このスキルは briefing フェーズの
 オーケストレータであり、どのスキルが適用されるかを判断し、情報状態に応じて
-skill stack を構成し、spec-doc と adr-doc が完了するまで次段階への進行を制御する。
+skill stack を構成し、spec と ADR の十分性が満たされるまで次段階への進行を制御する。
 
 これはメタスキルである。直接ドキュメントは生成しない。代わりに、スキル発見、構成、順序付け、そして情報収集から下流の文書作成へ接続するゲートループを管理する。
+
+**既存文書を最初に確認する。** briefing は生成 contract ではなく十分性 contract
+である。spec / ADR / knowledge 文書を新規作成・更新する前に、既存のものを監査する。
+focus された spec と ADR のペアが要件の十分性 — acceptance criteria、considered
+options、Knowledge Relations v1 の pair evidence — をすでに満たしている場合、
+フローはそれを再利用し、新しい文書を一切作らない。文書スキルは測定されたギャップを
+埋めるためだけに実行し、重複する Markdown を mint しない。
 
 ## 利用タイミング
 
@@ -28,7 +35,7 @@ skill stack を構成し、spec-doc と adr-doc が完了するまで次段階�
 
 ## ルール
 
-**spec-doc / adr-doc を書く前に、下の Assess と Configure フェーズを完了すること。**
+**spec / ADR の証拠を採用する前に — 既存の再利用でも新規作成でも — 下の Assess と Configure フェーズを完了すること。**
 生成された profile が現在の作業に applicable と示したスキルを default として使う。
 ただし user が routing decision を明示的に override した場合はそれを優先する。
 dispatch-specific override または emergency override を使う場合は、進行前に
@@ -46,7 +53,7 @@ Phase A: Assess  →  Phase B: Configure  →  Phase C: Gather & Generate  →  
 | ----- | ------- | ------ |
 | A. Assess | 要求を理解し、情報状態を判定する | Entry Decision を記録 + 特性を特定 |
 | B. Configure | スキルを発見し、briefing 用の skill stack を構成する | 有効な skill stack を宣言 |
-| C. Gather & Generate | 情報を集め、文書を逐次または段階的に生成する | discovery-doc（任意）+ spec-doc + adr-doc を生成 |
+| C. Gather & Generate | 情報を集め、文書を逐次または段階的に生成する | discovery-doc（任意）+ 十分な spec/ADR ペア（再利用または生成） |
 | D. Gate | 完了条件を検証し、次段階への準備完了を確認する | Gate の合否判定 |
 
 ---
@@ -55,6 +62,13 @@ Phase A: Assess  →  Phase B: Configure  →  Phase C: Gather & Generate  →  
 
 要求や問題を受け取り、情報状態を判定する:
 
+0. **既存文書を最初に監査する** — 作成をルーティングする前に、focus された
+   spec・ADR・knowledge 文書を要件の十分性で検査する。十分な既存の spec/ADR
+   ペア（有効な status、acceptance criteria、considered options、`adr
+   decides-for → spec` または共通の discovery/brainstorm anchor による
+   Knowledge Relations v1 の pair evidence）はそのまま再利用する。
+   Entry Decision の証拠として "reuse: <paths>" を記録し、Phase D の十分性
+   確認へ直接進む。ほぼ十分な文書はその場で更新し、別ファイル名で複製しない。
 1. **要求を理解する** — 目的、背景、制約、関係者を特定する。
 2. **情報状態を分類する** — Entry Decision テーブルで経路を決める:
 
@@ -164,6 +178,10 @@ skill の `SKILL.md` 本文だけを読み、references と scripts は active s
 
 ### ディスパッチ条件
 
+文書スキルは Phase A の十分性監査でギャップが測定されたときだけ発火する:
+文書の不存在、セクション不足、pair evidence の欠如。既存の spec/ADR ペアが
+すでに十分なら文書スキルは一切実行せず、既存パスのまま Phase D へ進む。
+
 spec と ADR は同じ問題の制約、選択肢、acceptance criteria を共有するため、
 **デフォルトではこの delegate 内で same-context skill として生成する**
 （[delegate execution-mode policy](../doc-driven-dev-graph/references/delegate-execution-policy.ja.md) の `shared-judgment`）。
@@ -171,8 +189,8 @@ sub-agent dispatch は、真に独立した作業にのみ予約する。
 
 | Trigger | Fire Condition | Execution |
 | ------- | -------------- | --------- |
-| spec-doc | 目的、範囲、acceptance criteria、除外事項が揃った | same-context skill（デフォルト） |
-| adr-doc | 採用方針、代替案、理由、影響が揃った | same-context skill（デフォルト）；spec-doc に続けて同じ context で実行してよい |
+| spec-doc | 目的、範囲、acceptance criteria、除外事項が揃い、かつ既存 spec が不存在または不十分 | same-context skill（デフォルト）— ほぼ十分な既存 spec はその場で更新 |
+| adr-doc | 採用方針、代替案、理由、影響が揃い、かつ既存 ADR が不存在または不十分 | same-context skill（デフォルト）；spec-doc に続けて同じ context で実行してよい — ほぼ十分な既存 ADR はその場で更新 |
 | discovery-doc | 問題空間が曖昧、代替案が存在する、または重大な調査を実施した | same-context または delegated — execution-mode policy に従う。独立した調査や分離された edit scope は `subagent-as-tool` を正当化し得る |
 | Independent research | 外部検証、black-box review、または context-heavy な探索 | policy による delegated mode のみ；spec/adr のデフォルトにはしない |
 
@@ -191,8 +209,8 @@ Phase C は、次のすべてが満たされるまで反復する:
 - 主要なユースケースについて、入力 / 処理 / 期待結果を説明できる。
 - 重要な制約（技術、運用、期限、品質）が明示されている。
 - 未解決の項目が "pre-implementation blocker" か "manageable downstream" に分類されている。
-- `spec-doc` が生成済み（ディスパッチされた effect が完了）。
-- `adr-doc` が生成済み（ディスパッチされた effect が完了）。
+- 十分な spec が存在する — 既存を再利用するか、`spec-doc` が生成・更新済み。
+- 十分な ADR が存在する — 既存を再利用するか、`adr-doc` が生成・更新済み。
 
 Stop conditions が満たされない場合:
 
@@ -232,8 +250,13 @@ spec の status は `proposed`、
 の解決と重複 ID、両文書内のローカル Markdown link/image の参照先の存在を検査する。
 `##` セクション検査は canonical 見出しか宣言済みのローカライズ別名を受理し、
 fenced code block 内の見出しはセクションとして数えない。
-pair evidence は直接 relation、共通 discovery anchor、または共通の承認済み design
-である。両文書とすべての共通 discovery anchor を検査し、直接 evidence も discovery
+pair evidence は stored Knowledge Relations v1 vocabulary のみを使う:
+`adr decides-for → spec` の直接 edge、両方の artifact に `motivates`/`informs`
+edge が届く共通の discovery/brainstorm anchor、または共通の承認済み design
+（`design realizes → spec` と `adr decides-for → design`）。legacy spelling
+（`derives-from`、`derived-by`、`refines`、`refined-by`）は migration 領域の
+finding であり、audit を通過するのではなく失敗させる。
+両文書とすべての共通 anchor を検査し、直接 evidence も anchor
 evidence もない場合は代わりにすべての supporting design を検査する。plan の検証や
 下流 chain の選択は行わず、design/plan の focus 曖昧性は graph の focus gate に委ねる。
 外部 URL、fragment の参照先、参照先の内容は検査せず、placeholder は警告となる。

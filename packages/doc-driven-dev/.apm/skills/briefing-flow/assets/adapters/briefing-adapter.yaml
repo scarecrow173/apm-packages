@@ -27,16 +27,16 @@ flow_stack:
           reason: "Persist exploration results as a canonical discovery artifact when the problem space is ambiguous or alternatives exist"
     - slot_id: "spec_output"
       slot_type: "layerable"
-      activation: "always"
+      activation: "conditional"
       default:
         - skill: "spec-doc"
-          reason: "All briefings produce spec-doc output"
+          reason: "Create or update a spec only when the existing spec/knowledge set fails requirement sufficiency; a sufficient existing spec is audited and reused, never duplicated"
     - slot_id: "adr_output"
       slot_type: "layerable"
-      activation: "always"
+      activation: "conditional"
       default:
         - skill: "adr-doc"
-          reason: "All briefings produce adr-doc output"
+          reason: "Create or update an ADR only when no existing ADR already decides the focused spec's approach; a sufficient existing ADR is audited and reused, never duplicated"
 classification:
   unmatched:
     action: "assign"

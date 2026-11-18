@@ -4429,7 +4429,7 @@ var require_extend = __commonJS({
       }
       return toStr.call(arr) === "[object Array]";
     };
-    var isPlainObject5 = function isPlainObject6(obj) {
+    var isPlainObject7 = function isPlainObject8(obj) {
       if (!obj || toStr.call(obj) !== "[object Object]") {
         return false;
       }
@@ -4486,12 +4486,12 @@ var require_extend = __commonJS({
             src = getProperty(target, name);
             copy = getProperty(options2, name);
             if (target !== copy) {
-              if (deep && copy && (isPlainObject5(copy) || (copyIsArray = isArray(copy)))) {
+              if (deep && copy && (isPlainObject7(copy) || (copyIsArray = isArray(copy)))) {
                 if (copyIsArray) {
                   copyIsArray = false;
                   clone2 = src && isArray(src) ? src : [];
                 } else {
-                  clone2 = src && isPlainObject5(src) ? src : {};
+                  clone2 = src && isPlainObject7(src) ? src : {};
                 }
                 setProperty(target, { name, newValue: extend3(deep, clone2, copy) });
               } else if (typeof copy !== "undefined") {
@@ -13588,8 +13588,8 @@ var init_unist_util_visit = __esm({
 var import_node_path6 = __toESM(require("node:path"));
 
 // src/skills/briefing-flow/scripts/lib/briefing_audit.ts
-var import_node_fs3 = __toESM(require("node:fs"));
-var import_node_path4 = __toESM(require("node:path"));
+var import_node_fs4 = __toESM(require("node:fs"));
+var import_node_path5 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_suite_utils.ts
 var import_gray_matter = __toESM(require_gray_matter());
@@ -35811,11 +35811,19 @@ function date4(params) {
 var import_uuid62 = __toESM(require_uuid62());
 
 // src/skills/lib/claim_ids.ts
+var CLAIM_KEY_PATTERN = /^[A-Z][A-Z0-9]*-\d+$/;
 var CLAIM_REFERENCE_PATTERN = /^([^\s:]+)::([A-Z][A-Z0-9]*-\d+)$/;
+var CLAIM_MARKER_PATTERN = /<!--\s*claim\s*:(.*?)-->/g;
+function isClaimKey(value) {
+  return CLAIM_KEY_PATTERN.test(value);
+}
 function parseClaimReference(value) {
   const match = CLAIM_REFERENCE_PATTERN.exec(value.trim());
   if (!match) return null;
   return { docId: match[1], key: match[2] };
+}
+function claimId(docId, key) {
+  return `${docId}::${key}`;
 }
 
 // src/skills/lib/doc_types.ts
@@ -36325,6 +36333,19 @@ function knowledgeRelationFields() {
   }
   return [...fields].sort();
 }
+function knowledgeRelationInverses() {
+  const inverses = {};
+  for (const type of docTypes) {
+    for (const relation of configs[type].allowedRelations) {
+      const existing = inverses[relation.field];
+      if (existing && existing !== relation.inverse) {
+        throw new Error(`Registry inconsistency: relation ${relation.field} declares two inverse names (${existing}, ${relation.inverse})`);
+      }
+      inverses[relation.field] = relation.inverse;
+    }
+  }
+  return inverses;
+}
 function allowedRelationsFor(type) {
   const resolved = resolveDocType(type);
   if (resolved.kind !== "durable") return [];
@@ -36361,10 +36382,6 @@ function containmentKey(value) {
   const normalized = stripExtendedLengthPrefix(import_node_path.default.resolve(value));
   return process.platform === "win32" ? normalized.toLowerCase() : normalized;
 }
-function repoPathKey(value) {
-  const normalized = value.replace(/\\/g, "/");
-  return process.platform === "win32" ? normalized.toLowerCase() : normalized;
-}
 function isInside(cwd, candidate) {
   const root = containmentKey(cwd);
   const resolved = containmentKey(candidate);
@@ -36381,33 +36398,6 @@ function isInsideCheckout(cwd, candidate) {
   const resolved = import_node_path.default.resolve(cwd, candidate);
   if (!isInside(cwd, resolved)) return false;
   return !import_node_fs.default.existsSync(resolved) || isInsideRealpath(cwd, resolved);
-}
-function toRepoRelative(cwd, absolute) {
-  return import_node_path.default.relative(import_node_path.default.resolve(cwd), absolute).split(import_node_path.default.sep).join("/");
-}
-function resolveContainedDir(cwd, dir, flag = "--dir") {
-  const resolved = import_node_path.default.resolve(cwd, dir);
-  if (!isInside(cwd, resolved)) {
-    throw new Error(`${flag} escapes the checkout: ${dir}`);
-  }
-  if (import_node_fs.default.existsSync(resolved)) {
-    if (!isInsideRealpath(cwd, resolved)) {
-      throw new Error(`${flag} escapes the checkout through a link: ${dir}`);
-    }
-    return toRepoRelative(
-      stripExtendedLengthPrefix(import_node_fs.default.realpathSync(cwd)),
-      stripExtendedLengthPrefix(import_node_fs.default.realpathSync(resolved))
-    );
-  }
-  return toRepoRelative(cwd, stripExtendedLengthPrefix(resolved));
-}
-function scanRootKey(cwd, directory) {
-  const absolute = import_node_path.default.resolve(cwd, directory);
-  try {
-    return containmentKey(stripExtendedLengthPrefix(import_node_fs.default.realpathSync(absolute)));
-  } catch {
-    return containmentKey(absolute);
-  }
 }
 function isIndexFileName(file2) {
   return /^(readme|index)(\.[a-z0-9_-]+)?\.md$/i.test(file2);
@@ -36726,518 +36716,1466 @@ async function markdownDestinations(content3) {
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/artifact_graph.ts
-var import_node_fs2 = __toESM(require("node:fs"));
-var import_node_path3 = __toESM(require("node:path"));
 var import_gray_matter3 = __toESM(require_gray_matter());
-var LINEAGE_RELATIONS = /* @__PURE__ */ new Set([
-  "motivates",
-  "decides-for",
-  "realizes",
-  "supersedes",
-  "implements",
-  "implemented-by",
-  "derives-from",
-  "derived-by",
-  "refines",
-  "refined-by"
-]);
-var TASK_DEPENDENCY_RELATIONS = /* @__PURE__ */ new Set(["depends-on", "blocks"]);
-var EVIDENCE_RELATIONS = /* @__PURE__ */ new Set([
-  "verifies",
-  "verified-by",
-  "references",
-  "evidence",
-  "evidence-refs",
-  "evidenceRefs"
-]);
 var EXTERNAL_REFERENCE = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
-function compareStrings(left, right) {
-  return left.localeCompare(right);
-}
-function sortedUnique(values) {
-  return [...new Set(values)].sort(compareStrings);
-}
-function normalizeArtifactPath(cwd, target) {
-  return import_node_path3.default.relative(import_node_path3.default.resolve(cwd), import_node_path3.default.resolve(cwd, target)).split(import_node_path3.default.sep).join("/");
-}
 function isExternalArtifactReference(value) {
   const trimmed = value.trim();
   if (parseClaimReference(trimmed)) return false;
   return EXTERNAL_REFERENCE.test(trimmed);
 }
-function resolveContainedTaskDir(cwd, taskDir) {
-  return resolveContainedDir(cwd, taskDir ?? "docs/tasks", "--task-dir");
+
+// src/skills/lib/doc_repository.ts
+var import_node_fs2 = __toESM(require("node:fs"));
+var import_node_path3 = __toESM(require("node:path"));
+function compareStrings(left, right) {
+  return left.localeCompare(right);
 }
-function markdownFiles(dir) {
-  if (!import_node_fs2.default.existsSync(dir) || !import_node_fs2.default.statSync(dir).isDirectory()) return [];
+var REQUIRED_FRONT_MATTER_FIELDS = [
+  "id",
+  "type",
+  "status",
+  "lifecycle",
+  "title",
+  "created",
+  "updated",
+  "owners",
+  "relations"
+];
+function migrationOwnedDirs() {
+  const dirs = /* @__PURE__ */ new Set();
+  for (const type of executionTypes) {
+    for (const dir of ephemeralConfigs[type].formerDirs) dirs.add(normalizeDir(dir));
+  }
+  for (const entry of Object.values(legacyDocTypes)) {
+    for (const dir of entry.formerDirs) dirs.add(normalizeDir(dir));
+    for (const dir of entry.scopeDirs) dirs.add(normalizeDir(dir));
+  }
+  return [...dirs].sort(compareStrings);
+}
+function contractForDocType(entry) {
+  return {
+    type: entry.type,
+    persistence: entry.persistence,
+    idPrefix: entry.idPrefix,
+    idPattern: new RegExp(`^${entry.idPrefix}-(?:\\d+|[0-9A-Za-z]{22})$`),
+    idExceptions: [...entry.idExceptions],
+    canonicalDir: entry.dir ?? "",
+    dirs: [...entry.dirs],
+    defaultStatus: entry.defaultStatus,
+    statusValues: [...entry.statusValues],
+    lifecycleValues: [...entry.lifecycleValues],
+    defaultLifecycle: entry.defaultLifecycle,
+    requiredFields: [...REQUIRED_FRONT_MATTER_FIELDS, ...entry.requiredFields],
+    fieldVocabularies: Object.fromEntries(
+      Object.entries(entry.fieldVocabularies).map(([field, values]) => [field, [...values]])
+    ),
+    requiredRelations: entry.requiredRelations.map((rule) => ({ ...rule, targetTypes: [...rule.targetTypes] })),
+    requiredDirectoryFiles: [...entry.requiredDirectoryFiles],
+    reservedFiles: [...entry.reservedFiles],
+    allowsRootArtifact: entry.allowsRootArtifact,
+    requiresSourceEvidence: entry.requiresSourceEvidence,
+    expectedUpstream: entry.expectedUpstream.map((expectation) => ({ ...expectation, fields: [...expectation.fields] })),
+    allowedRelations: Object.fromEntries(
+      entry.allowedRelations.map((relation) => [relation.field, [...relation.targetTypes]])
+    )
+  };
+}
+var contracts = Object.fromEntries(
+  docTypes.map((type) => [type, contractForDocType(configFor(type))])
+);
+var markdownModules2 = null;
+async function loadMarkdownModules2() {
+  if (!markdownModules2) {
+    markdownModules2 = Promise.all([
+      Promise.resolve().then(() => (init_unified(), unified_exports)),
+      Promise.resolve().then(() => (init_remark_parse(), remark_parse_exports)),
+      Promise.resolve().then(() => (init_unist_util_visit(), unist_util_visit_exports))
+    ]).then(([unifiedModule, remarkParseModule, visitModule]) => ({
+      unified: unifiedModule.unified,
+      remarkParse: remarkParseModule.default || remarkParseModule,
+      visit: visitModule.visit
+    }));
+  }
+  return markdownModules2;
+}
+function textFromNode(node3) {
+  if (typeof node3.value === "string") return node3.value;
+  return (node3.children || []).map(textFromNode).join("");
+}
+function slugifyAnchor(text3) {
+  return text3.trim().toLowerCase().replace(/[^\p{L}\p{N}_\- ]/gu, "").replace(/ /g, "-");
+}
+function frontMatterEndLine(content3) {
+  const lines = content3.split(/\r?\n/);
+  if (lines[0]?.trim() !== "---") return 0;
+  const closing = lines.findIndex((line, index2) => index2 > 0 && line.trim() === "---");
+  return closing > 0 ? closing + 1 : 0;
+}
+async function extractMarkdownStructure(body, lineOffset = 0) {
+  const { unified: unified2, remarkParse: remarkParse2, visit: visit3 } = await loadMarkdownModules2();
+  const tree = unified2().use(remarkParse2).parse(body);
+  const definitions = /* @__PURE__ */ new Map();
+  visit3(tree, "definition", (node3) => {
+    if (typeof node3.identifier === "string" && typeof node3.url === "string") {
+      definitions.set(node3.identifier.toLowerCase(), node3.url);
+    }
+  });
+  const links = [];
+  const headings = [];
+  const usedSlugs = /* @__PURE__ */ new Map();
+  visit3(tree, (node3) => {
+    const line = (node3.position?.start?.line ?? 0) + lineOffset;
+    const column = node3.position?.start?.column ?? 0;
+    if (node3.type === "heading") {
+      const text3 = textFromNode(node3).replace(/\s+/g, " ").trim();
+      const base = slugifyAnchor(text3);
+      const seen = usedSlugs.get(base) ?? 0;
+      usedSlugs.set(base, seen + 1);
+      headings.push({ depth: node3.depth ?? 0, text: text3, slug: seen === 0 ? base : `${base}-${seen}`, line });
+      return;
+    }
+    if (node3.type === "link" || node3.type === "image") {
+      if (typeof node3.url === "string" && node3.url.trim()) {
+        links.push({ target: node3.url.trim(), line, column, isImage: node3.type === "image" });
+      }
+      return;
+    }
+    if (node3.type === "linkReference" || node3.type === "imageReference") {
+      const url2 = typeof node3.identifier === "string" ? definitions.get(node3.identifier.toLowerCase()) : void 0;
+      if (url2 && url2.trim()) {
+        links.push({ target: url2.trim(), line, column, isImage: node3.type === "imageReference" });
+      }
+    }
+  });
+  return { links, headings };
+}
+var SKIPPED_DIRS = /* @__PURE__ */ new Set([".git", "node_modules", ".pnpm-store"]);
+var EXTERNAL_REFERENCE2 = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
+var WINDOWS_ABSOLUTE_PATH = /^[a-z]:[\\/]/i;
+var LOCALE_FILE_PATTERN = /^(.+)\.([a-z]{2})\.md$/i;
+function isWindowsAbsolutePath(value) {
+  return WINDOWS_ABSOLUTE_PATH.test(value.trim());
+}
+function isExternalReference(value) {
+  const trimmed = value.trim();
+  if (isWindowsAbsolutePath(trimmed)) return false;
+  if (parseClaimReference(trimmed)) return false;
+  return EXTERNAL_REFERENCE2.test(trimmed);
+}
+function walkMarkdownFiles(root) {
+  if (!import_node_fs2.default.existsSync(root) || !import_node_fs2.default.statSync(root).isDirectory()) return [];
   const files = [];
-  const visit3 = (current) => {
-    for (const entry of import_node_fs2.default.readdirSync(current, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name))) {
-      const full = import_node_path3.default.join(current, entry.name);
-      if (entry.isDirectory()) visit3(full);
-      else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md") && !/^(?:readme|index)\.md$/i.test(entry.name)) files.push(full);
+  const visitDir = (dir) => {
+    const entries = import_node_fs2.default.readdirSync(dir, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name));
+    for (const entry of entries) {
+      const full = import_node_path3.default.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (!SKIPPED_DIRS.has(entry.name)) visitDir(full);
+      } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
+        files.push(full);
+      }
     }
   };
-  visit3(dir);
+  visitDir(root);
   return files.sort(compareStrings);
 }
-function relationValues(raw, ownerPath) {
-  if (raw === void 0 || raw === null) return { relations: {}, issues: [] };
-  if (typeof raw !== "object" || Array.isArray(raw)) {
-    return { relations: {}, issues: [`invalid-relations:${ownerPath}`] };
+function toRepoPath(cwd, absolute) {
+  return import_node_path3.default.relative(cwd, absolute).split(import_node_path3.default.sep).join("/");
+}
+function isUnderDir(child, parent) {
+  const c = normalizeDir(child);
+  const p = normalizeDir(parent);
+  return c === p || c.startsWith(`${p}/`);
+}
+function artifactKeyOf(repoPath) {
+  const dir = import_node_path3.default.posix.dirname(repoPath);
+  const base = import_node_path3.default.posix.basename(repoPath).replace(/\.md$/i, "");
+  const locale = /^(.+)\.[a-z]{2}$/i.exec(base);
+  return `${dir}::${locale ? locale[1] : base}`;
+}
+function groupByArtifact(group) {
+  const buckets = /* @__PURE__ */ new Map();
+  for (const document3 of group) {
+    const key = artifactKeyOf(document3.path);
+    const bucket = buckets.get(key) ?? [];
+    bucket.push(document3);
+    buckets.set(key, bucket);
   }
-  const result = {};
-  const issues = [];
-  for (const key of Object.keys(raw).sort(compareStrings)) {
-    const value = raw[key];
-    if (nonReferenceRelationKeys.has(key)) continue;
-    if (typeof value !== "string" && !Array.isArray(value)) {
-      issues.push(`invalid-relation:${ownerPath}:${key}`);
-      result[key] = [];
-      continue;
+  return buckets;
+}
+function primaryDocumentOf(group) {
+  const nonLocalized = group.filter(
+    (document3) => !LOCALE_FILE_PATTERN.test(import_node_path3.default.posix.basename(document3.path))
+  );
+  const pool = nonLocalized.length > 0 ? nonLocalized : group;
+  return [...pool].sort((a, b) => compareStrings(a.path, b.path))[0];
+}
+function artifactPrimaries(group) {
+  return [...groupByArtifact(group).values()].map(primaryDocumentOf).sort((a, b) => compareStrings(a.path, b.path));
+}
+function canonicalTypeMap() {
+  const byDir = /* @__PURE__ */ new Map();
+  for (const contract of Object.values(contracts)) {
+    for (const dir of contract.dirs) {
+      const normalized = normalizeDir(dir);
+      const types = byDir.get(normalized) ?? /* @__PURE__ */ new Set();
+      types.add(contract.type);
+      byDir.set(normalized, types);
     }
-    const values = typeof value === "string" ? [value] : value;
-    const valid = [];
-    for (const item of values) {
-      if (typeof item !== "string" || !item.trim()) {
-        issues.push(`invalid-relation:${ownerPath}:${key}`);
+  }
+  return [...byDir.entries()].map(([dir, types]) => ({ dir, types: [...types].sort(compareStrings) })).sort((a, b) => b.dir.length - a.dir.length || compareStrings(a.dir, b.dir));
+}
+function expectedTypesFor(repoPath, typeMap) {
+  const dir = normalizeDir(import_node_path3.default.posix.dirname(repoPath));
+  const match = typeMap.find((entry) => isUnderDir(dir, entry.dir));
+  return match ? match.types : [];
+}
+function extractRelations(data) {
+  const result = {};
+  const raw = data.relations;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return result;
+  for (const [key, value] of Object.entries(raw)) {
+    if (nonReferenceRelationKeys.has(key)) continue;
+    const items = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
+    const values = items.filter((item) => typeof item === "string" && Boolean(item.trim())).map((item) => item.trim());
+    if (values.length > 0) result[key] = [...new Set(values)].sort(compareStrings);
+  }
+  return result;
+}
+function stringField(data, field) {
+  const value = data[field];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+function localeSiblingsFor(repoPath, siblingsByDir) {
+  const dir = import_node_path3.default.posix.dirname(repoPath);
+  const base = import_node_path3.default.posix.basename(repoPath);
+  const peers = siblingsByDir.get(dir);
+  if (!peers) return [];
+  const localeMatch = LOCALE_FILE_PATTERN.exec(base);
+  if (localeMatch) {
+    const sibling = `${dir === "." ? "" : `${dir}/`}${localeMatch[1]}.md`;
+    return peers.has(localeMatch[1] + ".md") ? [sibling] : [];
+  }
+  const stem = base.replace(/\.md$/i, "");
+  return [...peers].filter((peer) => LOCALE_FILE_PATTERN.test(peer) && peer.replace(LOCALE_FILE_PATTERN, "$1") === stem).map((peer) => `${dir === "." ? "" : `${dir}/`}${peer}`).sort(compareStrings);
+}
+function defaultScanRoots(cwd) {
+  const roots = /* @__PURE__ */ new Set();
+  if (import_node_fs2.default.existsSync(import_node_path3.default.join(cwd, "docs"))) roots.add("docs");
+  for (const dir of managedDocDirs()) {
+    if (import_node_fs2.default.existsSync(import_node_path3.default.join(cwd, dir))) roots.add(dir);
+  }
+  return [...roots].sort(compareStrings);
+}
+function pruneNestedRoots(roots) {
+  const sorted = [...new Set(roots.map((root) => normalizeDir(root)))].sort(compareStrings);
+  return sorted.filter((root) => !sorted.some((other) => other !== root && isUnderDir(root, other)));
+}
+async function scanRepository(options2) {
+  const cwd = import_node_path3.default.resolve(options2.cwd);
+  const roots = pruneNestedRoots(options2.roots?.length ? options2.roots : defaultScanRoots(cwd)).filter((root) => isInsideRealpath(cwd, import_node_path3.default.join(cwd, root)));
+  const typeMap = canonicalTypeMap();
+  const absoluteFiles = /* @__PURE__ */ new Set();
+  for (const root of roots) {
+    for (const file2 of walkMarkdownFiles(import_node_path3.default.join(cwd, root))) absoluteFiles.add(file2);
+  }
+  if (options2.includeTopLevelMarkdown !== false) {
+    for (const entry of import_node_fs2.default.readdirSync(cwd, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name))) {
+      if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
+        absoluteFiles.add(import_node_path3.default.join(cwd, entry.name));
+      }
+    }
+  }
+  const siblingsByDir = /* @__PURE__ */ new Map();
+  for (const absolute of absoluteFiles) {
+    const repoPath = toRepoPath(cwd, absolute);
+    const dir = import_node_path3.default.posix.dirname(repoPath);
+    const peers = siblingsByDir.get(dir) ?? /* @__PURE__ */ new Set();
+    peers.add(import_node_path3.default.posix.basename(repoPath));
+    siblingsByDir.set(dir, peers);
+  }
+  const migrationDirs = migrationOwnedDirs();
+  const files = [];
+  for (const absolute of [...absoluteFiles].sort(compareStrings)) {
+    const repoPath = toRepoPath(cwd, absolute);
+    const expectedTypes = expectedTypesFor(repoPath, typeMap);
+    const canonical = expectedTypes.length > 0;
+    const docDirName = normalizeDir(import_node_path3.default.posix.dirname(repoPath));
+    const indexNamed = isIndexFileName(import_node_path3.default.posix.basename(repoPath));
+    const kind = canonical ? indexNamed ? "index" : "canonical" : migrationDirs.some((dir) => docDirName === dir || isUnderDir(docDirName, dir)) ? indexNamed ? "index" : "legacy" : "unmanaged";
+    let content3 = "";
+    let readError = null;
+    try {
+      content3 = import_node_fs2.default.readFileSync(absolute, "utf8");
+    } catch (error62) {
+      readError = error62 instanceof Error ? error62.message : String(error62);
+    }
+    const parsed = readError ? { data: {}, body: "", error: readError } : parseDoc(content3);
+    const bodyStartLine = frontMatterEndLine(content3);
+    const structure = await extractMarkdownStructure(parsed.body, bodyStartLine);
+    const data = parsed.data;
+    const owners = Array.isArray(data.owners) ? data.owners.filter((owner) => typeof owner === "string" && Boolean(owner.trim())) : [];
+    files.push({
+      path: repoPath,
+      absolutePath: absolute,
+      kind,
+      expectedTypes,
+      type: stringField(data, "type"),
+      id: stringField(data, "id"),
+      status: stringField(data, "status"),
+      lifecycle: stringField(data, "lifecycle"),
+      title: stringField(data, "title"),
+      owners,
+      created: stringField(data, "created"),
+      updated: stringField(data, "updated"),
+      frontMatter: parsed.error ? {} : data,
+      parseError: parsed.error,
+      relations: extractRelations(data),
+      links: structure.links,
+      headings: structure.headings,
+      indexMembership: [],
+      localeSiblings: localeSiblingsFor(repoPath, siblingsByDir),
+      body: parsed.body,
+      bodyStartLine
+    });
+  }
+  const byPath = /* @__PURE__ */ new Map();
+  const byId = /* @__PURE__ */ new Map();
+  for (const document3 of files) {
+    byPath.set(document3.path, document3);
+    if (!document3.id) continue;
+    const group = byId.get(document3.id) ?? [];
+    group.push(document3);
+    byId.set(document3.id, group);
+  }
+  const insideRoot = (absolute) => isInside(cwd, absolute);
+  const fileExistsInsideRoot = (absolute) => {
+    return isInsideCheckout(cwd, absolute) && import_node_fs2.default.existsSync(absolute) && import_node_fs2.default.statSync(absolute).isFile();
+  };
+  const splitTarget = (raw) => {
+    const trimmed = raw.trim();
+    const withoutFragment = trimmed.split("#", 2);
+    const pathname = withoutFragment[0].split("?", 1)[0];
+    let decoded = pathname;
+    try {
+      decoded = decodeURIComponent(pathname);
+    } catch {
+      decoded = pathname;
+    }
+    return { pathname: decoded, fragment: withoutFragment[1] ?? null };
+  };
+  const resolvePath = (from, rawTarget) => {
+    const value = rawTarget.trim();
+    if (isExternalReference(value)) return { status: "external", path: null, fragment: null, document: null };
+    const { pathname, fragment } = splitTarget(value);
+    if (!pathname) {
+      const self = from?.path ?? null;
+      return { status: "resolved", path: self, fragment, document: self ? byPath.get(self) ?? null : null };
+    }
+    const docRelative = pathname.startsWith("./") || pathname.startsWith("../") || pathname === "." || pathname === "..";
+    const candidates = docRelative ? [from ? import_node_path3.default.resolve(import_node_path3.default.dirname(from.absolutePath), pathname) : null, import_node_path3.default.resolve(cwd, pathname)] : [import_node_path3.default.resolve(cwd, pathname), from ? import_node_path3.default.resolve(import_node_path3.default.dirname(from.absolutePath), pathname) : null];
+    if (import_node_path3.default.isAbsolute(pathname) || isWindowsAbsolutePath(pathname)) {
+      candidates.length = 0;
+      candidates.push(import_node_path3.default.resolve(pathname));
+    }
+    let sawEscaped = false;
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+      if (!insideRoot(candidate)) {
+        sawEscaped = true;
         continue;
       }
-      valid.push(item.trim());
-    }
-    result[key] = sortedUnique(valid);
-  }
-  return { relations: result, issues };
-}
-function readRecords(options2, collector) {
-  const cwd = import_node_path3.default.resolve(options2.cwd);
-  const taskDir = resolveContainedTaskDir(cwd, options2.taskDir);
-  const seenRoots = /* @__PURE__ */ new Set();
-  const directories = [];
-  for (const directory of [...CANONICAL_DOC_DIRS, taskDir]) {
-    const key = scanRootKey(cwd, directory);
-    if (seenRoots.has(key)) continue;
-    seenRoots.add(key);
-    const absolute = import_node_path3.default.join(cwd, directory);
-    if (import_node_fs2.default.existsSync(absolute) && !isInsideRealpath(cwd, absolute)) continue;
-    directories.push(directory);
-  }
-  const files = sortedUnique(directories.flatMap((directory) => markdownFiles(import_node_path3.default.join(cwd, directory))));
-  const records = [];
-  for (const absolutePath of files.map((file2) => import_node_path3.default.resolve(cwd, file2))) {
-    try {
-      const raw = import_node_fs2.default.readFileSync(absolutePath, "utf8");
-      if (collector) {
-        collector.filesRead += 1;
-        collector.bytesRead += Buffer.byteLength(raw, "utf8");
-        collector.filePaths.add(normalizeArtifactPath(cwd, absolutePath));
+      if (fileExistsInsideRoot(candidate)) {
+        const repoPath = toRepoPath(cwd, candidate);
+        return { status: "resolved", path: repoPath, fragment, document: byPath.get(repoPath) ?? null };
       }
-      const parsed = (0, import_gray_matter3.default)(raw);
-      const data = parsed.data;
-      const recordPath = normalizeArtifactPath(cwd, absolutePath);
-      const relationResult = relationValues(data.relations, recordPath);
-      const id = typeof data.id === "string" && data.id.trim() ? data.id.trim() : null;
-      const type = typeof data.type === "string" && data.type.trim() ? data.type.trim() : null;
-      const status = typeof data.status === "string" && data.status.trim() ? data.status.trim() : null;
-      records.push({
-        path: recordPath,
-        id,
-        type,
-        status,
-        absolutePath,
-        body: parsed.content,
-        relations: relationResult.relations,
-        relationIssues: relationResult.issues
-      });
-    } catch {
-      records.push({
-        path: normalizeArtifactPath(cwd, absolutePath),
-        id: null,
-        type: null,
-        status: null,
-        absolutePath,
-        body: "",
-        relations: {},
-        relationIssues: [`invalid-document:${normalizeArtifactPath(cwd, absolutePath)}`]
+    }
+    if (sawEscaped) {
+      return { status: "escaped", path: null, fragment, document: null };
+    }
+    const preferred = candidates.find((candidate) => Boolean(candidate)) ?? null;
+    return {
+      status: "unresolved",
+      path: preferred && insideRoot(preferred) ? toRepoPath(cwd, preferred) : null,
+      fragment,
+      document: null
+    };
+  };
+  const resolveRelationTarget = (from, rawTarget) => {
+    const value = rawTarget.trim();
+    const claimRef = parseClaimReference(value);
+    if (claimRef) {
+      const claimMatch = byId.get(claimRef.docId);
+      if (!claimMatch) return { status: "unresolved" };
+      const claimPrimaries = artifactPrimaries(claimMatch);
+      if (claimPrimaries.length === 1) return { status: "resolved", document: claimPrimaries[0] };
+      return { status: "ambiguous", candidates: claimPrimaries };
+    }
+    if (isExternalReference(value)) return { status: "external" };
+    const byIdMatch = byId.get(value);
+    if (byIdMatch) {
+      const primaries = artifactPrimaries(byIdMatch);
+      if (primaries.length === 1) return { status: "resolved", document: primaries[0] };
+      return { status: "ambiguous", candidates: primaries };
+    }
+    const resolved = resolvePath(from, value);
+    if (resolved.status === "resolved") {
+      if (resolved.document) return { status: "resolved", document: resolved.document };
+      return { status: "resolved-file", path: resolved.path };
+    }
+    if (resolved.status === "escaped") return { status: "escaped" };
+    return { status: "unresolved" };
+  };
+  for (const index2 of files.filter((file2) => file2.kind === "index")) {
+    const members2 = /* @__PURE__ */ new Set();
+    for (const link of index2.links) {
+      if (link.isImage) continue;
+      const resolved = resolvePath(index2, link.target);
+      if (resolved.status === "resolved" && resolved.path && byPath.has(resolved.path)) {
+        members2.add(resolved.path);
+      }
+    }
+    for (const memberPath of members2) {
+      const member = byPath.get(memberPath);
+      if (member && member.path !== index2.path) member.indexMembership.push(index2.path);
+    }
+  }
+  for (const document3 of files) {
+    document3.indexMembership.sort(compareStrings);
+  }
+  const repository = {
+    root: cwd,
+    files,
+    documents: files.filter((file2) => file2.kind !== "index"),
+    canonicalDocuments: files.filter((file2) => file2.kind === "canonical"),
+    legacyDocuments: files.filter((file2) => file2.kind === "legacy"),
+    unmanagedDocuments: files.filter((file2) => file2.kind === "unmanaged"),
+    indexes: files.filter((file2) => file2.kind === "index"),
+    byPath,
+    byId,
+    lookupById(id) {
+      const matches = byId.get(id.trim()) ?? [];
+      if (matches.length === 0) return { status: "none" };
+      const primaries = artifactPrimaries(matches);
+      if (primaries.length === 1) return { status: "unique", document: primaries[0] };
+      return { status: "ambiguous", candidates: primaries };
+    },
+    resolvePath,
+    resolveRelationTarget,
+    hasAnchor(document3, slug) {
+      return document3.headings.some((heading) => heading.slug === slug);
+    },
+    sameLogicalArtifact(aPath, bPath) {
+      return artifactKeyOf(aPath) === artifactKeyOf(bPath);
+    },
+    duplicateIds() {
+      return [...byId.entries()].filter(([, group]) => groupByArtifact(group).size > 1).map(([id, group]) => ({ id, paths: group.map((document3) => document3.path).sort(compareStrings) })).sort((a, b) => compareStrings(a.id, b.id));
+    }
+  };
+  return repository;
+}
+
+// src/skills/lib/verification_checks.ts
+var import_node_crypto = require("node:crypto");
+var CHECK_KEY_PATTERN = /^CHK-\d+$/;
+var CHECK_MARKER_PATTERN = /<!--\s*check\s*:(.*?)-->/g;
+var VERIFICATION_METHODS = [
+  "unit",
+  "integration",
+  "e2e",
+  "property",
+  "static",
+  "model-checking",
+  "formal-proof",
+  "runtime-monitoring",
+  "manual-review"
+];
+var METHOD_CRITERIA_FIELDS = {
+  unit: "expect",
+  integration: "expect",
+  e2e: "expect",
+  property: "invariant",
+  static: "rule",
+  "model-checking": "property",
+  "formal-proof": "theorem",
+  "runtime-monitoring": "signal",
+  "manual-review": "checklistItem"
+};
+function isPlainObject4(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function nonEmptyString(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+function stringList(value) {
+  if (!Array.isArray(value)) return null;
+  const items = value.filter((item) => typeof item === "string");
+  if (items.length !== value.length) return null;
+  return items.map((item) => item.trim()).filter((item) => item.length > 0);
+}
+function checkLabel(index2, id) {
+  return typeof id === "string" && id ? `check ${id}` : `checks[${index2}]`;
+}
+function validateCheckEntry(entry, index2, allowMissingId) {
+  const issues = [];
+  if (!isPlainObject4(entry)) {
+    issues.push({
+      code: "malformed-check-entry",
+      index: index2,
+      target: null,
+      message: `checks[${index2}] is not a verification check object (expected id/target/method/implementation/preconditions/passCriteria/limitations/required)`
+    });
+    return { check: null, issues };
+  }
+  const missing = (field) => {
+    issues.push({
+      code: "missing-check-field",
+      index: index2,
+      target: field,
+      message: `${checkLabel(index2, entry.id)} is missing required check field: ${field}`
+    });
+  };
+  let id = null;
+  if (entry.id === void 0 || entry.id === null) {
+    if (!allowMissingId) missing("id");
+  } else if (!nonEmptyString(entry.id) || !CHECK_KEY_PATTERN.test(entry.id.trim())) {
+    issues.push({
+      code: "invalid-check-id",
+      index: index2,
+      target: String(entry.id),
+      message: `checks[${index2}].id must be a stable check key matching CHK-<digits> (e.g. CHK-01), got ${JSON.stringify(entry.id)}`
+    });
+  } else {
+    id = entry.id.trim();
+  }
+  let target = null;
+  if (!nonEmptyString(entry.target)) {
+    missing("target");
+  } else if (parseClaimReference(entry.target.trim()) === null) {
+    issues.push({
+      code: "invalid-check-target",
+      index: index2,
+      target: entry.target.trim(),
+      message: `checks[${index2}].target must be a qualified claim reference <document-id>::<KEY> (e.g. SPEC-<id>::R-01), got ${JSON.stringify(entry.target)}`
+    });
+  } else {
+    target = entry.target.trim();
+  }
+  let method = null;
+  if (!nonEmptyString(entry.method)) {
+    missing("method");
+  } else if (!VERIFICATION_METHODS.includes(entry.method.trim())) {
+    issues.push({
+      code: "invalid-check-method",
+      index: index2,
+      target: entry.method.trim(),
+      message: `checks[${index2}].method must be one of: ${VERIFICATION_METHODS.join(", ")} \u2014 got ${JSON.stringify(entry.method)}`
+    });
+  } else {
+    method = entry.method.trim();
+  }
+  let implementation = null;
+  if (!nonEmptyString(entry.implementation)) {
+    missing("implementation");
+  } else {
+    implementation = entry.implementation.trim();
+  }
+  let preconditions = null;
+  if (!Array.isArray(entry.preconditions)) {
+    missing("preconditions");
+  } else {
+    preconditions = stringList(entry.preconditions);
+    if (preconditions === null) {
+      issues.push({
+        code: "missing-check-field",
+        index: index2,
+        target: "preconditions",
+        message: `${checkLabel(index2, entry.id)} field preconditions must be a list of strings`
       });
     }
   }
-  return records.sort((left, right) => compareStrings(left.path, right.path));
-}
-function classifyArtifactRelation(relation) {
-  if (LINEAGE_RELATIONS.has(relation)) return "lineage";
-  if (TASK_DEPENDENCY_RELATIONS.has(relation)) return "task-dependency";
-  if (EVIDENCE_RELATIONS.has(relation) || /evidence/i.test(relation)) return "evidence";
-  return "contextual";
-}
-function localTarget(cwd, owner, value) {
-  const trimmed = value.trim();
-  const ownerCandidate = import_node_path3.default.resolve(import_node_path3.default.dirname(owner.absolutePath), trimmed);
-  const rootCandidate = import_node_path3.default.resolve(cwd, trimmed);
-  const documentRelative = trimmed.startsWith("./") || trimmed.startsWith("../") || trimmed === "." || trimmed === "..";
-  const preferred = documentRelative ? ownerCandidate : rootCandidate;
-  const fallback = documentRelative ? rootCandidate : ownerCandidate;
-  const chosen = isInside(cwd, preferred) && import_node_fs2.default.existsSync(preferred) ? preferred : fallback;
-  const exists = isInside(cwd, chosen) && import_node_fs2.default.existsSync(chosen) && import_node_fs2.default.statSync(chosen).isFile();
+  let limitations = null;
+  if (!Array.isArray(entry.limitations)) {
+    missing("limitations");
+  } else {
+    limitations = stringList(entry.limitations);
+    if (limitations === null) {
+      issues.push({
+        code: "missing-check-field",
+        index: index2,
+        target: "limitations",
+        message: `${checkLabel(index2, entry.id)} field limitations must be a list of strings`
+      });
+    }
+  }
+  let required2 = null;
+  if (typeof entry.required !== "boolean") {
+    missing("required");
+  } else {
+    required2 = entry.required;
+  }
+  let passCriteria = null;
+  const criteria = entry.passCriteria;
+  if (!isPlainObject4(criteria)) {
+    missing("passCriteria");
+  } else if (typeof criteria.kind !== "string" || !VERIFICATION_METHODS.includes(criteria.kind)) {
+    issues.push({
+      code: "check-criteria-mismatch",
+      index: index2,
+      target: typeof criteria.kind === "string" ? criteria.kind : null,
+      message: `checks[${index2}].passCriteria.kind must be one of: ${VERIFICATION_METHODS.join(", ")}`
+    });
+  } else if (method !== null && criteria.kind !== method) {
+    issues.push({
+      code: "check-criteria-mismatch",
+      index: index2,
+      target: String(criteria.kind),
+      message: `checks[${index2}].passCriteria.kind "${String(criteria.kind)}" contradicts method "${method}" \u2014 the criteria variant must match the declared method`
+    });
+  } else {
+    const kind = criteria.kind;
+    const field = METHOD_CRITERIA_FIELDS[kind];
+    if (!nonEmptyString(criteria[field])) {
+      issues.push({
+        code: "check-criteria-mismatch",
+        index: index2,
+        target: field,
+        message: `checks[${index2}].passCriteria for method ${kind} requires a non-empty "${field}" criterion`
+      });
+    } else {
+      passCriteria = criteria;
+    }
+  }
+  if (required2 === true && preconditions !== null && preconditions.length === 0) {
+    issues.push({
+      code: "incomplete-required-check",
+      index: index2,
+      target: id,
+      message: `${checkLabel(index2, entry.id)} is marked required but declares no preconditions \u2014 a required check must state when it applies so assessment can judge applicability`
+    });
+  }
+  if (issues.length > 0) return { check: null, issues };
   return {
-    path: isInside(cwd, chosen) ? normalizeArtifactPath(cwd, chosen) : normalizeArtifactPath(cwd, preferred),
-    exists
+    check: {
+      id: id ?? "",
+      target,
+      method,
+      implementation,
+      preconditions,
+      passCriteria,
+      limitations,
+      required: required2
+    },
+    issues
   };
 }
-function resolveArtifactRelation(cwd, source, rawValue, records) {
-  const value = rawValue.trim();
-  if (isExternalArtifactReference(value)) return void 0;
-  const claimRef = parseClaimReference(value);
-  const lookup = claimRef?.docId ?? value;
-  const byId = records.filter((record2) => record2.id === lookup);
-  if (byId.length === 1) return byId[0];
-  if (byId.length > 1) return void 0;
-  if (claimRef) return void 0;
-  const target = localTarget(cwd, source, value);
-  return records.find((record2) => repoPathKey(record2.path) === repoPathKey(target.path));
+function parseVerificationChecks(value) {
+  const issues = [];
+  if (value === void 0 || value === null) return { checks: [], issues };
+  if (!Array.isArray(value)) {
+    issues.push({
+      code: "malformed-checks",
+      index: null,
+      target: null,
+      message: "checks must be a list of VerificationCheckV1 entries"
+    });
+    return { checks: [], issues };
+  }
+  const checks = [];
+  const seen = /* @__PURE__ */ new Map();
+  for (let index2 = 0; index2 < value.length; index2 += 1) {
+    const { check: check2, issues: entryIssues } = validateCheckEntry(value[index2], index2, false);
+    issues.push(...entryIssues);
+    if (!check2) continue;
+    const first = seen.get(check2.id);
+    if (first !== void 0) {
+      issues.push({
+        code: "duplicate-check",
+        index: index2,
+        target: check2.id,
+        message: `Check id ${check2.id} is declared more than once (first at checks[${first}]) \u2014 check ids must be unique and stable within the document`
+      });
+      continue;
+    }
+    seen.set(check2.id, index2);
+    checks.push(check2);
+  }
+  return { checks, issues };
+}
+function canonicalizeValue(value) {
+  if (Array.isArray(value)) return value.map(canonicalizeValue);
+  if (isPlainObject4(value)) {
+    return Object.fromEntries(
+      Object.keys(value).sort().map((key) => [key, canonicalizeValue(value[key])])
+    );
+  }
+  return value;
+}
+function canonicalCheck(check2) {
+  return {
+    id: check2.id,
+    target: check2.target,
+    method: check2.method,
+    implementation: check2.implementation,
+    preconditions: check2.preconditions,
+    passCriteria: canonicalizeValue(check2.passCriteria),
+    limitations: check2.limitations,
+    required: check2.required
+  };
+}
+function checkDesignRevision(check2) {
+  const canonical = JSON.stringify(canonicalCheck(check2));
+  return `sha256:${(0, import_node_crypto.createHash)("sha256").update(canonical, "utf8").digest("hex")}`;
+}
+
+// src/skills/lib/knowledge_graph.ts
+var FENCE_PATTERN = /^(`{3,}|~{3,})/;
+var LIST_ITEM_PATTERN = /^[ \t]*(?:[-+*]|\d+[.)])[ \t]+/;
+var BLOCK_OPENER_PATTERN = /^(?:#{1,6}(?:[ \t]|$)|>|(?:\*[ \t]*){3,}$|(?:-[ \t]*){3,}$|(?:_[ \t]*){3,}$|\|)/;
+function unfencedBody(body) {
+  const lines = body.split("\n");
+  let fenceChar = null;
+  const listContentIndents = [];
+  let paragraphOpen = false;
+  return lines.map((line) => {
+    const fence = FENCE_PATTERN.exec(line.trimStart());
+    if (fenceChar !== null) {
+      if (fence && fence[1][0] === fenceChar) fenceChar = null;
+      return "";
+    }
+    if (fence) {
+      fenceChar = fence[1][0];
+      paragraphOpen = false;
+      return "";
+    }
+    if (!line.trim()) {
+      paragraphOpen = false;
+      return line;
+    }
+    const indent = /^[ \t]*/.exec(line)[0].replace(/\t/g, "    ").length;
+    const item = LIST_ITEM_PATTERN.exec(line);
+    if (!paragraphOpen || item) {
+      while (listContentIndents.length > 0 && listContentIndents[listContentIndents.length - 1] > indent) {
+        listContentIndents.pop();
+      }
+    }
+    const codeIndent = (listContentIndents[listContentIndents.length - 1] ?? 0) + 4;
+    if (indent >= codeIndent) {
+      return paragraphOpen ? line : "";
+    }
+    if (item) {
+      const marker = item[0].replace(/^[ \t]+/, "").replace(/[ \t]+$/, "");
+      const gap = item[0].length - indent - marker.length;
+      listContentIndents.push(gap > 4 ? indent + marker.length + 1 : item[0].length);
+    }
+    paragraphOpen = !BLOCK_OPENER_PATTERN.test(line.trimStart());
+    return line;
+  }).join("\n");
+}
+function extractClaimDeclarations(document3) {
+  const declarations = [];
+  const body = unfencedBody(document3.body);
+  const lines = body.split("\n");
+  for (let index2 = 0; index2 < lines.length; index2 += 1) {
+    const line = lines[index2];
+    const lineNo = document3.bodyStartLine + index2 + 1;
+    for (const match of line.matchAll(CLAIM_MARKER_PATTERN)) {
+      const raw = match[1].trim();
+      const qualified = parseClaimReference(raw);
+      const bare = !qualified && isClaimKey(raw) ? raw : null;
+      declarations.push({
+        key: qualified?.key ?? bare,
+        declaredDocId: qualified?.docId ?? null,
+        invalid: qualified === null && bare === null ? raw : null,
+        path: document3.path,
+        line: lineNo,
+        text: line.slice((match.index ?? 0) + match[0].length).trim()
+      });
+    }
+  }
+  return declarations;
+}
+function extractCheckAnchors(document3) {
+  const anchors = [];
+  const body = unfencedBody(document3.body);
+  const lines = body.split("\n");
+  for (let index2 = 0; index2 < lines.length; index2 += 1) {
+    const line = lines[index2];
+    const lineNo = document3.bodyStartLine + index2 + 1;
+    for (const match of line.matchAll(CHECK_MARKER_PATTERN)) {
+      const raw = match[1].trim();
+      const parsed = parseClaimReference(raw);
+      const qualified = parsed && CHECK_KEY_PATTERN.test(parsed.key) ? parsed : null;
+      const bare = !qualified && CHECK_KEY_PATTERN.test(raw) ? raw : null;
+      anchors.push({
+        key: qualified?.key ?? bare,
+        declaredDocId: qualified?.docId ?? null,
+        invalid: qualified === null && bare === null ? raw : null,
+        path: document3.path,
+        line: lineNo
+      });
+    }
+  }
+  return anchors;
+}
+var V1_FIELDS = new Set(knowledgeRelationFields());
+var INVERSES = knowledgeRelationInverses();
+function declaredRelationFields(type) {
+  const declared = /* @__PURE__ */ new Map();
+  for (const relation of allowedRelationsFor(type)) {
+    declared.set(relation.field, relation.targetTypes);
+  }
+  return declared;
+}
+function unionRelations(documents) {
+  const merged = {};
+  for (const document3 of documents) {
+    for (const [field, targets] of Object.entries(document3.relations)) {
+      const bucket = merged[field] ?? /* @__PURE__ */ new Set();
+      for (const target of targets) bucket.add(target);
+      merged[field] = bucket;
+    }
+  }
+  return Object.fromEntries(
+    Object.entries(merged).map(([field, values]) => [field, [...values].sort(compareStrings)])
+  );
 }
 function issueCompare(left, right) {
-  return compareStrings(left.code, right.code) || compareStrings(left.message, right.message);
+  return compareStrings(left.path, right.path) || (left.line ?? 0) - (right.line ?? 0) || compareStrings(left.code, right.code) || compareStrings(left.target ?? "", right.target ?? "") || compareStrings(left.message, right.message);
 }
 function edgeCompare(left, right) {
-  const kindOrder = {
-    lineage: 0,
-    "task-dependency": 1,
-    contextual: 2,
-    evidence: 3
-  };
-  return kindOrder[left.kind] - kindOrder[right.kind] || compareStrings(left.from, right.from) || compareStrings(left.relation, right.relation) || compareStrings(left.to ?? "", right.to ?? "") || Number(left.external) - Number(right.external);
+  return compareStrings(left.from.path, right.from.path) || compareStrings(left.relation, right.relation) || compareStrings(left.target, right.target);
 }
-function scanArtifactGraph(options2, collector) {
-  const cwd = import_node_path3.default.resolve(options2.cwd);
-  if (collector) collector.scans += 1;
-  const records = readRecords({ ...options2, cwd }, collector);
-  const nodes = records.map(({ path: recordPath, id, type }) => ({ path: recordPath, id, type }));
-  const byId = /* @__PURE__ */ new Map();
-  for (const record2 of records) {
-    if (!record2.id) continue;
-    const values = byId.get(record2.id) ?? [];
-    values.push(record2);
-    byId.set(record2.id, values);
+function derivedEdgeCompare(left, right) {
+  return compareStrings(left.from.path, right.from.path) || compareStrings(left.relation, right.relation) || compareStrings(left.target, right.target);
+}
+function relationCycles(nodes, edges) {
+  const nodePaths = new Set(nodes.map((node3) => node3.path));
+  const adjacency = /* @__PURE__ */ new Map();
+  for (const edge of edges) {
+    if (edge.resolution !== "resolved" || !edge.to || !nodePaths.has(edge.to.path)) continue;
+    if (edge.to.path === edge.from.path) continue;
+    const bucket = adjacency.get(edge.from.path) ?? [];
+    bucket.push(edge.to.path);
+    adjacency.set(edge.from.path, bucket);
   }
-  const edges = [];
-  const issues = [];
-  for (const record2 of records) {
-    for (const relationIssue of record2.relationIssues) {
-      issues.push({
-        code: "broken-relation",
-        message: relationIssue
-      });
-    }
-  }
-  for (const [id, values] of byId.entries()) {
-    if (values.length > 1) {
-      issues.push({
-        code: "duplicate-id",
-        message: `Duplicate artifact ID ${id}: ${values.map((record2) => record2.path).sort(compareStrings).join(", ")}`
-      });
-    }
-  }
-  for (const source of records) {
-    for (const [relation, values] of Object.entries(source.relations)) {
-      const kind = classifyArtifactRelation(relation);
-      for (const value of values) {
-        if (isExternalArtifactReference(value)) {
-          edges.push({ from: source.path, to: null, relation, kind, external: true });
-          continue;
+  const indexOf = /* @__PURE__ */ new Map();
+  const lowLink = /* @__PURE__ */ new Map();
+  const onStack = /* @__PURE__ */ new Set();
+  const stack = [];
+  const components = [];
+  let counter = 0;
+  const strongConnect = (root) => {
+    indexOf.set(root, counter);
+    lowLink.set(root, counter);
+    counter += 1;
+    stack.push(root);
+    onStack.add(root);
+    const callStack = [
+      { node: root, successors: [...adjacency.get(root) ?? []].sort(compareStrings), next: 0 }
+    ];
+    while (callStack.length > 0) {
+      const frame = callStack[callStack.length - 1];
+      if (frame.next < frame.successors.length) {
+        const w = frame.successors[frame.next];
+        frame.next += 1;
+        if (!indexOf.has(w)) {
+          indexOf.set(w, counter);
+          lowLink.set(w, counter);
+          counter += 1;
+          stack.push(w);
+          onStack.add(w);
+          callStack.push({ node: w, successors: [...adjacency.get(w) ?? []].sort(compareStrings), next: 0 });
+        } else if (onStack.has(w)) {
+          lowLink.set(frame.node, Math.min(lowLink.get(frame.node), indexOf.get(w)));
         }
-        const target = resolveArtifactRelation(cwd, source, value, records);
-        edges.push({ from: source.path, to: target?.path ?? null, relation, kind, external: false });
-        if (!target) {
-          const local = localTarget(cwd, source, value);
-          if (!local.exists) {
-            issues.push({
-              code: "broken-relation",
-              message: `Broken ${relation} relation from ${source.path} to ${value}${local.path ? ` (${local.path})` : ""}`
-            });
-          }
-        }
+        continue;
+      }
+      callStack.pop();
+      if (callStack.length > 0) {
+        const parent = callStack[callStack.length - 1];
+        lowLink.set(parent.node, Math.min(lowLink.get(parent.node), lowLink.get(frame.node)));
+      }
+      if (lowLink.get(frame.node) === indexOf.get(frame.node)) {
+        const component = [];
+        let member;
+        do {
+          member = stack.pop();
+          if (member === void 0) break;
+          onStack.delete(member);
+          component.push(member);
+        } while (member !== frame.node);
+        if (component.length > 1) components.push(component.sort(compareStrings));
       }
     }
+  };
+  for (const nodePath of [...nodePaths].sort(compareStrings)) {
+    if (!indexOf.has(nodePath)) strongConnect(nodePath);
   }
-  return {
-    records,
-    graph: {
-      nodes: [...nodes].sort((left, right) => compareStrings(left.path, right.path)),
-      edges: edges.sort(edgeCompare),
-      issues: [...new Map(issues.map((issue2) => [`${issue2.code}\0${issue2.message}`, issue2])).values()].sort(issueCompare)
+  return components.sort((a, b) => compareStrings(a[0], b[0]));
+}
+function projectKnowledgeGraph(model) {
+  const issues = [];
+  const groups = groupByArtifact(model.canonicalDocuments);
+  const nodes = [];
+  const nodeByKey = /* @__PURE__ */ new Map();
+  const claimsByKey = /* @__PURE__ */ new Map();
+  for (const [key, group] of [...groups.entries()].sort((a, b) => compareStrings(a[0], b[0]))) {
+    const primary = artifactPrimaries(group)[0];
+    const nodeClaims = [];
+    const claimKeys = /* @__PURE__ */ new Map();
+    const seenKeys = /* @__PURE__ */ new Map();
+    for (const document3 of group) {
+      for (const declaration of extractClaimDeclarations(document3)) {
+        if (declaration.invalid !== null) {
+          issues.push({
+            code: "invalid-claim-id",
+            path: document3.path,
+            line: declaration.line,
+            target: declaration.invalid,
+            message: `Claim marker does not declare a claim key or DOC::KEY id: <!-- claim:${declaration.invalid} -->`
+          });
+          continue;
+        }
+        const claimKey = declaration.key;
+        if (primary.id !== null && declaration.declaredDocId !== null && declaration.declaredDocId !== primary.id) {
+          issues.push({
+            code: "claim-doc-mismatch",
+            path: document3.path,
+            line: declaration.line,
+            target: `${declaration.declaredDocId}::${claimKey}`,
+            message: `Claim ${declaration.declaredDocId}::${claimKey} is declared inside ${primary.id} \u2014 a moved claim must be re-keyed to its owning document`
+          });
+          continue;
+        }
+        const first = seenKeys.get(claimKey);
+        if (first && first.path === document3.path) {
+          issues.push({
+            code: "duplicate-claim",
+            path: document3.path,
+            line: declaration.line,
+            target: claimKey,
+            message: `Claim key ${claimKey} is declared more than once in ${document3.path} (first at line ${first.line})`
+          });
+          continue;
+        }
+        if (!first) seenKeys.set(claimKey, declaration);
+        const claim2 = {
+          key: claimKey,
+          id: primary.id ? claimId(primary.id, claimKey) : null,
+          path: document3.path,
+          line: declaration.line,
+          text: declaration.text
+        };
+        if (!claimKeys.has(claimKey)) claimKeys.set(claimKey, claim2);
+        nodeClaims.push(claim2);
+      }
     }
-  };
-}
-function artifactRelationTargets(graph, sourcePath, relationNames) {
-  const names = new Set(relationNames);
-  return graph.edges.filter((edge) => edge.kind === "lineage" && edge.from === sourcePath && edge.to !== null && names.has(edge.relation)).map((edge) => edge.to).sort(compareStrings);
-}
-function artifactHasRelation(graph, sourcePath, relationNames, targetPath) {
-  return Boolean(sourcePath && targetPath && artifactRelationTargets(graph, sourcePath, relationNames).includes(targetPath));
-}
-var CHAIN_STATUSES = {
-  spec: /* @__PURE__ */ new Set(["proposed", "approved", "implemented"]),
-  adr: /* @__PURE__ */ new Set(["proposed", "accepted"]),
-  design: /* @__PURE__ */ new Set(["approved"]),
-  plan: /* @__PURE__ */ new Set(["approved", "in-progress", "completed"])
-};
-function isValidChainRecord(record2) {
-  return Boolean(record2.type && CHAIN_STATUSES[record2.type]?.has(record2.status ?? ""));
-}
-function chainKey(chain) {
-  return [chain.spec, chain.adr, chain.design, chain.plan].map((value) => value ?? "").join("\0");
-}
-function preDesignAnchors(graph, records, spec, adr) {
-  const direct = graph.edges.some((edge) => edge.kind === "lineage" && ["decides-for", "derives-from", "derived-by", "refines", "refined-by"].includes(edge.relation) && (edge.from === spec.path && edge.to === adr.path || edge.from === adr.path && edge.to === spec.path));
-  const discoveries = records.filter((record2) => (record2.type === "discovery" || record2.type === "brainstorm") && [spec, adr].every((artifact) => graph.edges.some((edge) => edge.from === record2.path && edge.to === artifact.path && (edge.relation === "motivates" || edge.relation === "informs") || edge.from === artifact.path && edge.to === record2.path && edge.relation === "derives-from" || edge.from === record2.path && edge.to === artifact.path && edge.relation === "derived-by")));
-  return direct || discoveries.length > 0 ? discoveries.map((record2) => record2.path) : void 0;
-}
-function designClaimsSpec(graph, designPath, specPath) {
-  return Boolean(specPath) && (artifactHasRelation(graph, designPath, ["realizes"], specPath) || artifactHasRelation(graph, designPath, ["derives-from", "implements"], specPath));
-}
-function designClaimsAdr(graph, designPath, adrPath) {
-  return Boolean(adrPath) && (artifactHasRelation(graph, adrPath, ["decides-for"], designPath) || artifactHasRelation(graph, designPath, ["derives-from", "implements"], adrPath));
-}
-function artifactChainCandidates(graph, records) {
-  const specs = records.filter((record2) => record2.type === "spec" && isValidChainRecord(record2));
-  const adrs = records.filter((record2) => record2.type === "adr" && isValidChainRecord(record2));
-  const designs = records.filter((record2) => record2.type === "design" && isValidChainRecord(record2));
-  const plans = records.filter((record2) => record2.type === "plan" && isValidChainRecord(record2));
-  const tasks = records.filter((record2) => record2.type === "task");
-  const chains = /* @__PURE__ */ new Map();
-  const add = (chain) => {
-    chains.set(chainKey(chain), chain);
-  };
-  const cartesian = (values, fallback) => values.length > 0 ? values : fallback;
-  for (const design of designs) {
-    const relatedSpecs = specs.filter((candidate) => designClaimsSpec(graph, design.path, candidate.path));
-    const relatedAdrs = adrs.filter((candidate) => designClaimsAdr(graph, design.path, candidate.path));
-    const relatedPlans = plans.filter((candidate) => artifactHasRelation(graph, candidate.path, ["derives-from", "design"], design.path));
-    for (const spec of cartesian(relatedSpecs, [void 0])) {
-      for (const adr of cartesian(relatedAdrs, [void 0])) {
-        for (const plan of cartesian(relatedPlans, [void 0])) {
-          add({
-            spec: spec?.path,
-            adr: adr?.path,
-            design: design.path,
-            plan: plan?.path,
-            tasks: plan ? tasks.filter((task) => artifactHasRelation(graph, task.path, ["implements"], plan.path)).map((task) => task.path) : []
+    if (primary.id === null && nodeClaims.length > 0) {
+      issues.push({
+        code: "claim-without-doc-id",
+        path: primary.path,
+        line: null,
+        target: null,
+        message: `${primary.path} declares ${nodeClaims.length} claim(s) but has no front-matter id \u2014 claims cannot be referenced as <id>::<key>`
+      });
+    }
+    claimsByKey.set(key, claimKeys);
+    const isVerification = primary.type === "verification";
+    const nodeChecks = [];
+    const declaredChecks = /* @__PURE__ */ new Map();
+    const checkAnchors = [];
+    for (const document3 of group) {
+      if (isVerification) {
+        const parsed = parseVerificationChecks(document3.frontMatter.checks);
+        for (const issue2 of parsed.issues) {
+          issues.push({ code: issue2.code, path: document3.path, line: null, target: issue2.target, message: issue2.message });
+        }
+        for (const check2 of parsed.checks) {
+          const revision = checkDesignRevision(check2);
+          const first = declaredChecks.get(check2.id);
+          if (first) {
+            if (first.revision !== revision) {
+              issues.push({
+                code: "duplicate-check",
+                path: document3.path,
+                line: null,
+                target: check2.id,
+                message: `Check id ${check2.id} is declared with a different definition in ${document3.path} than in ${first.path} \u2014 locale siblings mirror one logical check`
+              });
+            }
+            continue;
+          }
+          declaredChecks.set(check2.id, { path: document3.path, revision });
+          nodeChecks.push({
+            id: check2.id,
+            qualifiedId: primary.id ? claimId(primary.id, check2.id) : null,
+            target: check2.target,
+            method: check2.method,
+            required: check2.required,
+            designRevision: revision
+          });
+        }
+      } else if (document3.frontMatter.checks !== void 0) {
+        issues.push({
+          code: "misplaced-checks",
+          path: document3.path,
+          line: null,
+          target: "checks",
+          message: `checks: is the Verification Design contract \u2014 a ${primary.type ?? "untyped"} document does not declare checks`
+        });
+      }
+      checkAnchors.push(...extractCheckAnchors(document3));
+    }
+    const seenAnchors = /* @__PURE__ */ new Map();
+    for (const anchor2 of checkAnchors) {
+      if (anchor2.invalid !== null) {
+        issues.push({
+          code: "invalid-check-anchor",
+          path: anchor2.path,
+          line: anchor2.line,
+          target: anchor2.invalid,
+          message: `Check marker does not declare a check key or DOC::CHK-NN reference: <!-- check:${anchor2.invalid} -->`
+        });
+        continue;
+      }
+      if (!isVerification) {
+        issues.push({
+          code: "misplaced-check-anchor",
+          path: anchor2.path,
+          line: anchor2.line,
+          target: anchor2.declaredDocId ? `${anchor2.declaredDocId}::${anchor2.key}` : anchor2.key,
+          message: `Check anchor <!-- check:${anchor2.declaredDocId ? `${anchor2.declaredDocId}::` : ""}${anchor2.key} --> sits outside a verification document \u2014 check markers only bind inside Verification Designs`
+        });
+        continue;
+      }
+      if (primary.id !== null && anchor2.declaredDocId !== null && anchor2.declaredDocId !== primary.id) {
+        issues.push({
+          code: "check-anchor-mismatch",
+          path: anchor2.path,
+          line: anchor2.line,
+          target: `${anchor2.declaredDocId}::${anchor2.key}`,
+          message: `Check anchor ${anchor2.declaredDocId}::${anchor2.key} is declared inside ${primary.id} \u2014 a qualified check anchor names its own document`
+        });
+        continue;
+      }
+      const anchorKey = anchor2.key;
+      if (!declaredChecks.has(anchorKey)) {
+        issues.push({
+          code: "unresolved-check-anchor",
+          path: anchor2.path,
+          line: anchor2.line,
+          target: anchorKey,
+          message: `Check anchor ${anchorKey} names a check the front matter of ${primary.path} does not declare`
+        });
+        continue;
+      }
+      const anchorSeenKey = JSON.stringify([anchor2.path, anchorKey]);
+      const firstAnchor = seenAnchors.get(anchorSeenKey);
+      if (firstAnchor !== void 0) {
+        issues.push({
+          code: "duplicate-check-anchor",
+          path: anchor2.path,
+          line: anchor2.line,
+          target: anchorKey,
+          message: `Check anchor ${anchorKey} is bound more than once in ${anchor2.path} (first at line ${firstAnchor})`
+        });
+        continue;
+      }
+      seenAnchors.set(anchorSeenKey, anchor2.line);
+    }
+    const node3 = {
+      key,
+      path: primary.path,
+      id: primary.id,
+      type: primary.type ?? "",
+      paths: group.map((document3) => document3.path).sort(compareStrings),
+      claims: nodeClaims.sort((a, b) => compareStrings(a.key, b.key) || a.line - b.line),
+      checks: nodeChecks.sort((a, b) => compareStrings(a.id, b.id))
+    };
+    nodes.push(node3);
+    nodeByKey.set(key, node3);
+  }
+  nodes.sort((a, b) => compareStrings(a.path, b.path));
+  for (const document3 of model.legacyDocuments) {
+    for (const field of Object.keys(document3.relations).sort(compareStrings)) {
+      if (PROVENANCE_RELATION_KEYS.includes(field)) continue;
+      if (nonReferenceRelationKeys.has(field)) continue;
+      issues.push({
+        code: "legacy-relation-field",
+        path: document3.path,
+        line: null,
+        target: field,
+        message: `relations.${field} is outside the Knowledge Relations v1 stored vocabulary (legacy keys are migration input, not graph data)`
+      });
+    }
+  }
+  const edges = [];
+  for (const [key, group] of [...groups.entries()].sort((a, b) => compareStrings(a[0], b[0]))) {
+    const node3 = nodeByKey.get(key);
+    const primary = artifactPrimaries(group)[0];
+    const declared = declaredRelationFields(node3.type);
+    const relations = unionRelations(group);
+    for (const [field, targets] of Object.entries(relations).sort((a, b) => compareStrings(a[0], b[0]))) {
+      if (PROVENANCE_RELATION_KEYS.includes(field)) continue;
+      if (nonReferenceRelationKeys.has(field)) continue;
+      if (!V1_FIELDS.has(field)) {
+        issues.push({
+          code: "legacy-relation-field",
+          path: node3.path,
+          line: null,
+          target: field,
+          message: `relations.${field} is outside the Knowledge Relations v1 stored vocabulary (stored forward set: ${[...V1_FIELDS].sort(compareStrings).join(", ")})`
+        });
+        continue;
+      }
+      const targetTypes = declared.get(field);
+      if (!targetTypes) {
+        issues.push({
+          code: "invalid-relation-field",
+          path: node3.path,
+          line: null,
+          target: field,
+          message: `relations.${field} is a Knowledge Relations v1 field but is not declared for type ${node3.type || "unknown"} (declared: ${[...declared.keys()].sort(compareStrings).join(", ") || "none"})`
+        });
+        continue;
+      }
+      for (const target of targets) {
+        const claimRef = parseClaimReference(target);
+        if (claimRef) {
+          const lookup = model.lookupById(claimRef.docId);
+          if (lookup.status === "ambiguous") {
+            edges.push({
+              from: { path: node3.path, id: node3.id },
+              relation: field,
+              target,
+              to: null,
+              claim: target,
+              resolution: "ambiguous",
+              derived: false
+            });
+            issues.push({
+              code: "ambiguous-relation-target",
+              path: node3.path,
+              line: null,
+              target,
+              message: `Relation ${field} claim target ${target} matches multiple documents: ${lookup.candidates.map((doc) => doc.path).join(", ")}`
+            });
+          } else if (lookup.status === "none") {
+            edges.push({
+              from: { path: node3.path, id: node3.id },
+              relation: field,
+              target,
+              to: null,
+              claim: target,
+              resolution: "unresolved",
+              derived: false
+            });
+            issues.push({
+              code: "unresolved-relation-target",
+              path: node3.path,
+              line: null,
+              target,
+              message: `Relation ${field} points to missing document: ${claimRef.docId}`
+            });
+          } else {
+            const targetDoc2 = lookup.document;
+            const targetNode2 = nodeByKey.get(artifactKeyOf(targetDoc2.path));
+            edges.push({
+              from: { path: node3.path, id: node3.id },
+              relation: field,
+              target,
+              to: targetNode2 ? { path: targetNode2.path, id: targetNode2.id } : { path: targetDoc2.path, id: targetDoc2.id },
+              claim: target,
+              resolution: "resolved",
+              derived: false
+            });
+            const targetClaims = claimsByKey.get(artifactKeyOf(targetDoc2.path));
+            if (!targetClaims || !targetClaims.has(claimRef.key)) {
+              issues.push({
+                code: "unresolved-claim-target",
+                path: node3.path,
+                line: null,
+                target,
+                message: `Relation ${field} targets claim ${target}, but ${targetDoc2.path} declares no claim ${claimRef.key}`
+              });
+            }
+            if (targetNode2 && targetNode2.key === node3.key) {
+              issues.push({
+                code: "self-relation",
+                path: node3.path,
+                line: null,
+                target,
+                message: `Relation ${field} references the document itself: ${target}`
+              });
+            }
+            if (!targetDoc2.type || !targetTypes.includes(targetDoc2.type)) {
+              issues.push({
+                code: "invalid-relation-target-type",
+                path: node3.path,
+                line: null,
+                target,
+                message: `Relation ${field} target resolves to type "${targetDoc2.type ?? "unknown"}", expected one of: ${targetTypes.join(", ")}: ${target}`
+              });
+            }
+          }
+          continue;
+        }
+        const resolved = model.resolveRelationTarget(primary, target);
+        if (resolved.status === "external") {
+          edges.push({
+            from: { path: node3.path, id: node3.id },
+            relation: field,
+            target,
+            to: null,
+            claim: null,
+            resolution: "external",
+            derived: false
+          });
+          continue;
+        }
+        if (resolved.status === "escaped") {
+          edges.push({
+            from: { path: node3.path, id: node3.id },
+            relation: field,
+            target,
+            to: null,
+            claim: null,
+            resolution: "escaped",
+            derived: false
+          });
+          issues.push({
+            code: "relation-escapes-root",
+            path: node3.path,
+            line: null,
+            target,
+            message: `Relation ${field} points outside the repository root: ${target}`
+          });
+          continue;
+        }
+        if (resolved.status === "ambiguous") {
+          edges.push({
+            from: { path: node3.path, id: node3.id },
+            relation: field,
+            target,
+            to: null,
+            claim: null,
+            resolution: "ambiguous",
+            derived: false
+          });
+          issues.push({
+            code: "ambiguous-relation-target",
+            path: node3.path,
+            line: null,
+            target,
+            message: `Relation ${field} target ${target} matches multiple documents: ${resolved.candidates.map((doc) => doc.path).join(", ")}`
+          });
+          continue;
+        }
+        if (resolved.status === "resolved-file") {
+          edges.push({
+            from: { path: node3.path, id: node3.id },
+            relation: field,
+            target,
+            to: { path: resolved.path, id: null },
+            claim: null,
+            resolution: "non-document",
+            derived: false
+          });
+          issues.push({
+            code: "invalid-relation-target-type",
+            path: node3.path,
+            line: null,
+            target,
+            message: `Relation ${field} target resolves to a non-document file, expected a durable document of type: ${targetTypes.join(", ")}: ${target}`
+          });
+          continue;
+        }
+        if (resolved.status === "unresolved") {
+          edges.push({
+            from: { path: node3.path, id: node3.id },
+            relation: field,
+            target,
+            to: null,
+            claim: null,
+            resolution: "unresolved",
+            derived: false
+          });
+          issues.push({
+            code: "unresolved-relation-target",
+            path: node3.path,
+            line: null,
+            target,
+            message: `Relation ${field} points to missing target: ${target}`
+          });
+          continue;
+        }
+        const targetDoc = resolved.document;
+        const targetNode = nodeByKey.get(artifactKeyOf(targetDoc.path));
+        edges.push({
+          from: { path: node3.path, id: node3.id },
+          relation: field,
+          target,
+          to: targetNode ? { path: targetNode.path, id: targetNode.id } : { path: targetDoc.path, id: targetDoc.id },
+          claim: null,
+          resolution: "resolved",
+          derived: false
+        });
+        if (targetNode && targetNode.key === node3.key) {
+          issues.push({
+            code: "self-relation",
+            path: node3.path,
+            line: null,
+            target,
+            message: `Relation ${field} references the document itself: ${target}`
+          });
+        }
+        if (!targetDoc.type || !targetTypes.includes(targetDoc.type)) {
+          issues.push({
+            code: "invalid-relation-target-type",
+            path: node3.path,
+            line: null,
+            target,
+            message: `Relation ${field} target resolves to type "${targetDoc.type ?? "unknown"}", expected one of: ${targetTypes.join(", ")}: ${target}`
           });
         }
       }
     }
   }
-  for (const plan of plans) {
-    if (designs.some((design) => artifactHasRelation(graph, plan.path, ["derives-from", "design"], design.path))) continue;
-    add({ plan: plan.path, tasks: tasks.filter((task) => artifactHasRelation(graph, task.path, ["implements"], plan.path)).map((task) => task.path) });
-  }
-  const unassignedSpecs = specs.filter((spec) => !designs.some((design) => designClaimsSpec(graph, design.path, spec.path)));
-  const paired = /* @__PURE__ */ new Set();
-  for (const spec of unassignedSpecs) {
-    for (const adr of adrs) {
-      const anchors = preDesignAnchors(graph, records, spec, adr);
-      if (!anchors) continue;
-      add({ spec: spec.path, adr: adr.path, tasks: [], anchors });
-      paired.add(spec.path);
-      paired.add(adr.path);
-    }
-  }
-  for (const artifact of [...specs, ...adrs]) {
-    if (!paired.has(artifact.path) && !designs.some((design) => artifact.type === "adr" ? designClaimsAdr(graph, design.path, artifact.path) : designClaimsSpec(graph, design.path, artifact.path))) {
-      add(artifact.type === "spec" ? { spec: artifact.path, tasks: [] } : { adr: artifact.path, tasks: [] });
-    }
-  }
-  return [...chains.values()].sort((left, right) => compareStrings(chainKey(left), chainKey(right)));
-}
-
-// src/skills/briefing-flow/scripts/lib/briefing_audit.ts
-var SPEC_STATUSES = /* @__PURE__ */ new Set(["proposed", "approved", "implemented"]);
-var ADR_STATUSES = /* @__PURE__ */ new Set(["proposed", "accepted"]);
-var PLACEHOLDER_MARKER = /TODO|{{[^}]+}}|<!--\s*(option|driver|justification|Describe)/i;
-function normalizePath(cwd, target) {
-  return import_node_path4.default.relative(import_node_path4.default.resolve(cwd), import_node_path4.default.resolve(target)).split(import_node_path4.default.sep).join("/");
-}
-function consideredOptionCount(body) {
-  const section = sectionBody(body, "Considered Options");
-  if (!section) return 0;
-  const headings = subHeadingCount(section);
-  const listItems = section.match(/^\s*[-*+]\s+\S/gm)?.length ?? 0;
-  return Math.max(headings, listItems);
-}
-function acceptanceCriterionCount(body) {
-  const section = sectionBody(body, "Acceptance Criteria");
-  if (!section) return 0;
-  return section.match(/^\s*(?:[-*+]|\d+\.)\s+\S/gm)?.length ?? 0;
-}
-function toAuditedDoc(cwd, absolutePath, content3) {
-  const parsed = parseDoc(content3);
-  if (parsed.error) return null;
-  return {
-    absolutePath: import_node_path4.default.resolve(absolutePath),
-    body: parsed.body,
-    content: content3,
-    data: parsed.data,
-    path: normalizePath(cwd, absolutePath)
-  };
-}
-function loadDoc(cwd, inputPath, role, findings) {
-  const absolutePath = import_node_path4.default.resolve(cwd, inputPath);
-  const relativePath = normalizePath(cwd, absolutePath);
-  const label = role === "spec" ? "Spec" : "ADR";
-  let content3;
-  try {
-    content3 = import_node_fs3.default.readFileSync(absolutePath, "utf8");
-  } catch {
-    findings.push({
-      severity: "error",
-      code: "missing-file",
-      file: relativePath,
-      message: `${label} file not found: ${relativePath}`
-    });
-    return null;
-  }
-  const doc = toAuditedDoc(cwd, absolutePath, content3);
-  if (!doc) {
-    const parsed = parseDoc(content3);
-    findings.push({
-      severity: "error",
-      code: "unparseable-front-matter",
-      file: relativePath,
-      message: `Front matter is not valid YAML: ${parsed.error ?? "unknown parse error"}`
-    });
-    return null;
-  }
-  return doc;
-}
-async function auditDocContent(cwd, doc, role, findings) {
-  for (const issue2 of validateFrontMatter(doc.content)) {
-    findings.push({
-      severity: "error",
-      code: "invalid-front-matter",
-      file: doc.path,
-      message: `Invalid front matter ${issue2.path}: ${issue2.message}`
+  const derivedEdges = [];
+  for (const edge of edges) {
+    if (edge.resolution !== "resolved" || !edge.to) continue;
+    const targetNode = nodeByKey.get(artifactKeyOf(edge.to.path));
+    const inverse = INVERSES[edge.relation];
+    if (!inverse || !targetNode) continue;
+    derivedEdges.push({
+      from: { path: targetNode.path, id: targetNode.id },
+      relation: inverse,
+      target: edge.from.id ?? edge.from.path,
+      to: { path: edge.from.path, id: edge.from.id },
+      claim: edge.claim,
+      via: edge.relation,
+      derived: true
     });
   }
-  if (doc.data.type !== role) {
-    findings.push({
-      severity: "error",
-      code: `${role}-type`,
-      file: doc.path,
-      message: `Expected type "${role}", found "${typeof doc.data.type === "string" ? doc.data.type : "(missing)"}"`
-    });
-  }
-  const status = typeof doc.data.status === "string" ? doc.data.status : "";
-  const allowed = role === "spec" ? SPEC_STATUSES : ADR_STATUSES;
-  if (!allowed.has(status)) {
-    findings.push({
-      severity: "error",
-      code: `${role}-status`,
-      file: doc.path,
-      message: `Invalid ${role} status "${status || "(missing)"}" (expected one of: ${[...allowed].join(", ")})`
-    });
-  }
-  if (role === "spec" && acceptanceCriterionCount(doc.body) < 1) {
-    findings.push({
-      severity: "error",
-      code: "spec-acceptance-criteria",
-      file: doc.path,
-      message: 'Expected "## Acceptance Criteria" with at least one list item'
-    });
-  }
-  if (role === "adr" && consideredOptionCount(doc.body) < 2) {
-    findings.push({
-      severity: "error",
-      code: "adr-considered-options",
-      file: doc.path,
-      message: 'Expected "## Considered Options" with at least two options'
-    });
-  }
-  if (PLACEHOLDER_MARKER.test(doc.content)) {
-    findings.push({
-      severity: "warning",
-      code: "unresolved-placeholder",
-      file: doc.path,
-      message: "Contains unresolved placeholders"
-    });
-  }
-  for (const url2 of await markdownDestinations(doc.content)) {
-    if (isExternalArtifactReference(url2) || url2.startsWith("#")) continue;
-    const pathname = url2.split(/[?#]/, 1)[0];
-    if (!pathname) continue;
-    let decoded;
-    try {
-      decoded = decodeURIComponent(pathname);
-    } catch {
-      findings.push({ severity: "error", code: "broken-local-link", file: doc.path, message: `Invalid local link: ${url2}` });
-      continue;
-    }
-    const target = import_node_path4.default.resolve(import_node_path4.default.dirname(doc.absolutePath), decoded);
-    if (!isInsideCheckout(cwd, target) || !import_node_fs3.default.existsSync(target)) {
-      findings.push({ severity: "error", code: "broken-local-link", file: doc.path, message: `Broken local link: ${url2}` });
-    }
-  }
-}
-async function auditBriefingPair(cwd, specPath, adrPath) {
-  const root = import_node_path4.default.resolve(cwd);
-  const findings = [];
-  const spec = loadDoc(root, specPath, "spec", findings);
-  if (spec) await auditDocContent(root, spec, "spec", findings);
-  const adr = loadDoc(root, adrPath, "adr", findings);
-  if (adr) await auditDocContent(root, adr, "adr", findings);
-  const { graph, records } = scanArtifactGraph({ cwd: root });
-  const specRecord = records.find((record2) => record2.path === spec?.path && record2.type === "spec");
-  const adrRecord = records.find((record2) => record2.path === adr?.path && record2.type === "adr");
-  const anchors = specRecord && adrRecord ? preDesignAnchors(graph, records, specRecord, adrRecord) : void 0;
-  const candidates = spec && adr && anchors === void 0 ? artifactChainCandidates(graph, records).filter((chain) => chain.spec === spec.path && chain.adr === adr.path) : [];
-  if (spec && adr && anchors === void 0 && candidates.length === 0) {
-    findings.push({
-      severity: "error",
-      code: "inconsistent-pairing",
-      file: null,
-      message: `Spec ${spec.path} and ADR ${adr.path} lack a typed pair relation`
-    });
-  }
-  const relevant = /* @__PURE__ */ new Set([spec?.path, adr?.path, ...anchors ?? [], ...candidates.map((chain) => chain.design)]);
-  for (const doc of [spec, adr]) {
-    if (doc && !records.some((record2) => record2.path === doc.path)) {
-      findings.push({ severity: "error", code: "noncanonical-artifact", file: doc.path, message: "Document is not in the artifact graph's canonical record set" });
-    }
-  }
-  for (const record2 of records.filter((item) => relevant.has(item.path))) {
-    auditRelations(root, record2, records, findings);
-  }
-  return {
-    spec: spec?.path ?? null,
-    adr: adr?.path ?? null,
-    findings,
-    consistent: !findings.some((finding) => finding.severity === "error")
-  };
-}
-function auditRelations(cwd, record2, records, findings) {
-  if (record2.id && records.filter((other) => other.id === record2.id).length > 1) {
-    findings.push({ severity: "error", code: "duplicate-id", file: record2.path, message: `Duplicate artifact ID: ${record2.id}` });
-  }
-  for (const issue2 of record2.relationIssues) {
-    findings.push({ severity: "error", code: "invalid-relation", file: record2.path, message: issue2 });
-  }
-  for (const [field, values] of Object.entries(record2.relations)) {
-    for (const value of values) {
-      if (isExternalArtifactReference(value)) continue;
-      const matches = records.filter((other) => other.id === value);
-      const target = resolveArtifactRelation(cwd, record2, value, records);
-      if (matches.length > 1 || !target && !localTarget(cwd, record2, value).exists) {
-        findings.push({ severity: "error", code: "broken-relation-link", file: record2.path, message: `Relation ${field} has an unresolved or ambiguous target: ${value}` });
-      } else if (target?.id && records.filter((other) => other.id === target.id).length > 1) {
-        findings.push({ severity: "error", code: "duplicate-id", file: record2.path, message: `Relation ${field} targets duplicate artifact ID: ${target.id}` });
+  const checkEdges = [];
+  const projectedCheckClaims = /* @__PURE__ */ new Set();
+  for (const node3 of nodes) {
+    for (const check2 of node3.checks) {
+      const claimRef = parseClaimReference(check2.target);
+      const qualifiedCheckId = check2.qualifiedId ?? check2.id;
+      const lookup = model.lookupById(claimRef.docId);
+      if (lookup.status === "ambiguous") {
+        checkEdges.push({
+          from: { path: node3.path, id: node3.id },
+          check: qualifiedCheckId,
+          target: check2.target,
+          to: null,
+          method: check2.method,
+          required: check2.required,
+          resolution: "ambiguous"
+        });
+        issues.push({
+          code: "ambiguous-check-target",
+          path: node3.path,
+          line: null,
+          target: check2.target,
+          message: `Check ${check2.id} target ${check2.target} matches multiple documents: ${lookup.candidates.map((doc) => doc.path).join(", ")}`
+        });
+        continue;
       }
+      if (lookup.status === "none") {
+        checkEdges.push({
+          from: { path: node3.path, id: node3.id },
+          check: qualifiedCheckId,
+          target: check2.target,
+          to: null,
+          method: check2.method,
+          required: check2.required,
+          resolution: "unresolved"
+        });
+        issues.push({
+          code: "unresolved-check-target",
+          path: node3.path,
+          line: null,
+          target: check2.target,
+          message: `Check ${check2.id} targets claim ${check2.target}, but no document declares id ${claimRef.docId} \u2014 unknown Claim ID`
+        });
+        continue;
+      }
+      const targetDoc = lookup.document;
+      const targetKey = artifactKeyOf(targetDoc.path);
+      const targetNode = nodeByKey.get(targetKey);
+      const to = targetNode ? { path: targetNode.path, id: targetNode.id } : { path: targetDoc.path, id: targetDoc.id };
+      const targetClaims = claimsByKey.get(targetKey);
+      const claimExists = targetClaims !== void 0 && targetClaims.has(claimRef.key);
+      checkEdges.push({
+        from: { path: node3.path, id: node3.id },
+        check: qualifiedCheckId,
+        target: check2.target,
+        to: claimExists ? to : null,
+        method: check2.method,
+        required: check2.required,
+        resolution: claimExists ? "resolved" : "unresolved"
+      });
+      if (!claimExists) {
+        issues.push({
+          code: "unresolved-check-target",
+          path: node3.path,
+          line: null,
+          target: check2.target,
+          message: `Check ${check2.id} targets claim ${check2.target}, but ${targetDoc.path} declares no claim ${claimRef.key} \u2014 unknown Claim ID`
+        });
+        continue;
+      }
+      const forwardKey = JSON.stringify([node3.path, check2.target]);
+      if (!projectedCheckClaims.has(forwardKey)) {
+        projectedCheckClaims.add(forwardKey);
+        derivedEdges.push({
+          from: { path: node3.path, id: node3.id },
+          relation: "checks",
+          target: check2.target,
+          to,
+          claim: check2.target,
+          via: "checks[].target",
+          derived: true
+        });
+      }
+      derivedEdges.push({
+        from: { path: to.path, id: to.id },
+        relation: "checked-by",
+        target: qualifiedCheckId,
+        to: { path: node3.path, id: node3.id },
+        claim: check2.target,
+        via: "checks[].target",
+        derived: true
+      });
     }
   }
+  for (const component of relationCycles(nodes, edges)) {
+    const label = component.join(" -> ");
+    for (const member of component) {
+      const memberNode = nodeByKey.get(artifactKeyOf(member));
+      if (!memberNode) continue;
+      issues.push({
+        code: "relation-cycle",
+        path: memberNode.path,
+        line: null,
+        target: null,
+        message: `Stored forward relations form a cycle: ${label}`
+      });
+    }
+  }
+  edges.sort(edgeCompare);
+  derivedEdges.sort(derivedEdgeCompare);
+  checkEdges.sort((left, right) => compareStrings(left.from.path, right.from.path) || compareStrings(left.check, right.check));
+  issues.sort(issueCompare);
+  return { nodes, edges, derivedEdges, checkEdges, issues };
 }
 
 // src/skills/lib/schema_preflight.ts
-var import_node_fs4 = __toESM(require("node:fs"));
-var import_node_path5 = __toESM(require("node:path"));
+var import_node_fs3 = __toESM(require("node:fs"));
+var import_node_path4 = __toESM(require("node:path"));
 var import_gray_matter4 = __toESM(require_gray_matter());
 var DOC_DRIVEN_DEV_DIR = "docs/.doc-driven-dev";
 var SCHEMA_MANIFEST_PATH = `${DOC_DRIVEN_DEV_DIR}/schema.json`;
@@ -37260,34 +38198,34 @@ var MANIFEST_DIR_ALLOWED_FILES = /* @__PURE__ */ new Set([
   "schema.json",
   "migration.journal.json"
 ]);
-function toRepoRelative2(cwd, absolute) {
-  return import_node_path5.default.relative(import_node_path5.default.resolve(cwd), absolute).split(import_node_path5.default.sep).join("/");
+function toRepoRelative(cwd, absolute) {
+  return import_node_path4.default.relative(import_node_path4.default.resolve(cwd), absolute).split(import_node_path4.default.sep).join("/");
 }
-function isUnderDir(relPath, dir) {
+function isUnderDir2(relPath, dir) {
   return relPath === dir || relPath.startsWith(`${dir}/`);
 }
-function isPlainObject4(value) {
+function isPlainObject5(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function managedRootAliases() {
   return managedDocDirs().filter((dir) => !dir.startsWith("docs/"));
 }
 function walkTree(cwd, relRoot, visit3, onEscape) {
-  const absRoot = import_node_path5.default.resolve(cwd, relRoot);
-  if (!import_node_fs4.default.existsSync(absRoot) || !import_node_fs4.default.statSync(absRoot).isDirectory()) return false;
+  const absRoot = import_node_path4.default.resolve(cwd, relRoot);
+  if (!import_node_fs3.default.existsSync(absRoot) || !import_node_fs3.default.statSync(absRoot).isDirectory()) return false;
   if (!isInsideCheckout(cwd, absRoot)) return false;
   const stack = [absRoot];
   while (stack.length > 0) {
     const dir = stack.pop();
     let entries;
     try {
-      entries = import_node_fs4.default.readdirSync(dir, { withFileTypes: true });
+      entries = import_node_fs3.default.readdirSync(dir, { withFileTypes: true });
     } catch {
       continue;
     }
     for (const entry of entries) {
-      const abs = import_node_path5.default.join(dir, entry.name);
-      const rel = toRepoRelative2(cwd, abs);
+      const abs = import_node_path4.default.join(dir, entry.name);
+      const rel = toRepoRelative(cwd, abs);
       if (entry.isDirectory()) {
         if (!isInsideCheckout(cwd, abs)) {
           onEscape?.(rel, "dir");
@@ -37309,7 +38247,7 @@ function walkTree(cwd, relRoot, visit3, onEscape) {
 function relationIssues(relPath, relations) {
   const scoped = [];
   if (relations === void 0) return scoped;
-  if (!isPlainObject4(relations)) {
+  if (!isPlainObject5(relations)) {
     scoped.push({
       reason: "legacy-relations",
       path: relPath,
@@ -37349,10 +38287,10 @@ function scanDocuments(cwd) {
     unmanagedDocs: 0
   };
   const visitMarkdown = (rel) => {
-    const abs = import_node_path5.default.resolve(cwd, rel);
+    const abs = import_node_path4.default.resolve(cwd, rel);
     let raw;
     try {
-      raw = import_node_fs4.default.readFileSync(abs, "utf8");
+      raw = import_node_fs3.default.readFileSync(abs, "utf8");
     } catch {
       return;
     }
@@ -37360,7 +38298,7 @@ function scanDocuments(cwd) {
     let parsed = true;
     try {
       const result = (0, import_gray_matter4.default)(raw, {});
-      data = isPlainObject4(result.data) ? result.data : {};
+      data = isPlainObject5(result.data) ? result.data : {};
     } catch {
       parsed = false;
     }
@@ -37383,12 +38321,12 @@ function scanDocuments(cwd) {
     }
   };
   const visitDocsTree = (rel) => {
-    if (isUnderDir(rel, DOC_DRIVEN_DEV_DIR)) return;
-    if (rel.endsWith(".md") && !isIndexFileName(import_node_path5.default.basename(rel))) {
+    if (isUnderDir2(rel, DOC_DRIVEN_DEV_DIR)) return;
+    if (rel.endsWith(".md") && !isIndexFileName(import_node_path4.default.basename(rel))) {
       visitMarkdown(rel);
       return;
     }
-    if (isUnderDir(rel, "docs/impl")) {
+    if (isUnderDir2(rel, "docs/impl")) {
       scan.manifestScopedIssues.push({
         reason: "legacy-execution-doc",
         path: rel,
@@ -37399,10 +38337,10 @@ function scanDocuments(cwd) {
   const roots = ["docs", ...managedRootAliases()];
   const walked = /* @__PURE__ */ new Set();
   for (const root of roots) {
-    const abs = import_node_path5.default.resolve(cwd, root);
+    const abs = import_node_path4.default.resolve(cwd, root);
     let key = abs;
     try {
-      key = import_node_fs4.default.realpathSync(abs);
+      key = import_node_fs3.default.realpathSync(abs);
     } catch {
     }
     if (walked.has(key)) continue;
@@ -37416,10 +38354,10 @@ function scanDocuments(cwd) {
   return scan;
 }
 function scanManifestDir(cwd, issues) {
-  const abs = import_node_path5.default.resolve(cwd, DOC_DRIVEN_DEV_DIR);
-  if (!import_node_fs4.default.existsSync(abs)) return;
+  const abs = import_node_path4.default.resolve(cwd, DOC_DRIVEN_DEV_DIR);
+  if (!import_node_fs3.default.existsSync(abs)) return;
   const walked = walkTree(cwd, DOC_DRIVEN_DEV_DIR, (rel, isDir) => {
-    const name = import_node_path5.default.basename(rel);
+    const name = import_node_path4.default.basename(rel);
     if (isDir) {
       if (rel !== DOC_DRIVEN_DEV_DIR) {
         issues.push({
@@ -37434,8 +38372,8 @@ function scanManifestDir(cwd, issues) {
     if (/\.ya?ml$/i.test(name)) {
       let legacy = false;
       try {
-        const parsed = load(import_node_fs4.default.readFileSync(import_node_path5.default.resolve(cwd, rel), "utf8"));
-        if (isPlainObject4(parsed)) {
+        const parsed = load(import_node_fs3.default.readFileSync(import_node_path4.default.resolve(cwd, rel), "utf8"));
+        if (isPlainObject5(parsed)) {
           const version2 = parsed.schemaVersion;
           legacy = typeof version2 === "number" && version2 < EXPECTED_COMPONENT_VERSIONS.graphDefinition || "nodes" in parsed && "edges" in parsed;
         }
@@ -37463,7 +38401,7 @@ function scanManifestDir(cwd, issues) {
   if (!walked) {
     let directory = false;
     try {
-      directory = import_node_fs4.default.statSync(abs).isDirectory();
+      directory = import_node_fs3.default.statSync(abs).isDirectory();
     } catch {
     }
     issues.push({
@@ -37474,8 +38412,8 @@ function scanManifestDir(cwd, issues) {
   }
 }
 function scanExecutionState(cwd, issues) {
-  const abs = import_node_path5.default.resolve(cwd, EXECUTION_STATE_ROOT);
-  if (!import_node_fs4.default.existsSync(abs)) return;
+  const abs = import_node_path4.default.resolve(cwd, EXECUTION_STATE_ROOT);
+  if (!import_node_fs3.default.existsSync(abs)) return;
   const marker = (rel, detail) => {
     issues.push({ reason: "legacy-execution-state", path: rel, detail });
   };
@@ -37503,7 +38441,7 @@ function scanExecutionState(cwd, issues) {
       if (segments.length === 2 && segments[1] === "manifest.json") {
         let version2;
         try {
-          version2 = JSON.parse(import_node_fs4.default.readFileSync(import_node_path5.default.resolve(cwd, rel), "utf8")).schemaVersion;
+          version2 = JSON.parse(import_node_fs3.default.readFileSync(import_node_path4.default.resolve(cwd, rel), "utf8")).schemaVersion;
         } catch {
           version2 = null;
         }
@@ -37521,7 +38459,7 @@ function scanExecutionState(cwd, issues) {
     if (/^(run|manifest|run\.manifest|run-manifest)\.json$/i.test(name)) {
       let version2;
       try {
-        version2 = JSON.parse(import_node_fs4.default.readFileSync(import_node_path5.default.resolve(cwd, rel), "utf8")).schemaVersion;
+        version2 = JSON.parse(import_node_fs3.default.readFileSync(import_node_path4.default.resolve(cwd, rel), "utf8")).schemaVersion;
       } catch {
         version2 = null;
       }
@@ -37535,7 +38473,7 @@ function scanExecutionState(cwd, issues) {
   if (!walked) {
     let directory = false;
     try {
-      directory = import_node_fs4.default.statSync(abs).isDirectory();
+      directory = import_node_fs3.default.statSync(abs).isDirectory();
     } catch {
     }
     issues.push({
@@ -37547,12 +38485,12 @@ function scanExecutionState(cwd, issues) {
 }
 function readManifest(cwd) {
   const rel = SCHEMA_MANIFEST_PATH;
-  const abs = import_node_path5.default.resolve(cwd, rel);
-  if (!import_node_fs4.default.existsSync(abs)) return { state: "missing" };
+  const abs = import_node_path4.default.resolve(cwd, rel);
+  if (!import_node_fs3.default.existsSync(abs)) return { state: "missing" };
   if (!isInsideCheckout(cwd, abs)) return { state: "escaped" };
   let raw;
   try {
-    raw = import_node_fs4.default.readFileSync(abs, "utf8");
+    raw = import_node_fs3.default.readFileSync(abs, "utf8");
   } catch (error62) {
     return { state: "unreadable", detail: error62 instanceof Error ? error62.message : String(error62) };
   }
@@ -37562,7 +38500,7 @@ function readManifest(cwd) {
   } catch (error62) {
     return { state: "malformed", detail: `schema.json is not valid JSON: ${error62 instanceof Error ? error62.message : String(error62)}` };
   }
-  if (!isPlainObject4(parsed)) {
+  if (!isPlainObject5(parsed)) {
     return { state: "malformed", detail: "schema.json must be a JSON object" };
   }
   const versionIssues = [];
@@ -37603,7 +38541,7 @@ function readManifest(cwd) {
   }
   let migrationInProgress = false;
   if (parsed.migration !== void 0) {
-    if (!isPlainObject4(parsed.migration)) {
+    if (!isPlainObject5(parsed.migration)) {
       return { state: "malformed", detail: "migration must be an object when present" };
     }
     const status = parsed.migration.status;
@@ -37615,7 +38553,7 @@ function readManifest(cwd) {
   return { state: "read", declared, migrationInProgress, versionIssues };
 }
 function journalPresent(cwd) {
-  return import_node_fs4.default.existsSync(import_node_path5.default.resolve(cwd, MIGRATION_JOURNAL_PATH));
+  return import_node_fs3.default.existsSync(import_node_path4.default.resolve(cwd, MIGRATION_JOURNAL_PATH));
 }
 function recommendedCommand(status, docCount) {
   const maintenance = "node .apm/skills/doc-maintenance/scripts/doc_maintenance.js";
@@ -37651,7 +38589,7 @@ function statusSummary(report) {
   }
 }
 function evaluateSchemaPreflight(cwd) {
-  const root = import_node_path5.default.resolve(cwd);
+  const root = import_node_path4.default.resolve(cwd);
   const scan = scanDocuments(root);
   scanManifestDir(root, scan.issues);
   scanExecutionState(root, scan.issues);
@@ -37745,6 +38683,358 @@ function schemaEntrypointGuard(cwd) {
   console.error(`schema preflight blocked (${report.status}): ${statusSummary(report)} \u2014 run ${recommended}`);
   process.exitCode = SCHEMA_PREFLIGHT_EXIT_CODE;
   return false;
+}
+
+// src/skills/lib/verification_assessment/types.ts
+var ASSESSMENT_REASON_CODES = [
+  // The caller's target could not be named (unresolvable commit, no
+  // snapshot): nothing can be judged applicable.
+  "target-unverifiable",
+  // The record's own subject could not be digested (e.g. its commit no
+  // longer resolves) — applicability cannot be proven.
+  "subject-unverifiable",
+  // The record's subject digest differs from the target's — it measured a
+  // different commit or workspace.
+  "subject-mismatch",
+  // Claim/check reference failed to resolve in the live graph (detail
+  // carries the resolution status).
+  "claim-unresolved",
+  "check-unresolved",
+  // Resolved, but the pinned revision no longer matches the live document
+  // or check design — the evidence predates the current design.
+  "claim-revision-mismatch",
+  "check-revision-mismatch",
+  // The resolved check does not target the claim the record credits.
+  "check-target-mismatch",
+  // The recorded method differs from the check's designed method — the
+  // outcome is not a measurement of the designed check.
+  "method-mismatch",
+  // A declared artifact is known-inaccessible.
+  "artifact-unavailable",
+  // A declared artifact is past its expiresAt deadline.
+  "artifact-expired",
+  // A declared artifact was recorded but never fetched — its content was
+  // never digest-verified.
+  "artifact-unverified",
+  // The record declares no artifacts at all — the outcome is
+  // attestation-only, never digest-backed (integrity `unverified`).
+  "attestation-only",
+  // The recorded outcome is a measured failure of this target.
+  "outcome-failed",
+  // The recorded outcome is inconclusive/error/not-run — not a pass.
+  "outcome-not-passed"
+];
+var ASSESSMENT_REASON_SET = new Set(ASSESSMENT_REASON_CODES);
+var CHECK_STATUSES = [
+  // An applicable record assessed `sufficient` is the newest conclusive
+  // measurement for this target.
+  "satisfied",
+  // The newest conclusive applicable measurement is `insufficient` — a
+  // recorded failure for this target. Measured outcomes outrank any
+  // exemption: a failed check stays failed even under a valid waiver.
+  "failed",
+  // No conclusive evidence, but a validated waiver exempts the check.
+  "waived",
+  // No conclusive evidence, but a validated not-applicable verdict
+  // (impact-analysis basis) exempts the check.
+  "out-of-scope",
+  // In scope, no usable outcome and no valid exemption — unexecuted or
+  // indeterminate-only evidence. This is the bucket an unexecuted check
+  // lands in; it is never silently out-of-scope.
+  "undetermined",
+  // The check ref does not resolve in the live graph — coverage is
+  // unprovable, so the check gates as required.
+  "unresolved"
+];
+var CHECK_STATUS_SET = new Set(CHECK_STATUSES);
+var CLAIM_STATUSES = [
+  // Every in-scope required check is satisfied, waived, or out-of-scope.
+  "covered",
+  // At least one required check is covered, but not all.
+  "partial",
+  // No required check is covered — including the zero-required-checks
+  // coverage gap.
+  "uncovered",
+  // A required check measured a failure for this target.
+  "failed"
+];
+var CLAIM_STATUS_SET = new Set(CLAIM_STATUSES);
+
+// src/skills/doc-driven-dev-graph/scripts/lib/graph_state.ts
+var CHAIN_STATUSES = {
+  spec: /* @__PURE__ */ new Set(["proposed", "approved", "implemented"]),
+  adr: /* @__PURE__ */ new Set(["proposed", "accepted"]),
+  design: /* @__PURE__ */ new Set(["approved"])
+};
+function chainKey(chain) {
+  return [chain.spec, chain.adr, chain.design].map((value) => value ?? "").join("\0");
+}
+function chainMembers(chain) {
+  return new Set([chain.spec, chain.adr, chain.design, ...chain.anchors ?? []].filter((value) => Boolean(value)));
+}
+function hasKnowledgeEdge(graph, fromPath, relation, toPath) {
+  return graph.edges.some((edge) => edge.resolution === "resolved" && edge.from.path === fromPath && edge.relation === relation && edge.to?.path === toPath);
+}
+function designClaimsSpec(graph, designPath, specPath) {
+  return Boolean(specPath) && hasKnowledgeEdge(graph, designPath, "realizes", specPath);
+}
+function designClaimsAdr(graph, designPath, adrPath) {
+  return Boolean(adrPath) && hasKnowledgeEdge(graph, adrPath, "decides-for", designPath);
+}
+function preDesignAnchors(graph, records, spec, adr) {
+  const direct = hasKnowledgeEdge(graph, adr.path, "decides-for", spec.path);
+  const discoveries = records.filter((record2) => (record2.type === "discovery" || record2.type === "brainstorm") && [spec, adr].every((artifact) => hasKnowledgeEdge(graph, record2.path, "motivates", artifact.path) || hasKnowledgeEdge(graph, record2.path, "informs", artifact.path)));
+  return direct || discoveries.length > 0 ? discoveries.map((record2) => record2.path) : void 0;
+}
+function artifactChainCandidates(graph, records) {
+  const specs = records.filter((record2) => record2.type === "spec" && CHAIN_STATUSES.spec.has(record2.status ?? ""));
+  const adrs = records.filter((record2) => record2.type === "adr" && CHAIN_STATUSES.adr.has(record2.status ?? ""));
+  const designs = records.filter((record2) => record2.type === "design" && CHAIN_STATUSES.design.has(record2.status ?? ""));
+  const chains = /* @__PURE__ */ new Map();
+  const add = (chain) => {
+    chains.set(chainKey(chain), chain);
+  };
+  const cartesian = (values, fallback) => values.length > 0 ? values : fallback;
+  for (const design of designs) {
+    const relatedSpecs = specs.filter((candidate) => designClaimsSpec(graph, design.path, candidate.path));
+    const relatedAdrs = adrs.filter((candidate) => designClaimsAdr(graph, design.path, candidate.path));
+    for (const spec of cartesian(relatedSpecs, [void 0])) {
+      for (const adr of cartesian(relatedAdrs, [void 0])) {
+        add({ spec: spec?.path, adr: adr?.path, design: design.path });
+      }
+    }
+  }
+  const unassignedSpecs = specs.filter((spec) => !designs.some((design) => designClaimsSpec(graph, design.path, spec.path)));
+  const paired = /* @__PURE__ */ new Set();
+  for (const spec of unassignedSpecs) {
+    for (const adr of adrs) {
+      const anchors = preDesignAnchors(graph, records, spec, adr);
+      if (!anchors) continue;
+      add({ spec: spec.path, adr: adr.path, anchors });
+      paired.add(spec.path);
+      paired.add(adr.path);
+    }
+  }
+  for (const artifact of [...specs, ...adrs]) {
+    if (!paired.has(artifact.path) && !designs.some((design) => artifact.type === "adr" ? designClaimsAdr(graph, design.path, artifact.path) : designClaimsSpec(graph, design.path, artifact.path))) {
+      add(artifact.type === "spec" ? { spec: artifact.path } : { adr: artifact.path });
+    }
+  }
+  return [...chains.values()].sort((left, right) => compareStrings(chainKey(left), chainKey(right)));
+}
+
+// src/skills/briefing-flow/scripts/lib/briefing_audit.ts
+var SPEC_STATUSES = /* @__PURE__ */ new Set(["proposed", "approved", "implemented"]);
+var ADR_STATUSES = /* @__PURE__ */ new Set(["proposed", "accepted"]);
+var PLACEHOLDER_MARKER = /TODO|{{[^}]+}}|<!--\s*(option|driver|justification|Describe)/i;
+function normalizePath(cwd, target) {
+  return import_node_path5.default.relative(import_node_path5.default.resolve(cwd), import_node_path5.default.resolve(target)).split(import_node_path5.default.sep).join("/");
+}
+function consideredOptionCount(body) {
+  const section = sectionBody(body, "Considered Options");
+  if (!section) return 0;
+  const headings = subHeadingCount(section);
+  const listItems = section.match(/^\s*[-*+]\s+\S/gm)?.length ?? 0;
+  return Math.max(headings, listItems);
+}
+function acceptanceCriterionCount(body) {
+  const section = sectionBody(body, "Acceptance Criteria");
+  if (!section) return 0;
+  return section.match(/^\s*(?:[-*+]|\d+\.)\s+\S/gm)?.length ?? 0;
+}
+function toAuditedDoc(cwd, absolutePath, content3) {
+  const parsed = parseDoc(content3);
+  if (parsed.error) return null;
+  return {
+    absolutePath: import_node_path5.default.resolve(absolutePath),
+    body: parsed.body,
+    content: content3,
+    data: parsed.data,
+    path: normalizePath(cwd, absolutePath)
+  };
+}
+function loadDoc(cwd, inputPath, role, findings) {
+  const absolutePath = import_node_path5.default.resolve(cwd, inputPath);
+  const relativePath = normalizePath(cwd, absolutePath);
+  const label = role === "spec" ? "Spec" : "ADR";
+  let content3;
+  try {
+    content3 = import_node_fs4.default.readFileSync(absolutePath, "utf8");
+  } catch {
+    findings.push({
+      severity: "error",
+      code: "missing-file",
+      file: relativePath,
+      message: `${label} file not found: ${relativePath}`
+    });
+    return null;
+  }
+  const doc = toAuditedDoc(cwd, absolutePath, content3);
+  if (!doc) {
+    const parsed = parseDoc(content3);
+    findings.push({
+      severity: "error",
+      code: "unparseable-front-matter",
+      file: relativePath,
+      message: `Front matter is not valid YAML: ${parsed.error ?? "unknown parse error"}`
+    });
+    return null;
+  }
+  return doc;
+}
+async function auditDocContent(cwd, doc, role, findings) {
+  for (const issue2 of validateFrontMatter(doc.content)) {
+    findings.push({
+      severity: "error",
+      code: "invalid-front-matter",
+      file: doc.path,
+      message: `Invalid front matter ${issue2.path}: ${issue2.message}`
+    });
+  }
+  if (doc.data.type !== role) {
+    findings.push({
+      severity: "error",
+      code: `${role}-type`,
+      file: doc.path,
+      message: `Expected type "${role}", found "${typeof doc.data.type === "string" ? doc.data.type : "(missing)"}"`
+    });
+  }
+  const status = typeof doc.data.status === "string" ? doc.data.status : "";
+  const allowed = role === "spec" ? SPEC_STATUSES : ADR_STATUSES;
+  if (!allowed.has(status)) {
+    findings.push({
+      severity: "error",
+      code: `${role}-status`,
+      file: doc.path,
+      message: `Invalid ${role} status "${status || "(missing)"}" (expected one of: ${[...allowed].join(", ")})`
+    });
+  }
+  if (role === "spec" && acceptanceCriterionCount(doc.body) < 1) {
+    findings.push({
+      severity: "error",
+      code: "spec-acceptance-criteria",
+      file: doc.path,
+      message: 'Expected "## Acceptance Criteria" with at least one list item'
+    });
+  }
+  if (role === "adr" && consideredOptionCount(doc.body) < 2) {
+    findings.push({
+      severity: "error",
+      code: "adr-considered-options",
+      file: doc.path,
+      message: 'Expected "## Considered Options" with at least two options'
+    });
+  }
+  if (PLACEHOLDER_MARKER.test(doc.content)) {
+    findings.push({
+      severity: "warning",
+      code: "unresolved-placeholder",
+      file: doc.path,
+      message: "Contains unresolved placeholders"
+    });
+  }
+  for (const url2 of await markdownDestinations(doc.content)) {
+    if (isExternalArtifactReference(url2) || url2.startsWith("#")) continue;
+    const pathname = url2.split(/[?#]/, 1)[0];
+    if (!pathname) continue;
+    let decoded;
+    try {
+      decoded = decodeURIComponent(pathname);
+    } catch {
+      findings.push({ severity: "error", code: "broken-local-link", file: doc.path, message: `Invalid local link: ${url2}` });
+      continue;
+    }
+    const target = import_node_path5.default.resolve(import_node_path5.default.dirname(doc.absolutePath), decoded);
+    if (!isInsideCheckout(cwd, target) || !import_node_fs4.default.existsSync(target)) {
+      findings.push({ severity: "error", code: "broken-local-link", file: doc.path, message: `Broken local link: ${url2}` });
+    }
+  }
+}
+async function auditBriefingPair(cwd, specPath, adrPath) {
+  const root = import_node_path5.default.resolve(cwd);
+  const findings = [];
+  const spec = loadDoc(root, specPath, "spec", findings);
+  if (spec) await auditDocContent(root, spec, "spec", findings);
+  const adr = loadDoc(root, adrPath, "adr", findings);
+  if (adr) await auditDocContent(root, adr, "adr", findings);
+  const model = await scanRepository({ cwd: root, roots: [...DURABLE_DOC_DIRS], includeTopLevelMarkdown: false });
+  const knowledge = projectKnowledgeGraph(model);
+  const records = model.canonicalDocuments;
+  const specRecord = records.find((record2) => record2.path === spec?.path && record2.type === "spec");
+  const adrRecord = records.find((record2) => record2.path === adr?.path && record2.type === "adr");
+  const anchors = specRecord && adrRecord ? preDesignAnchors(knowledge, records, specRecord, adrRecord) : void 0;
+  const candidates = spec && adr && anchors === void 0 ? artifactChainCandidates(knowledge, records).filter((chain) => chain.spec === spec.path && chain.adr === adr.path) : [];
+  if (spec && adr && anchors === void 0 && candidates.length === 0) {
+    findings.push({
+      severity: "error",
+      code: "inconsistent-pairing",
+      file: null,
+      message: `Spec ${spec.path} and ADR ${adr.path} lack a typed pair relation`
+    });
+  }
+  const relevant = /* @__PURE__ */ new Set([
+    spec?.path,
+    adr?.path,
+    ...anchors ?? [],
+    ...candidates.flatMap((chain) => [...chainMembers(chain)])
+  ]);
+  for (const doc of [spec, adr]) {
+    if (doc && !records.some((record2) => record2.path === doc.path)) {
+      findings.push({ severity: "error", code: "noncanonical-artifact", file: doc.path, message: "Document is not in the knowledge graph's canonical record set" });
+    }
+  }
+  const duplicateIds = model.duplicateIds();
+  for (const record2 of records.filter((item) => relevant.has(item.path))) {
+    auditRelations(record2, duplicateIds, knowledge, findings);
+  }
+  return {
+    spec: spec?.path ?? null,
+    adr: adr?.path ?? null,
+    findings,
+    consistent: !findings.some((finding) => finding.severity === "error")
+  };
+}
+var BROKEN_LINK_ISSUE_CODES = /* @__PURE__ */ new Set([
+  "unresolved-relation-target",
+  "ambiguous-relation-target",
+  "relation-escapes-root",
+  "unresolved-claim-target"
+]);
+var RELATION_ISSUE_CODES = /* @__PURE__ */ new Set([
+  ...BROKEN_LINK_ISSUE_CODES,
+  "legacy-relation-field",
+  "invalid-relation-field",
+  "self-relation",
+  "invalid-relation-target-type",
+  "relation-cycle"
+]);
+function auditRelations(record2, duplicateIds, knowledge, findings) {
+  if (record2.id && duplicateIds.some((entry) => entry.id === record2.id)) {
+    findings.push({ severity: "error", code: "duplicate-id", file: record2.path, message: `Duplicate artifact ID: ${record2.id}` });
+  }
+  const raw = record2.frontMatter.relations;
+  if (raw !== void 0 && raw !== null) {
+    if (typeof raw !== "object" || Array.isArray(raw)) {
+      findings.push({ severity: "error", code: "invalid-relation", file: record2.path, message: "relations must be a mapping of relation names to target lists" });
+    } else {
+      for (const [field, value] of Object.entries(raw).sort((a, b) => compareStrings(a[0], b[0]))) {
+        if (nonReferenceRelationKeys.has(field)) continue;
+        const items = Array.isArray(value) ? value : typeof value === "string" ? [value] : null;
+        if (items === null || items.some((item) => typeof item !== "string" || !item.trim())) {
+          findings.push({ severity: "error", code: "invalid-relation", file: record2.path, message: `Relation ${field} has a malformed (non-string) target` });
+        }
+      }
+    }
+  }
+  for (const issue2 of knowledge.issues) {
+    if (issue2.path !== record2.path || !RELATION_ISSUE_CODES.has(issue2.code)) continue;
+    findings.push({
+      severity: "error",
+      code: BROKEN_LINK_ISSUE_CODES.has(issue2.code) ? "broken-relation-link" : "invalid-relation",
+      file: record2.path,
+      message: issue2.message
+    });
+  }
 }
 
 // src/skills/briefing-flow/scripts/audit_briefing.ts
