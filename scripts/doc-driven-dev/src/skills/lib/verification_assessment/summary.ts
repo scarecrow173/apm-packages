@@ -38,6 +38,7 @@ import path from "node:path";
 
 import { scanKnowledgeGraph, resolveCheckReference, resolveClaimReference } from "../knowledge_graph";
 import type { KnowledgeGraph } from "../knowledge_graph";
+import { isPlainObject } from "../execution_store/types";
 import { query, resolveCommitSubject } from "../evidence_store/store";
 import type { StoreOptions } from "../evidence_store/store";
 import type {
@@ -59,6 +60,7 @@ import type {
   NotApplicableVerdict,
   RejectedNotApplicable,
   RejectedWaiver,
+  ShadowedExemption,
   VerificationSummary,
   VerificationSummaryVerdict,
   VerificationWaiver,
@@ -209,6 +211,14 @@ function classifyCheck(
   notApplicable: ExemptionVerdict<NotApplicableVerdict> | null,
 ): CheckVerification {
   const reasons: string[] = [];
+  const buckets = { sufficient: [] as string[], insufficient: [] as string[], indeterminate: [] as string[] };
+  // Every assessed record for this check is listed exactly once — even
+  // for an unresolved check: its records were assessed (an unresolvable
+  // ref can only ever yield `unknown` applicability ⇒ indeterminate) and
+  // dropping them here would leave them attributed nowhere.
+  for (const entry of assessed) {
+    buckets[entry.assessment.assessment].push(entry.assessment.evidenceId);
+  }
   if (!check.resolved) {
     reasons.push("check-unresolved");
     return {
@@ -220,7 +230,7 @@ function classifyCheck(
       constraints: check.constraints,
       executed: false,
       status: "unresolved",
-      evidence: { sufficient: [], insufficient: [], indeterminate: [] },
+      evidence: buckets,
       latestConclusiveAt: null,
       waiver,
       notApplicable,
@@ -228,7 +238,6 @@ function classifyCheck(
     };
   }
 
-  const buckets = { sufficient: [] as string[], insufficient: [] as string[], indeterminate: [] as string[] };
   // The newest CONCLUSIVE applicable assessment decides: measured
   // outcomes — usable pass or usable fail — outrank any exemption, and
   // the latest measurement supersedes older ones (createdAt, then id —
@@ -236,9 +245,6 @@ function classifyCheck(
   const conclusive = assessed
     .filter((entry) => entry.assessment.assessment !== "indeterminate")
     .sort((left, right) => compareRecords(left.record, right.record));
-  for (const entry of assessed) {
-    buckets[entry.assessment.assessment].push(entry.assessment.evidenceId);
-  }
   const latest = conclusive.length === 0 ? null : conclusive[conclusive.length - 1];
   const executed = latest !== null;
 
@@ -413,10 +419,46 @@ function buildVerificationSummaryIn(
   for (const check of gated) reasons.push(`required-check-${check.status}:${check.ref}`);
   for (const claim of uncovered) reasons.push(`claim-${claim.status}:${claim.ref}`);
   for (const entry of waivers.rejected) {
-    reasons.push(`rejected-waiver:${entry.waiver.scope.ref}`);
+    // A malformed candidate carries no contract shape — name the
+    // best-effort scope it spelled, or that none could be read.
+    const scope = candidateScope(entry.waiver, entry.input);
+    reasons.push(`rejected-waiver:${scope?.ref ?? "unidentified"}`);
   }
   for (const entry of notApplicables.rejected) {
-    reasons.push(`rejected-not-applicable:${entry.verdict.check}`);
+    reasons.push(`rejected-not-applicable:${candidateCheck(entry.verdict, entry.input) ?? "unidentified"}`);
+  }
+  // Shadowing audit — deterministic input order gives each scope key to
+  // its FIRST candidate, so a later APPLIED candidate for the same scope
+  // attaches nowhere: valid, but it exempted nothing. Record those
+  // losers so an applied exemption never vanishes silently; a shadowed
+  // REJECTED candidate needs no entry (the rejected lists carry it).
+  const shadowedExemptions: ShadowedExemption[] = [];
+  const seenWaiverScopes = new Set<string>();
+  for (const result of waivers.results) {
+    const scope = candidateScope(result.verdict, result.input);
+    if (scope === null) continue;
+    const key = `${scope.kind}:${scope.ref}`;
+    if (seenWaiverScopes.has(key)) {
+      if (result.status === "applied") {
+        shadowedExemptions.push({ kind: "waiver", input: result.input, scope });
+        reasons.push(`shadowed-exemption:waiver:${scope.ref}`);
+      }
+    } else {
+      seenWaiverScopes.add(key);
+    }
+  }
+  const seenVerdictChecks = new Set<string>();
+  for (const result of notApplicables.results) {
+    const ref = candidateCheck(result.verdict, result.input);
+    if (ref === null) continue;
+    if (seenVerdictChecks.has(ref)) {
+      if (result.status === "applied") {
+        shadowedExemptions.push({ kind: "not-applicable", input: result.input, scope: { kind: "check", ref } });
+        reasons.push(`shadowed-exemption:not-applicable:${ref}`);
+      }
+    } else {
+      seenVerdictChecks.add(ref);
+    }
   }
   // A check-design graph issue means the declared check inventory could
   // not be fully read — a malformed or misplaced `checks:` entry drops
@@ -436,10 +478,12 @@ function buildVerificationSummaryIn(
     verdict = "indeterminate";
   } else {
     verdict = "verified";
-    if (requiredChecks.length === 0 && claims.length === 0) {
+    // A verified verdict over a non-empty scope implies required checks:
+    // a claim with zero required checks is `uncovered`, which gates as
+    // indeterminate above — so an empty required set here can only mean
+    // the scope itself was empty.
+    if (requiredChecks.length === 0) {
       reasons.push("no-required-coverage");
-    } else if (requiredChecks.length === 0) {
-      reasons.push("no-required-checks");
     }
   }
 
@@ -484,10 +528,39 @@ function buildVerificationSummaryIn(
     evidence: assessments,
     rejectedWaivers: waivers.rejected,
     rejectedNotApplicable: notApplicables.rejected,
+    shadowedExemptions,
     counts,
     verdict,
     reasons: reasons.sort(),
   };
+}
+
+// The scope a waiver candidate names — the validated scope when the
+// candidate had one, else the best-effort readable scope of the verbatim
+// input. A malformed waiver still "tried" to exempt the scope it
+// spelled, so its refusal attaches there (and can shadow a later
+// candidate) exactly like a shape-valid one — invalid input is never
+// dereferenced as if it were a contract shape.
+function candidateScope(
+  verdict: VerificationWaiver | null,
+  input: unknown,
+): { kind: "check" | "claim"; ref: string } | null {
+  if (verdict !== null) return verdict.scope;
+  if (!isPlainObject(input) || !isPlainObject(input.scope)) return null;
+  const kind = input.scope.kind;
+  const ref = input.scope.ref;
+  return (kind === "check" || kind === "claim") && typeof ref === "string" && ref.length > 0
+    ? { kind, ref }
+    : null;
+}
+
+// The check a not-applicable candidate names — validated or best-effort
+// readable from the verbatim input, same rule as candidateScope.
+function candidateCheck(verdict: NotApplicableVerdict | null, input: unknown): string | null {
+  if (verdict !== null) return verdict.check;
+  return isPlainObject(input) && typeof input.check === "string" && input.check.length > 0
+    ? input.check
+    : null;
 }
 
 // Pick the first waiver covering a scope — deterministic input order,
@@ -499,7 +572,8 @@ function firstWaiverForScope(
   ref: string,
 ): ExemptionVerdict<VerificationWaiver> | null {
   for (const result of results) {
-    if (result.verdict.scope.kind === kind && result.verdict.scope.ref === ref) return result;
+    const scope = candidateScope(result.verdict, result.input);
+    if (scope !== null && scope.kind === kind && scope.ref === ref) return result;
   }
   return null;
 }
@@ -509,7 +583,7 @@ function firstVerdictForCheck(
   ref: string,
 ): ExemptionVerdict<NotApplicableVerdict> | null {
   for (const result of results) {
-    if (result.verdict.check === ref) return result;
+    if (candidateCheck(result.verdict, result.input) === ref) return result;
   }
   return null;
 }

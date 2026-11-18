@@ -215,6 +215,10 @@ function assessEvidenceIn(
 
   // --- availability + integrity ----------------------------------------
   const axes = artifactAxes(record, deps.now, reasons);
+  // A record declaring no artifacts is attestation-only: its outcome was
+  // never backed by a fetchable, digest-verifiable package — an
+  // indeterminate judgment must name that, not land silently.
+  if (record.artifacts.length === 0) push(reasons, "attestation-only");
   const integrity: EvidenceIntegrity = axes.brokenSupport || methodMismatch
     ? "invalid"
     : axes.unverifiedSupport || record.artifacts.length === 0

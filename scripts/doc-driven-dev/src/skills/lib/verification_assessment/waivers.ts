@@ -29,6 +29,9 @@
 // Rejections are data, not silence: a refused waiver or verdict lands in
 // `rejectedWaivers`/`rejectedNotApplicable` on the summary AND attaches
 // to its check with `status: "rejected"`, so a gate sees the refusal.
+// A candidate that fails shape validation is recorded VERBATIM under
+// `input` with `verdict: null` — invalid input is never cast into the
+// contract shape.
 
 import { resolveCheckReference, resolveClaimReference } from "../knowledge_graph";
 import type { KnowledgeGraph } from "../knowledge_graph";
@@ -72,11 +75,10 @@ function evaluateWaiver(
 ): ExemptionVerdict<VerificationWaiver> {
   const reasons: string[] = [];
   if (!validateWaiver(input)) {
-    const waiver = (typeof input === "object" && input !== null
-      ? input
-      : { scope: { kind: "check", ref: "" }, authority: "", reason: "", grantedAt: "", expiresAt: "" }
-    ) as VerificationWaiver;
-    return { verdict: waiver, status: "rejected", reasons: [WAIVER_REASONS.malformed] };
+    // A malformed candidate rejects as DATA — never cast the input into
+    // the contract shape: `verdict` stays null and the verbatim `input`
+    // is the audit record (a `waiver-malformed` refusal).
+    return { input, verdict: null, status: "rejected", reasons: [WAIVER_REASONS.malformed] };
   }
   if (authorities === null || !authorities.includes(input.authority)) {
     reasons.push(WAIVER_REASONS.untrustedAuthority);
@@ -92,7 +94,7 @@ function evaluateWaiver(
   if (expires <= granted) {
     reasons.push(WAIVER_REASONS.invalidWindow);
   }
-  return { verdict: input, status: reasons.length === 0 ? "applied" : "rejected", reasons };
+  return { input, verdict: input, status: reasons.length === 0 ? "applied" : "rejected", reasons };
 }
 
 // Evaluate all waiver candidates once; results keyed for scope lookup —
@@ -107,7 +109,7 @@ function evaluateWaivers(
   const results = inputs.map((input) => evaluateWaiver(graph, input, authorities, now));
   const rejected = results
     .filter((result) => result.status === "rejected")
-    .map((result) => ({ waiver: result.verdict, reasons: result.reasons }));
+    .map((result) => ({ input: result.input, waiver: result.verdict, reasons: result.reasons }));
   return { results, rejected };
 }
 
@@ -125,16 +127,14 @@ function evaluateNotApplicable(
   input: unknown,
 ): ExemptionVerdict<NotApplicableVerdict> {
   if (!validateNotApplicableVerdict(input)) {
-    const verdict = (typeof input === "object" && input !== null
-      ? input
-      : { check: "", revision: "", paths: [], rule: "", judger: "", method: "", reason: "" }
-    ) as NotApplicableVerdict;
-    return { verdict, status: "rejected", reasons: [NOT_APPLICABLE_REASONS.malformed] };
+    // Same rule as waivers: the malformed candidate is recorded verbatim
+    // under `input`; `verdict` stays null — never a contract-shaped lie.
+    return { input, verdict: null, status: "rejected", reasons: [NOT_APPLICABLE_REASONS.malformed] };
   }
   if (resolveCheckReference(graph, input.check).status !== "resolved") {
-    return { verdict: input, status: "rejected", reasons: [NOT_APPLICABLE_REASONS.checkUnresolved] };
+    return { input, verdict: input, status: "rejected", reasons: [NOT_APPLICABLE_REASONS.checkUnresolved] };
   }
-  return { verdict: input, status: "applied", reasons: [] };
+  return { input, verdict: input, status: "applied", reasons: [] };
 }
 
 function evaluateNotApplicables(
@@ -144,7 +144,7 @@ function evaluateNotApplicables(
   const results = inputs.map((input) => evaluateNotApplicable(graph, input));
   const rejected = results
     .filter((result) => result.status === "rejected")
-    .map((result) => ({ verdict: result.verdict, reasons: result.reasons }));
+    .map((result) => ({ input: result.input, verdict: result.verdict, reasons: result.reasons }));
   return { results, rejected };
 }
 

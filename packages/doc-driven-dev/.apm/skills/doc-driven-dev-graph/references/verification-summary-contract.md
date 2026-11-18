@@ -87,7 +87,7 @@ writes to the Evidence Store.
 `claim-unresolved`, `check-unresolved`, `claim-revision-mismatch`,
 `check-revision-mismatch`, `check-target-mismatch`, `method-mismatch`,
 `artifact-unavailable`, `artifact-expired`, `artifact-unverified`,
-`outcome-failed`, `outcome-not-passed`.
+`attestation-only`, `outcome-failed`, `outcome-not-passed`.
 
 ## VerificationSummary — schemaVersion 1
 
@@ -107,8 +107,9 @@ writes to the Evidence Store.
                "evidence": { "sufficient": [], "insufficient": [], "indeterminate": [] },
                "latestConclusiveAt", "waiver", "notApplicable", "reasons" }],
   "evidence": [EvidenceAssessment],
-  "rejectedWaivers": [{ "waiver", "reasons" }],
-  "rejectedNotApplicable": [{ "verdict", "reasons" }],
+  "rejectedWaivers": [{ "input", "waiver", "reasons" }],
+  "rejectedNotApplicable": [{ "input", "verdict", "reasons" }],
+  "shadowedExemptions": [{ "kind", "input", "scope": { "kind", "ref" } }],
   "counts": { "checks": {…}, "claims": {…}, "evidence": {…} },
   "verdict": "verified | failed | indeterminate",
   "reasons": ["…"]
@@ -151,7 +152,13 @@ measured a failure).
   claim is uncovered/partial, any check-design graph issue made the
   declared inventory untrustworthy, or the target is unverifiable.
 - `verified` — otherwise. An empty scope verifies with an explicit
-  `no-required-coverage` / `no-required-checks` reason — never silently.
+  `no-required-coverage` reason — never silently.
+
+A `verified` verdict must be internally consistent: no required check
+`undetermined`/`unresolved`/`failed` and no claim left un-covered
+(advisory failures never gate). A file claiming `verified` over
+un-covered required coverage is inconsistent — the boundary validator
+refuses it, and the gate blocks on `verification-summary-inconsistent`.
 
 ## Exemptions — validated, never trusted
 
@@ -175,9 +182,30 @@ resolve. Rejection reasons: `not-applicable-malformed`,
 `not-applicable-check-unresolved`. An unexecuted check is never
 out-of-scope by default — only this explicit verdict makes it so.
 
+`revision` names the revision the impact analysis ran at. It is a
+**caller attestation**: the summary records it as the analysis's stated
+basis and never re-derives or verifies it — the impact-analysis tooling
+that produced the verdict is the authority for what it measured.
+
 Rejections land in `rejectedWaivers` / `rejectedNotApplicable` on the
 summary and attach to the check they tried to exempt with
-`status: "rejected"` — a refused exemption is data, not silence.
+`status: "rejected"` — a refused exemption is data, not silence. Every
+evaluated exemption — on a check entry or a rejected entry — is a record
+of `{ input, verdict, status, reasons }` (`waiver`/`verdict` naming the
+validated shape on rejected entries): `input` is the verbatim candidate,
+never contract-typed; `verdict` is the validated shape — `null` exactly
+when the candidate failed shape validation (a `*-malformed` refusal,
+which the boundary validator requires to carry its reason). A malformed
+candidate that spells a readable scope still attaches its refusal to
+that scope — and can shadow a later candidate for it.
+
+Deterministic input order gives each scope key (`check:<ref>` or
+`claim:<ref>` for waivers, the check ref for verdicts) to its FIRST
+candidate. A later APPLIED candidate for the same scope attaches
+nowhere — it is recorded under `shadowedExemptions` with its verbatim
+`input` and competed-for `scope`, and a `shadowed-exemption:<kind>:<ref>`
+reason names it. A shadowed *rejected* candidate needs no entry: the
+rejected lists already carry it.
 
 ## Graph Gate binding
 
@@ -187,9 +215,14 @@ the checkout's `HEAD` through the canonical subject digest — the digest
 same way and a summary targeting another subject is a stale artifact:
 
 - no summary → gate blocked on `verification-summary`;
+- HEAD itself unresolvable (unborn branch, non-repo) → binding is
+  unprovable — blocked on `verification-summary-head-unreadable`;
 - `subjectDigest` ≠ HEAD's → blocked on `verification-summary-target-mismatch`;
 - `verdict` ≠ `verified` → blocked on `verification-<verdict>` plus the
-  summary's own reasons, so the operator sees *which* coverage failed.
+  summary's own reasons, so the operator sees *which* coverage failed;
+- `verdict` = `verified` over un-covered required coverage → blocked on
+  `verification-summary-inconsistent` — the gate re-checks the cheap
+  invariant rather than trusting the claimed verdict.
 
 `route_graph.js` always supplies the gate a summary: with
 `--verification-summary <file>` the file must satisfy this contract's
@@ -198,6 +231,14 @@ refused); without a file the router computes the summary itself from the
 live Evidence Store and Knowledge Graph against `HEAD`. The summary file
 is the caller's exemption channel — waivers and conditional
 out-of-scope verdicts are judgments only a caller can supply.
+
+Auto-compute is intentionally per-invocation: each route decision
+re-derives the summary so routing never reads a cached assessment
+against a moved `HEAD` or a changed store. The trade-off is a widened
+failure domain — an unreadable or corrupt Evidence Store fails the whole
+route invocation (the gate's authority cannot be computed), not just
+verification subcommands. That is deliberate fail-closed: a store that
+cannot prove coverage can never satisfy the gate.
 
 ## CLI
 
@@ -229,5 +270,6 @@ workspace digest verbatim.
 `assessEvidence / assessEvidenceIn / recordSubjectDigest`,
 `buildVerificationSummary / buildVerificationSummaryIn / normalizeTarget`,
 `validateVerificationSummary / validateAssessment / validateWaiver /
-validateNotApplicableVerdict`, and the `NOT_APPLICABLE_REASONS` /
-`WAIVER_REASONS` vocabularies from `src/skills/lib/verification_assessment`.
+validateNotApplicableVerdict`, `verificationCoverageGap`, and the
+`NOT_APPLICABLE_REASONS` / `WAIVER_REASONS` vocabularies from
+`src/skills/lib/verification_assessment`.

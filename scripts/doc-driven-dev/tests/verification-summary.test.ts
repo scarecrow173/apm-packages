@@ -383,6 +383,9 @@ test("an attestation-only record (no artifacts) is unverified, never sufficient"
   assert.equal(assessment.availability, "available");
   assert.equal(assessment.integrity, "unverified");
   assert.equal(assessment.assessment, "indeterminate");
+  // The indeterminate judgment names why — an attestation-only outcome
+  // must never land with an empty reasons list.
+  assert.ok(reasonCodes(assessment).includes("attestation-only"));
 });
 
 test("an applicable measured failure is insufficient", async () => {
@@ -503,6 +506,24 @@ test("an explicit unresolvable check ref stays in scope as unresolved", async ()
   assert.equal(unresolved.required, true, "an unnamed check gates as required — coverage is unprovable");
   assert.equal(summary.verdict, "indeterminate");
   assert.ok(summary.reasons.includes("required-check-unresolved:VD-nope::CHK-09"));
+});
+
+test("records crediting an unresolved check still land in its evidence bucket", async () => {
+  const repo = knowledgeRepo();
+  const graph = await scanKnowledgeGraph({ cwd: repo });
+  // A record exists for the check — it was assessed (unresolvable ⇒
+  // indeterminate) and must be attributed, never swallowed by the
+  // unresolved status.
+  const record = recordFor(repo, graph, {
+    check: { ref: "VD-nope::CHK-09", designRevision: sha256Of("foreign-design") },
+  });
+  const summary = await summarize(repo, { checks: ["VD-nope::CHK-09"], records: [record] });
+  const check = assessedFor(summary, "VD-nope::CHK-09");
+  assert.equal(check.status, "unresolved");
+  assert.deepEqual(check.evidence.indeterminate, ["EVID-0001"]);
+  assert.equal(summary.evidence.length, 1);
+  assert.equal(summary.evidence[0].check, "VD-nope::CHK-09");
+  assert.equal(summary.counts.evidence.indeterminate, 1);
 });
 
 test("advisory checks are classified but never gate the verdict", async () => {
@@ -737,6 +758,143 @@ test("a waiver scoping an unresolvable ref is rejected", async () => {
   assert.ok(summary.rejectedWaivers[0].reasons.includes("waiver-scope-unresolved"));
 });
 
+test("a malformed waiver candidate rejects as data — never throws, never casts", async () => {
+  const repo = knowledgeRepo();
+  for (const broken of [
+    { bad: true },                          // no scope at all
+    { scope: { kind: "check", ref: "VD-efgh::CHK-01" } }, // scope only — every other field missing
+    { scope: "not-an-object" },             // unreadable scope
+    "a string is not a waiver",
+    42,
+    null,
+  ]) {
+    const summary = await summarize(repo, { waivers: [broken], waiverAuthorities: ["release-manager"] });
+    assert.equal(summary.rejectedWaivers.length, 1, JSON.stringify(broken));
+    const entry = summary.rejectedWaivers[0];
+    // The malformed candidate is recorded verbatim — never cast into the
+    // contract shape; `verdict` stays null and `input` is the audit copy.
+    assert.equal(entry.waiver, null, JSON.stringify(broken));
+    assert.deepEqual(entry.input, broken);
+    assert.deepEqual(entry.reasons, ["waiver-malformed"]);
+    assert.equal(summary.verdict, "indeterminate");
+    assert.ok(validateVerificationSummary(JSON.parse(JSON.stringify(summary))), JSON.stringify(broken));
+  }
+});
+
+test("a malformed waiver that spells a readable scope attaches its refusal to that check", async () => {
+  const repo = knowledgeRepo();
+  const broken = { scope: { kind: "check", ref: "VD-efgh::CHK-01" } };
+  const summary = await summarize(repo, { waivers: [broken], waiverAuthorities: ["release-manager"] });
+  const check = assessedFor(summary, "VD-efgh::CHK-01");
+  assert.equal(check.status, "undetermined");
+  assert.equal(check.waiver?.status, "rejected");
+  assert.equal(check.waiver?.verdict, null, "a malformed candidate never produces a contract-shaped verdict");
+  assert.deepEqual(check.waiver?.input, broken);
+  assert.ok(check.waiver?.reasons.includes("waiver-malformed"));
+  assert.ok(summary.reasons.includes("rejected-waiver:VD-efgh::CHK-01"));
+  assert.equal(validateVerificationSummary(JSON.parse(JSON.stringify(summary))), true);
+});
+
+test("a waiver scope with no readable ref reports an unidentified rejection", async () => {
+  const repo = knowledgeRepo();
+  const summary = await summarize(repo, { waivers: [{ bad: true }], waiverAuthorities: ["release-manager"] });
+  assert.ok(summary.reasons.includes("rejected-waiver:unidentified"));
+});
+
+test("a summary carrying rejected malformed exemptions round-trips through the boundary validator", async () => {
+  const repo = knowledgeRepo();
+  const summary = await summarize(repo, {
+    waivers: [{ bad: true }, validWaiver({ authority: "intern" })],
+    waiverAuthorities: ["release-manager"],
+    notApplicable: [{ check: "VD-efgh::CHK-01" }, { bad: true }],
+  });
+  assert.equal(summary.rejectedWaivers.length, 2);
+  assert.equal(summary.rejectedWaivers[0].waiver, null);
+  assert.notEqual(summary.rejectedWaivers[1].waiver, null, "shape-valid refusals keep their validated verdict");
+  assert.equal(summary.rejectedNotApplicable.length, 2);
+  assert.equal(summary.rejectedNotApplicable[0].verdict, null);
+  assert.equal(summary.rejectedNotApplicable[1].verdict, null);
+  // The emitted file must satisfy the same validator route_graph reads —
+  // a recorded rejection can never poison the summary that carries it.
+  assert.equal(validateVerificationSummary(JSON.parse(JSON.stringify(summary))), true);
+});
+
+test("a rejected entry with a null verdict but no malformed reason fails the boundary", async () => {
+  const repo = knowledgeRepo();
+  const summary = await summarize(repo, { waivers: [{ bad: true }] });
+  const forged = JSON.parse(JSON.stringify(summary)) as Record<string, unknown>;
+  (forged.rejectedWaivers as { reasons: string[] }[])[0].reasons = ["waiver-expired"];
+  assert.equal(validateVerificationSummary(forged), false,
+    "a null waiver verdict is only honest under the malformed reason");
+});
+
+test("a duplicate waiver for the same scope is shadowed — and audited, never dropped silently", async () => {
+  const repo = knowledgeRepo();
+  const summary = await summarize(repo, {
+    waivers: [validWaiver(), validWaiver({ reason: "a second, redundant grant" })],
+    waiverAuthorities: ["release-manager"],
+  });
+  assert.equal(assessedFor(summary, "VD-efgh::CHK-01").status, "waived");
+  assert.equal(summary.shadowedExemptions.length, 1);
+  const shadow = summary.shadowedExemptions[0];
+  assert.equal(shadow.kind, "waiver");
+  assert.deepEqual(shadow.scope, { kind: "check", ref: "VD-efgh::CHK-01" });
+  assert.ok(summary.reasons.includes("shadowed-exemption:waiver:VD-efgh::CHK-01"));
+  assert.equal(validateVerificationSummary(JSON.parse(JSON.stringify(summary))), true);
+});
+
+test("a rejected waiver shadows a later applied one — the loser is still audited", async () => {
+  const repo = knowledgeRepo();
+  const summary = await summarize(repo, {
+    // The expired entry owns the scope (deterministic input order); the
+    // valid waiver it hides is applied-but-shadowed.
+    waivers: [validWaiver({ expiresAt: PAST }), validWaiver()],
+    waiverAuthorities: ["release-manager"],
+  });
+  const check = assessedFor(summary, "VD-efgh::CHK-01");
+  assert.equal(check.status, "undetermined");
+  assert.equal(check.waiver?.status, "rejected");
+  assert.equal(summary.rejectedWaivers.length, 1);
+  assert.equal(summary.shadowedExemptions.length, 1);
+  assert.equal(summary.shadowedExemptions[0].kind, "waiver");
+  assert.equal(summary.verdict, "indeterminate");
+});
+
+test("a duplicate not-applicable verdict for the same check is shadowed and audited", async () => {
+  const repo = knowledgeRepo();
+  const summary = await summarize(repo, {
+    notApplicable: [VALID_NA, { ...VALID_NA, reason: "a second analysis" }],
+  });
+  assert.equal(assessedFor(summary, "VD-efgh::CHK-01").status, "out-of-scope");
+  assert.equal(summary.shadowedExemptions.length, 1);
+  assert.equal(summary.shadowedExemptions[0].kind, "not-applicable");
+  assert.deepEqual(summary.shadowedExemptions[0].scope, { kind: "check", ref: "VD-efgh::CHK-01" });
+  assert.ok(summary.reasons.includes("shadowed-exemption:not-applicable:VD-efgh::CHK-01"));
+});
+
+test("waiver expiry boundaries: expiry AT the instant is expired, expiry at grant is a malformed window", async () => {
+  const repo = knowledgeRepo();
+  // expiresAt === now → expired (the deadline must be in the future).
+  let summary = await summarize(repo, {
+    waivers: [validWaiver({ expiresAt: NOW })],
+    waiverAuthorities: ["release-manager"],
+  });
+  assert.deepEqual(summary.rejectedWaivers[0].reasons, ["waiver-expired"]);
+  // expiresAt === grantedAt → an impossible window.
+  summary = await summarize(repo, {
+    waivers: [validWaiver({ grantedAt: FUTURE, expiresAt: FUTURE })],
+    waiverAuthorities: ["release-manager"],
+  });
+  assert.deepEqual(summary.rejectedWaivers[0].reasons, ["waiver-invalid-window"]);
+  // One millisecond past the instant is a live deadline → applied.
+  summary = await summarize(repo, {
+    waivers: [validWaiver({ expiresAt: "2026-02-01T00:00:00.001Z" })],
+    waiverAuthorities: ["release-manager"],
+  });
+  assert.equal(summary.rejectedWaivers.length, 0);
+  assert.equal(assessedFor(summary, "VD-efgh::CHK-01").status, "waived");
+});
+
 test("a measured failure stays failed under a valid waiver — exemptions never rewrite reality", async () => {
   const repo = knowledgeRepo();
   const graph = await scanKnowledgeGraph({ cwd: repo });
@@ -943,6 +1101,47 @@ test("the implementation gate fails closed without a summary and passes on a HEA
   assert.equal(verified.gates.implementation.status, "pass", JSON.stringify(verified.gates.implementation));
 });
 
+test("a HEAD the checkout cannot resolve reports head-unreadable — never a target mismatch", () => {
+  const repo = chainRepo();
+  const head = resolveCommitSubject(repo, "HEAD");
+  assert.ok(head !== null);
+  const summary = {
+    ...emptySummary(),
+    target: { subject: { kind: "commit" as const, commit: head.commitOid }, subjectDigest: head.subjectDigest },
+  };
+  // Removing .git makes HEAD unresolvable: binding becomes unprovable,
+  // which fails closed but must not be mislabeled a stale artifact.
+  fs.rmSync(path.join(repo, ".git"), { recursive: true, force: true });
+  const state = projectGraphState({ cwd: repo, focus: ["DESIGN-0001"], verificationSummary: summary });
+  assert.equal(state.verification?.boundToHead, null);
+  assert.equal(state.gates.implementation.status, "blocked");
+  assert.ok(state.gates.implementation.reasons.includes("verification-summary-head-unreadable"));
+  assert.ok(!state.gates.implementation.reasons.includes("verification-summary-target-mismatch"));
+});
+
+test("a verified verdict over un-covered required coverage is inconsistent — refused and gated", async () => {
+  const repo = chainRepo();
+  const head = resolveCommitSubject(repo, "HEAD");
+  assert.ok(head !== null);
+  // The honest summary is indeterminate — the declared check has no
+  // evidence. Forging `verdict: "verified"` over it asserts coverage the
+  // file does not contain.
+  const honest = await buildVerificationSummary(repo, {
+    subject: { kind: "workspace", snapshotDigest: head.subjectDigest },
+    now: NOW,
+  });
+  assert.equal(honest.verdict, "indeterminate");
+  const forged = { ...honest, verdict: "verified" as const };
+  // The file boundary refuses the inconsistency outright.
+  assert.equal(validateVerificationSummary(JSON.parse(JSON.stringify(forged))), false);
+  // And the gate re-checks the cheap invariant on trusted input — a
+  // hand-projected inconsistent summary is blocked, never trusted.
+  const state = projectGraphState({ cwd: repo, focus: ["DESIGN-0001"], verificationSummary: forged });
+  assert.equal(state.verification?.boundToHead, true);
+  assert.equal(state.gates.implementation.status, "blocked");
+  assert.ok(state.gates.implementation.reasons.includes("verification-summary-inconsistent"));
+});
+
 function emptySummary() {
   return {
     schemaVersion: 1 as const,
@@ -955,6 +1154,7 @@ function emptySummary() {
     evidence: [],
     rejectedWaivers: [],
     rejectedNotApplicable: [],
+    shadowedExemptions: [],
     counts: {
       checks: { total: 0, required: 0, advisory: 0, satisfied: 0, failed: 0, waived: 0, outOfScope: 0, undetermined: 0, unresolved: 0 },
       claims: { total: 0, covered: 0, partial: 0, uncovered: 0, failed: 0 },
@@ -1032,6 +1232,65 @@ test("evidence_store summary validates exemptions from --waivers/--not-applicabl
   assert.equal(payload.summary.checks[0].status, "waived");
   assert.equal(payload.summary.rejectedNotApplicable.length, 1);
   assert.equal(payload.summary.verdict, "verified");
+});
+
+test("evidence_store summary/assess accept a --snapshot workspace subject", async () => {
+  const repo = knowledgeRepo({ gitInit: true });
+  const graph = await scanKnowledgeGraph({ cwd: repo });
+  putViaCli(repo, {
+    ...recordFor(repo, graph),
+    check: { ref: "VD-efgh::CHK-01", designRevision: "" },
+    claim: { ref: "SPEC-abcd::R-01", documentRevision: "" },
+  });
+  const assessed = runCli(cli, ["assess", "EVID-0001", "--snapshot", SNAP_A], repo);
+  assert.equal(assessed.status, 0, assessed.stderr + assessed.stdout);
+  const axes = JSON.parse(assessed.stdout).assessment;
+  assert.equal(axes.applicability, "applicable");
+  assert.equal(axes.assessment, "sufficient");
+  const summarized = runCli(cli, ["summary", "--snapshot", SNAP_A], repo);
+  assert.equal(summarized.status, 0, summarized.stderr + summarized.stdout);
+  const payload = JSON.parse(summarized.stdout).summary;
+  assert.equal(payload.target.subject.kind, "workspace");
+  assert.equal(payload.target.subjectDigest, SNAP_A);
+  assert.equal(payload.verdict, "verified");
+});
+
+test("route_graph --verification-summary consumes a valid summary file end-to-end", async () => {
+  const repo = knowledgeRepo({ gitInit: true });
+  const head = resolveCommitSubject(repo, "HEAD");
+  assert.ok(head !== null);
+  const graph = await scanKnowledgeGraph({ cwd: repo });
+  putViaCli(repo, {
+    ...recordFor(repo, graph, { subject: { kind: "commit", commit: head.commitOid } }),
+    check: { ref: "VD-efgh::CHK-01", designRevision: "" },
+    claim: { ref: "SPEC-abcd::R-01", documentRevision: "" },
+  });
+  const produced = runCli(cli, ["summary", "--commit", "HEAD", "--out", "summary.json"], repo);
+  assert.equal(produced.status, 0, produced.stderr + produced.stdout);
+  const result = runCli(routeCli, [
+    "--graph", graphYaml, "--verification-summary", "summary.json",
+    "--focus", "SPEC-abcd", "--current", "implementation",
+  ], repo);
+  assert.equal(result.status, 0, `a contract-valid summary file must be consumed: ${result.stderr + result.stdout}`);
+  const route = JSON.parse(result.stdout);
+  assert.equal(route.edgeId, "implementation-retry");
+});
+
+test("a summary file carrying rejected malformed exemptions is still route-consumable", async () => {
+  const repo = knowledgeRepo({ gitInit: true });
+  // A typo'd waivers file: the summary records the refusal as data — the
+  // emitted file must not be refused wholesale by the route boundary.
+  fs.writeFileSync(path.join(repo, "waivers.json"), JSON.stringify([{ bad: true }]), "utf8");
+  const produced = runCli(cli, ["summary", "--commit", "HEAD", "--waivers", "waivers.json", "--out", "s.json"], repo);
+  assert.equal(produced.status, 0, produced.stderr + produced.stdout);
+  const written = JSON.parse(fs.readFileSync(path.join(repo, "s.json"), "utf8"));
+  assert.equal(written.rejectedWaivers.length, 1);
+  assert.equal(written.rejectedWaivers[0].waiver, null);
+  const result = runCli(routeCli, [
+    "--graph", graphYaml, "--verification-summary", "s.json",
+    "--focus", "SPEC-abcd", "--current", "implementation",
+  ], repo);
+  assert.equal(result.status, 0, `a summary carrying recorded rejections must be consumed: ${result.stderr + result.stdout}`);
 });
 
 test("route_graph --verification-summary rejects an invalid summary file", () => {

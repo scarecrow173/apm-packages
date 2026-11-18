@@ -87,7 +87,8 @@ graph と宣言された対象に対して再計算します —— ここにあ
 `claim-unresolved`、`check-unresolved`、`claim-revision-mismatch`、
 `check-revision-mismatch`、`check-target-mismatch`、
 `method-mismatch`、`artifact-unavailable`、`artifact-expired`、
-`artifact-unverified`、`outcome-failed`、`outcome-not-passed`。
+`artifact-unverified`、`attestation-only`、`outcome-failed`、
+`outcome-not-passed`。
 
 ## VerificationSummary —— schemaVersion 1
 
@@ -107,8 +108,9 @@ graph と宣言された対象に対して再計算します —— ここにあ
                "evidence": { "sufficient": [], "insufficient": [], "indeterminate": [] },
                "latestConclusiveAt", "waiver", "notApplicable", "reasons" }],
   "evidence": [EvidenceAssessment],
-  "rejectedWaivers": [{ "waiver", "reasons" }],
-  "rejectedNotApplicable": [{ "verdict", "reasons" }],
+  "rejectedWaivers": [{ "input", "waiver", "reasons" }],
+  "rejectedNotApplicable": [{ "input", "verdict", "reasons" }],
+  "shadowedExemptions": [{ "kind", "input", "scope": { "kind", "ref" } }],
   "counts": { "checks": {…}, "claims": {…}, "evidence": {…} },
   "verdict": "verified | failed | indeterminate",
   "reasons": ["…"]
@@ -151,8 +153,15 @@ required check が 0 件の gap を含む）、`failed`（required check が
   claim が uncovered/partial、check 設計の graph issue が宣言された
   inventory を信頼できないものにした、あるいは対象が検証不能。
 - `verified` —— それ以外。空スコープは明示的な
-  `no-required-coverage` / `no-required-checks` の reason を伴って
-  verified になります —— 黙ってはなりません。
+  `no-required-coverage` の reason を伴って verified になります
+  —— 黙ってはなりません。
+
+`verified` verdict は内部整合性を満たさなければなりません: required
+check が `undetermined`/`unresolved`/`failed` のまま残らず、
+カバーされない claim も残らない（advisory の失敗は gate しません）。
+カバーされていない required coverage の上に `verified` を主張する
+ファイルは不整合です —— 境界 validator が拒否し、gate は
+`verification-summary-inconsistent` で block します。
 
 ## 免除 —— 検証される、信頼されることはない
 
@@ -177,9 +186,30 @@ expiresAt }`。次のすべてを満たす場合のみ適用されます: 形状
 out-of-scope になることはありません —— この明示的 verdict のみが
 それを可能にします。
 
+`revision` は impact 解析が実行された revision を指名します。これは
+**caller の証明（attestation）** です: サマリーは解析が述べた根拠
+として記録するだけで、再導出・検証はしません —— verdict を生成した
+impact 解析ツールこそが、何を測定したかの権威です。
+
 拒否はサマリーの `rejectedWaivers` / `rejectedNotApplicable` に入り、
 免除しようとした check にも `status: "rejected"` で添付されます ——
-拒否された免除は沈黙ではなくデータです。
+拒否された免除は沈黙ではなくデータです。評価された免除はすべて
+—— check エントリ上でも拒否エントリ上でも ——
+`{ input, verdict, status, reasons }` のレコードです（拒否エントリ
+では `waiver`/`verdict` が検証済み形状を指名）: `input` は逐語の
+候補であり、決してコントラクト型ではありません。`verdict` は検証済
+みの形状 —— 候補が形状検証に失敗した場合（`*-malformed` の拒否で
+あり、境界 validator はその reason の同伴を要求します）に限り
+`null` です。読み取り可能なスコープを綴った malformed 候補も、その
+スコープに拒否を添付します —— そして後続候補を shadow できます。
+
+決定的な入力順は各スコープキー（waiver は `check:<ref>` または
+`claim:<ref>`、verdict は check ref）を先頭の候補に与えます。同じ
+スコープの後続の APPLIED 候補はどこにも添付されません —— 逐語の
+`input` と競合した `scope` とともに `shadowedExemptions` に記録され、
+`shadowed-exemption:<kind>:<ref>` の reason がそれを指名します。
+shadow された*拒否*候補にエントリは要りません —— 拒否リストが既に
+それを保持しています。
 
 ## Graph Gate との束縛
 
@@ -190,11 +220,16 @@ implementation gate の権威は、canonical サブジェクトダイジェス�
 artifact です。
 
 - サマリーなし → `verification-summary` で blocked。
+- HEAD 自体が解決不能（unborn branch、非 repo） → 束縛は証明不能
+  —— `verification-summary-head-unreadable` で blocked。
 - `subjectDigest` ≠ HEAD のもの → `verification-summary-target-mismatch`
   で blocked。
 - `verdict` ≠ `verified` → `verification-<verdict>` とサマリー自身の
   reasons で blocked。オペレーターは*どの*カバレッジが失敗したかを
   見られます。
+- `verdict` = `verified` だがカバーされない required coverage がある
+  → `verification-summary-inconsistent` で blocked —— gate は主張さ
+  れた verdict を信頼せず、安価な不変条件を再検査します。
 
 `route_graph.js` は常に gate にサマリーを供給します:
 `--verification-summary <file>` 指定時は、このコントラクトの
@@ -203,6 +238,14 @@ validator を通過するまでファイルを読みません（読めない・�
 Store と Knowledge Graph から `HEAD` に対してサマリーを自ら計算し
 ます。サマリーファイルは caller の免除チャンネルです —— waiver と
 条件付き out-of-scope verdict は caller だけが供給できる判定です。
+
+自動計算は意図的に呼び出しごとです: 各 route 判定がサマリーを再導出
+するため、動いた `HEAD` や変化した store に対するキャッシュ済み
+assessment を routing が読むことはありません。トレードオフとして
+失敗ドメインは広がります —— 読み取り不能・破損した Evidence Store
+は検証サブコマンドだけでなく route 呼び出し全体を失敗させます
+（gate の権威を計算できない）。これは意図的な fail-closed です:
+カバレッジを証明できない store は gate を決して満たせません。
 
 ## CLI
 
@@ -235,6 +278,6 @@ node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
 `assessEvidence / assessEvidenceIn / recordSubjectDigest`、
 `buildVerificationSummary / buildVerificationSummaryIn / normalizeTarget`、
 `validateVerificationSummary / validateAssessment / validateWaiver /
-validateNotApplicableVerdict`、および `NOT_APPLICABLE_REASONS` /
-`WAIVER_REASONS` の語彙を `src/skills/lib/verification_assessment`
-から提供します。
+validateNotApplicableVerdict`、`verificationCoverageGap`、および
+`NOT_APPLICABLE_REASONS` / `WAIVER_REASONS` の語彙を
+`src/skills/lib/verification_assessment` から提供します。

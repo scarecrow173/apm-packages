@@ -130,6 +130,14 @@ function validateSignals(definition: GraphDefinition, signals: string[]): void {
 // in-scope check assessed from the live Evidence Store against HEAD, so
 // the gate always reads current measurement, never a stale artifact or a
 // caller-asserted signal.
+//
+// Auto-compute is intentionally per-invocation: each route decision
+// re-derives the summary so routing never reads a cached assessment
+// against a moved HEAD or a changed store. The trade-off is a widened
+// failure domain — an unreadable or corrupt Evidence Store now fails
+// the whole route invocation (the gate's authority cannot be computed),
+// not just verification subcommands. Fail closed is deliberate: a store
+// that cannot prove coverage can never satisfy the gate.
 async function verificationSummary(args: CliArgs): Promise<VerificationSummary> {
   if (args.verificationSummary !== undefined) {
     const file = path.resolve(args.cwd, args.verificationSummary);

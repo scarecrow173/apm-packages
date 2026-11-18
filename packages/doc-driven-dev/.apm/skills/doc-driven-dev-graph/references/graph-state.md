@@ -19,8 +19,11 @@ way artifact blockers do.
 
 `verification` carries the Verification Summary the implementation gate
 consumes (Issue `#241`) plus `boundToHead` — whether the summary's target
-subject digest equals this checkout's `HEAD` content identity. The router
-auto-computes the summary from the live Evidence Store against `HEAD`;
+subject digest equals this checkout's `HEAD` content identity: `true`
+binds, `false` is a resolved HEAD and a different subject, and `null`
+means HEAD itself could not be resolved (unborn branch, non-repo), which
+fails closed but is never a target mismatch. The router auto-computes the
+summary from the live Evidence Store against `HEAD`;
 `--verification-summary <file>` supplies a caller-evaluated one.
 
 ## Focus
@@ -60,10 +63,13 @@ in the selected Graph Definition.
 Implementation completion requires selected tasks to be graph-resolved (`done`
 or `wont-do`) and a HEAD-bound Verification Summary reporting `verdict:
 "verified"` (see `verification-summary-contract.md`). A missing summary
-blocks on `verification-summary`, a summary targeting another subject on
-`verification-summary-target-mismatch`, and a non-verified verdict on
-`verification-<verdict>` plus the summary's own reasons — the gate reads
-actual evidence assessments, never a caller-asserted signal. Follow-up
+blocks on `verification-summary`, an unresolvable HEAD on
+`verification-summary-head-unreadable`, a summary targeting another
+subject on `verification-summary-target-mismatch`, a non-verified verdict
+on `verification-<verdict>` plus the summary's own reasons, and a
+`verified` verdict over un-covered required coverage on
+`verification-summary-inconsistent` — the gate reads actual evidence
+assessments, never a caller-asserted signal. Follow-up
 triage requires
 exactly one typed follow-up signal. Exit audit requires `exit-audit-pass`.
 Missing or conflicting evidence blocks routing rather than advancing silently.

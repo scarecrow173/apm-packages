@@ -92,6 +92,9 @@ const ASSESSMENT_REASON_CODES = [
   // A declared artifact was recorded but never fetched — its content was
   // never digest-verified.
   "artifact-unverified",
+  // The record declares no artifacts at all — the outcome is
+  // attestation-only, never digest-backed (integrity `unverified`).
+  "attestation-only",
   // The recorded outcome is a measured failure of this target.
   "outcome-failed",
   // The recorded outcome is inconclusive/error/not-run — not a pass.
@@ -166,7 +169,10 @@ type NotApplicableVerdict = {
   check: string;
   // The revision the impact analysis ran at (claim document revision,
   // check design revision, commit oid, or plan digest — opaque string,
-  // required non-empty).
+  // required non-empty). This is a CALLER ATTESTATION: the summary
+  // records it as the analysis's stated basis and never re-derives or
+  // verifies it — the impact-analysis tooling that produced the verdict
+  // is the authority for what it measured.
   revision: string;
   // The changed paths the analysis covered — at least one.
   paths: string[];
@@ -219,8 +225,20 @@ const CHECK_STATUSES = [
 type CheckStatus = typeof CHECK_STATUSES[number];
 const CHECK_STATUS_SET: ReadonlySet<CheckStatus> = new Set(CHECK_STATUSES);
 
+// An evaluated exemption candidate — attached to the check it tried to
+// exempt and (when refused) recorded on the summary's rejected lists.
+//
+//   input   — the verbatim caller candidate: audit data, NEVER
+//             contract-typed. Consumers must not dereference it.
+//   verdict — the validated contract shape. Always present on
+//             `status: "applied"`; on `rejected` it is null exactly when
+//             the candidate failed shape validation (a `*-malformed`
+//             refusal — `input` is then the only record of the attempt).
+//             A shape-valid refusal (untrusted authority, expiry,
+//             unresolved scope) still carries its validated verdict.
 type ExemptionVerdict<T> = {
-  verdict: T;
+  input: unknown;
+  verdict: T | null;
   status: "applied" | "rejected";
   // Refusal codes when rejected (`waiver-*`/`not-applicable-*`); empty on
   // applied.
@@ -279,14 +297,36 @@ type ClaimVerification = {
   reasons: string[];
 };
 
+// A refused exemption, kept for audit. `waiver`/`verdict` is the
+// validated shape — null when the candidate never had one (the refusal
+// then carries the `*-malformed` reason); `input` is the verbatim
+// rejected entry either way. A null verdict is honest only under the
+// malformed reason — the boundary validator enforces that pairing.
 type RejectedWaiver = {
-  waiver: VerificationWaiver;
+  input: unknown;
+  waiver: VerificationWaiver | null;
   reasons: string[];
 };
 
 type RejectedNotApplicable = {
-  verdict: NotApplicableVerdict;
+  input: unknown;
+  verdict: NotApplicableVerdict | null;
   reasons: string[];
+};
+
+// An applied exemption that attached nowhere: deterministic input order
+// gives each scope key to its FIRST candidate, so a later applied
+// candidate for the same scope is shadowed — valid, but it exempted
+// nothing. Recorded so an applied exemption can never vanish silently;
+// a shadowed REJECTED candidate needs no entry (the rejected lists
+// already carry it).
+type ShadowedExemption = {
+  kind: "waiver" | "not-applicable";
+  // The verbatim applied candidate — validated shape by construction.
+  input: unknown;
+  // The scope it competed for — a check ref for check-waivers and
+  // not-applicable verdicts, a claim ref for claim-waivers.
+  scope: { kind: "check" | "claim"; ref: string };
 };
 
 const VERIFICATION_SUMMARY_VERDICTS = ["verified", "failed", "indeterminate"] as const;
@@ -314,6 +354,10 @@ type VerificationSummary = {
   evidence: EvidenceAssessment[];
   rejectedWaivers: RejectedWaiver[];
   rejectedNotApplicable: RejectedNotApplicable[];
+  // Applied exemptions that lost their scope to an earlier candidate in
+  // input order — the audit trace for exemptions that evaluated valid
+  // yet attached nowhere.
+  shadowedExemptions: ShadowedExemption[];
   counts: {
     checks: {
       total: number;
@@ -407,11 +451,20 @@ function stringArrayField(value: unknown): value is string[] {
 function validateExemption<T>(
   value: unknown,
   inner: (candidate: unknown) => candidate is T,
+  malformedCode: string,
 ): value is ExemptionVerdict<T> {
-  return isPlainObject(value)
-    && inner(value.verdict)
-    && (value.status === "applied" || value.status === "rejected")
-    && stringArrayField(value.reasons);
+  if (!isPlainObject(value)) return false;
+  // `input` is the verbatim candidate — audit data whose own shape is
+  // unconstrained; presence is required so every recorded exemption
+  // keeps its raw form.
+  if (!("input" in value)) return false;
+  if (!stringArrayField(value.reasons)) return false;
+  if (value.status === "applied") return inner(value.verdict);
+  if (value.status !== "rejected") return false;
+  // A rejected entry carries the validated shape — or null when the
+  // candidate never had one, which only the malformed reason explains.
+  if (value.verdict === null) return value.reasons.includes(malformedCode);
+  return inner(value.verdict);
 }
 
 function validateConstraint(value: unknown): value is CheckConstraint {
@@ -435,8 +488,8 @@ function validateCheckVerification(value: unknown): value is CheckVerification {
     && stringArrayField(value.evidence.insufficient)
     && stringArrayField(value.evidence.indeterminate)
     && (value.latestConclusiveAt === null || isIsoTimestamp(value.latestConclusiveAt))
-    && (value.waiver === null || validateExemption(value.waiver, validateWaiver))
-    && (value.notApplicable === null || validateExemption(value.notApplicable, validateNotApplicableVerdict))
+    && (value.waiver === null || validateExemption(value.waiver, validateWaiver, "waiver-malformed"))
+    && (value.notApplicable === null || validateExemption(value.notApplicable, validateNotApplicableVerdict, "not-applicable-malformed"))
     && stringArrayField(value.reasons);
 }
 
@@ -463,10 +516,47 @@ function validateSummaryCounts(counts: Record<string, unknown>): boolean {
     && ["total", "sufficient", "insufficient", "indeterminate"].every((key) => nonNegativeInt(evidenceCounts[key]));
 }
 
+// The cheap internal consistency every `verified` verdict claims: no
+// required check left undetermined/unresolved/failed and no claim left
+// un-covered (a measured failure under an advisory check never gates —
+// required checks only). A summary asserting verified coverage it does
+// not contain is internally inconsistent — refused at the file boundary
+// and re-checked by the consuming gate, never trusted.
+function verificationCoverageGap(summary: Pick<VerificationSummary, "checks" | "claims">): boolean {
+  return summary.checks.some((check) =>
+    check.required
+    && (check.status === "undetermined" || check.status === "unresolved" || check.status === "failed"))
+    || summary.claims.some((claim) => claim.status !== "covered");
+}
+
+function validateRejectedEntry(
+  entry: unknown,
+  validatedField: "waiver" | "verdict",
+  inner: (candidate: unknown) => boolean,
+  malformedCode: string,
+): boolean {
+  if (!isPlainObject(entry) || !("input" in entry)) return false;
+  if (!stringArrayField(entry.reasons)) return false;
+  // The recorded entry carries the validated shape — or null when the
+  // candidate never had one, which only the malformed reason explains.
+  if (entry[validatedField] === null) return entry.reasons.includes(malformedCode);
+  return inner(entry[validatedField]);
+}
+
+function validateShadowedExemption(entry: unknown): entry is ShadowedExemption {
+  return isPlainObject(entry)
+    && (entry.kind === "waiver" || entry.kind === "not-applicable")
+    && "input" in entry
+    && isPlainObject(entry.scope)
+    && (entry.scope.kind === "check" || entry.scope.kind === "claim")
+    && typeof entry.scope.ref === "string";
+}
+
 // The summary boundary validator — `route_graph --verification-summary`
 // and Graph Gate consumers read a caller-supplied summary through this.
-// Shape only: correctness of the assessment inside is the producer's
-// contract (verification_summary.js), never re-derived at the boundary.
+// Shape plus the cheap verdict/coverage consistency a `verified` claim
+// must contain; the full assessment inside is the producer's contract
+// (verification_summary.js), never re-derived at the boundary.
 function validateVerificationSummary(value: unknown): value is VerificationSummary {
   if (!isPlainObject(value)) return false;
   if (value.schemaVersion !== VERIFICATION_SUMMARY_SCHEMA_VERSION) return false;
@@ -476,19 +566,26 @@ function validateVerificationSummary(value: unknown): value is VerificationSumma
   if (!isIsoTimestamp(value.assessedAt)) return false;
   if (!isPlainObject(value.scope)) return false;
   if (!stringArrayField(value.scope.claims) || !stringArrayField(value.scope.checks)) return false;
-  if (!Array.isArray(value.claims) || !value.claims.every(validateClaimVerification)) return false;
-  if (!Array.isArray(value.checks) || !value.checks.every(validateCheckVerification)) return false;
+  const claims = value.claims;
+  const checks = value.checks;
+  if (!Array.isArray(claims) || !claims.every(validateClaimVerification)) return false;
+  if (!Array.isArray(checks) || !checks.every(validateCheckVerification)) return false;
   if (!Array.isArray(value.evidence) || !value.evidence.every(validateAssessment)) return false;
   if (!Array.isArray(value.rejectedWaivers)) return false;
   for (const entry of value.rejectedWaivers) {
-    if (!isPlainObject(entry) || !validateWaiver(entry.waiver) || !stringArrayField(entry.reasons)) return false;
+    if (!validateRejectedEntry(entry, "waiver", validateWaiver, "waiver-malformed")) return false;
   }
   if (!Array.isArray(value.rejectedNotApplicable)) return false;
   for (const entry of value.rejectedNotApplicable) {
-    if (!isPlainObject(entry) || !validateNotApplicableVerdict(entry.verdict) || !stringArrayField(entry.reasons)) return false;
+    if (!validateRejectedEntry(entry, "verdict", validateNotApplicableVerdict, "not-applicable-malformed")) return false;
   }
+  if (!Array.isArray(value.shadowedExemptions) || !value.shadowedExemptions.every(validateShadowedExemption)) return false;
   if (!isPlainObject(value.counts) || !validateSummaryCounts(value.counts)) return false;
   if (!(VERIFICATION_SUMMARY_VERDICTS as readonly string[]).includes(value.verdict as string)) return false;
+  // A `verified` verdict asserts coverage the file must actually
+  // contain — a file claiming it over un-covered required checks or
+  // claims is internally inconsistent, not merely unusual.
+  if (value.verdict === "verified" && verificationCoverageGap({ checks, claims })) return false;
   return stringArrayField(value.reasons);
 }
 
@@ -503,6 +600,7 @@ export {
   validateNotApplicableVerdict,
   validateVerificationSummary,
   validateWaiver,
+  verificationCoverageGap,
 };
 
 export type {
@@ -522,6 +620,7 @@ export type {
   NotApplicableVerdict,
   RejectedNotApplicable,
   RejectedWaiver,
+  ShadowedExemption,
   VerificationSummary,
   VerificationSummaryVerdict,
   VerificationWaiver,

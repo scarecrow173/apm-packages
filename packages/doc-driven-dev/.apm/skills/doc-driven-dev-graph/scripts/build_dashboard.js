@@ -41422,6 +41422,84 @@ function resolveCommitSubject(cwd, commit) {
   }
 }
 
+// src/skills/lib/verification_assessment/types.ts
+var ASSESSMENT_REASON_CODES = [
+  // The caller's target could not be named (unresolvable commit, no
+  // snapshot): nothing can be judged applicable.
+  "target-unverifiable",
+  // The record's own subject could not be digested (e.g. its commit no
+  // longer resolves) — applicability cannot be proven.
+  "subject-unverifiable",
+  // The record's subject digest differs from the target's — it measured a
+  // different commit or workspace.
+  "subject-mismatch",
+  // Claim/check reference failed to resolve in the live graph (detail
+  // carries the resolution status).
+  "claim-unresolved",
+  "check-unresolved",
+  // Resolved, but the pinned revision no longer matches the live document
+  // or check design — the evidence predates the current design.
+  "claim-revision-mismatch",
+  "check-revision-mismatch",
+  // The resolved check does not target the claim the record credits.
+  "check-target-mismatch",
+  // The recorded method differs from the check's designed method — the
+  // outcome is not a measurement of the designed check.
+  "method-mismatch",
+  // A declared artifact is known-inaccessible.
+  "artifact-unavailable",
+  // A declared artifact is past its expiresAt deadline.
+  "artifact-expired",
+  // A declared artifact was recorded but never fetched — its content was
+  // never digest-verified.
+  "artifact-unverified",
+  // The record declares no artifacts at all — the outcome is
+  // attestation-only, never digest-backed (integrity `unverified`).
+  "attestation-only",
+  // The recorded outcome is a measured failure of this target.
+  "outcome-failed",
+  // The recorded outcome is inconclusive/error/not-run — not a pass.
+  "outcome-not-passed"
+];
+var ASSESSMENT_REASON_SET = new Set(ASSESSMENT_REASON_CODES);
+var CHECK_STATUSES = [
+  // An applicable record assessed `sufficient` is the newest conclusive
+  // measurement for this target.
+  "satisfied",
+  // The newest conclusive applicable measurement is `insufficient` — a
+  // recorded failure for this target. Measured outcomes outrank any
+  // exemption: a failed check stays failed even under a valid waiver.
+  "failed",
+  // No conclusive evidence, but a validated waiver exempts the check.
+  "waived",
+  // No conclusive evidence, but a validated not-applicable verdict
+  // (impact-analysis basis) exempts the check.
+  "out-of-scope",
+  // In scope, no usable outcome and no valid exemption — unexecuted or
+  // indeterminate-only evidence. This is the bucket an unexecuted check
+  // lands in; it is never silently out-of-scope.
+  "undetermined",
+  // The check ref does not resolve in the live graph — coverage is
+  // unprovable, so the check gates as required.
+  "unresolved"
+];
+var CHECK_STATUS_SET = new Set(CHECK_STATUSES);
+var CLAIM_STATUSES = [
+  // Every in-scope required check is satisfied, waived, or out-of-scope.
+  "covered",
+  // At least one required check is covered, but not all.
+  "partial",
+  // No required check is covered — including the zero-required-checks
+  // coverage gap.
+  "uncovered",
+  // A required check measured a failure for this target.
+  "failed"
+];
+var CLAIM_STATUS_SET = new Set(CLAIM_STATUSES);
+function verificationCoverageGap(summary) {
+  return summary.checks.some((check2) => check2.required && (check2.status === "undetermined" || check2.status === "unresolved" || check2.status === "failed")) || summary.claims.some((claim2) => claim2.status !== "covered");
+}
+
 // src/skills/lib/markdown_sections.ts
 var SECTION_HEADING_ALIASES = {
   // task-doc
@@ -41698,11 +41776,15 @@ function evaluateGraphGates(state, collector) {
     const verification = state.verification;
     if (verification == null) {
       implementationReasons.push("verification-summary");
+    } else if (verification.boundToHead === null) {
+      implementationReasons.push("verification-summary-head-unreadable");
     } else if (!verification.boundToHead) {
       implementationReasons.push("verification-summary-target-mismatch");
     } else if (verification.summary.verdict !== "verified") {
       implementationReasons.push(`verification-${verification.summary.verdict}`);
       implementationReasons.push(...verification.summary.reasons);
+    } else if (verificationCoverageGap(verification.summary)) {
+      implementationReasons.push("verification-summary-inconsistent");
     }
     gates.implementation = gate(implementationReasons.length === 0 ? "pass" : "blocked", implementationReasons);
   }
@@ -41736,7 +41818,7 @@ function projectGraphState(options2, collector) {
     const head = resolveCommitSubject(cwd, "HEAD");
     return {
       summary: options2.verificationSummary,
-      boundToHead: head !== null && options2.verificationSummary.target.subjectDigest === head.subjectDigest
+      boundToHead: head === null ? null : options2.verificationSummary.target.subjectDigest === head.subjectDigest
     };
   })();
   const state = {

@@ -29,6 +29,7 @@ import {
 } from "../../../lib/execution_store";
 import { resolveCommitSubject } from "../../../lib/evidence_store";
 import type { VerificationSummary } from "../../../lib/verification_assessment";
+import { verificationCoverageGap } from "../../../lib/verification_assessment";
 import { sectionBody, subHeadingCount } from "../../../lib/markdown_sections";
 
 export type GraphGateResult = { status: "pass" | "fail" | "blocked"; reasons: string[] };
@@ -39,12 +40,14 @@ export type GraphSignal = string;
  * implementation gate's evidence authority. `summary` is the
  * caller-supplied (or route-computed) assessment; `boundToHead` records
  * whether its target's canonical subject digest equals this checkout's
- * HEAD content identity. A summary that does not bind to HEAD is a stale
- * artifact — it can never satisfy the gate.
+ * HEAD content identity — `true` binds, `false` is a resolved HEAD and a
+ * different subject (a stale artifact), and `null` means HEAD itself
+ * could not be resolved (unborn branch, non-repo): binding is then
+ * unprovable, which fails closed but is never a target mismatch.
  */
 export type GraphVerification = {
   summary: VerificationSummary;
-  boundToHead: boolean;
+  boundToHead: boolean | null;
 };
 export type GraphState = {
   schemaVersion: 2;
@@ -342,11 +345,21 @@ export function evaluateGraphGates(state: GraphState, collector?: ArtifactScanCo
     // missing verification input always fails closed, never crashes.
     if (verification == null) {
       implementationReasons.push("verification-summary");
+    } else if (verification.boundToHead === null) {
+      // HEAD itself could not be resolved — unprovable binding, not a
+      // stale artifact: report the unreadable HEAD, never a mismatch.
+      implementationReasons.push("verification-summary-head-unreadable");
     } else if (!verification.boundToHead) {
       implementationReasons.push("verification-summary-target-mismatch");
     } else if (verification.summary.verdict !== "verified") {
       implementationReasons.push(`verification-${verification.summary.verdict}`);
       implementationReasons.push(...verification.summary.reasons);
+    } else if (verificationCoverageGap(verification.summary)) {
+      // A `verified` verdict over un-covered required checks or claims
+      // asserts coverage the summary does not contain — the file
+      // contract already refuses that inconsistency; the gate re-checks
+      // the cheap invariant because its input here is caller-trusted.
+      implementationReasons.push("verification-summary-inconsistent");
     }
     gates.implementation = gate(implementationReasons.length === 0 ? "pass" : "blocked", implementationReasons);
   }
@@ -391,15 +404,18 @@ export function projectGraphState(options: ProjectGraphStateOptions, collector?:
   // the canonical subject digest (#241): the digest IS the content
   // identity, so a summary whose target digests to HEAD's tree speaks for
   // this checkout — commit and workspace spellings bind the same way. A
-  // HEAD that cannot resolve (unborn branch, non-repo) binds nothing.
+  // HEAD that cannot resolve (unborn branch, non-repo) proves nothing:
+  // `boundToHead: null` keeps that failure distinct from a resolved-but-
+  // different subject, which IS a target mismatch.
   const verification = options.verificationSummary === undefined
     ? null
     : (() => {
       const head = resolveCommitSubject(cwd, "HEAD");
       return {
         summary: options.verificationSummary,
-        boundToHead: head !== null
-          && options.verificationSummary.target.subjectDigest === head.subjectDigest,
+        boundToHead: head === null
+          ? null
+          : options.verificationSummary.target.subjectDigest === head.subjectDigest,
       };
     })();
   const state: GraphState = {

@@ -20,8 +20,11 @@ run 規則で選択された 1 つの Execution Store run の Dynamic Task Graph
 `verification` は implementation gate が消費する Verification Summary
 （Issue `#241`）と `boundToHead` —— サマリーの対象サブジェクト
 ダイジェストがこの checkout の `HEAD` 内容同一性と一致するか —— を
-持ちます。router は live の Evidence Store から `HEAD` に対して
-サマリーを自動計算します。`--verification-summary <file>` は caller が
+持ちます: `true` は束縛、`false` は解決された HEAD と別の
+サブジェクト、`null` は HEAD 自体が解決不能（unborn branch、非
+repo）で、fail-closed するものの target mismatch ではありません。
+router は live の Evidence Store から `HEAD` に対してサマリーを
+自動計算します。`--verification-summary <file>` は caller が
 評価したサマリーを供給します。
 
 ## Focus
@@ -58,9 +61,12 @@ Definition の `kind: signal` condition が宣言した値だけです。
 implementation 完了には、選択 task の graph-resolved（`done` または `wont-do`）と
 `verdict: "verified"` を報告する HEAD 束縛の Verification Summary が必要です
 （`verification-summary-contract.ja.md` 参照）。サマリーなしは
-`verification-summary`、別対象を指すサマリーは
+`verification-summary`、HEAD 解決不能は
+`verification-summary-head-unreadable`、別対象を指すサマリーは
 `verification-summary-target-mismatch`、verified でない verdict は
-`verification-<verdict>` とサマリー自身の reasons で block します ——
+`verification-<verdict>` とサマリー自身の reasons、カバーされない
+required coverage の上の `verified` verdict は
+`verification-summary-inconsistent` で block します ——
 gate は実際の evidence assessment を読み、caller が主張する signal を
 読みません。follow-up triage は型付き signal が正確に
 1 つ必要です。exit audit は `exit-audit-pass` を必要とします。証跡が欠落または

@@ -142,6 +142,7 @@ function verifiedSummary(repo: string): VerificationSummary {
     evidence: [],
     rejectedWaivers: [],
     rejectedNotApplicable: [],
+    shadowedExemptions: [],
     counts: {
       checks: { total: 0, required: 0, advisory: 0, satisfied: 0, failed: 0, waived: 0, outOfScope: 0, undetermined: 0, unresolved: 0 },
       claims: { total: 0, covered: 0, partial: 0, uncovered: 0, failed: 0 },

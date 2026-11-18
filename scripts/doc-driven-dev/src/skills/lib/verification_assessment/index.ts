@@ -24,6 +24,7 @@ export {
   validateNotApplicableVerdict,
   validateVerificationSummary,
   validateWaiver,
+  verificationCoverageGap,
 } from "./types";
 export type {
   AssessmentReason,
@@ -42,6 +43,7 @@ export type {
   NotApplicableVerdict,
   RejectedNotApplicable,
   RejectedWaiver,
+  ShadowedExemption,
   VerificationSummary,
   VerificationSummaryVerdict,
   VerificationWaiver,
