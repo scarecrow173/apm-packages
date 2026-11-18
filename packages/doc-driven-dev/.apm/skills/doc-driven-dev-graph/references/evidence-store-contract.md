@@ -36,15 +36,15 @@ default: records in one worktree are invisible elsewhere unless a shared
 | `claim.documentRevision` | `sha256:<hex>` digest of the claim's document at measure time |
 | `check.ref` | qualified check reference `VD-<id>::CHK-NN` |
 | `check.designRevision` | `sha256:<hex>` of the check's canonical payload at measure time |
-| `subject` | `{ kind: "commit", commit }` or `{ kind: "workspace", snapshotDigest }` — what the outcome was measured against |
+| `subject` | `{ kind: "commit", commit }` or `{ kind: "workspace", snapshotDigest }` — what the outcome was measured against; `snapshotDigest` is the canonical subject digest (below) |
 | `method` | verification method used (`unit`, `integration`, `e2e`, `property`, `static`, `model-checking`, `formal-proof`, `runtime-monitoring`, `manual-review`) |
 | `provider` | `{ kind: repository\|ci\|external, name }` — which adapter produced the result |
 | `runId` | producing Execution Store run, or `null` — context only, never run state |
-| `environment` | freeform runner/os/toolchain description, recorded verbatim |
+| `environment` | freeform runner/os/toolchain description, stored as its JSON round-trip form — non-serializable values (circular, BigInt, functions) are refused `invalid-argument` |
 | `outcome` | `passed`, `failed`, `inconclusive`, `error`, or `not-run` |
 | `retention` | `transient`, `release`, or `durable` — the storage policy (below) |
 | `artifacts` | recorded artifact references (below) |
-| `derivedFrom` | source evidence id when this record was promoted from another, else `null` |
+| `derivedFrom` | source evidence id when this record was promoted from another, else `null` — written only by `promote`; intake that supplies it is refused |
 | `createdAt` | ISO-8601 creation timestamp |
 
 From a record you can always back-resolve: the claim/check it measured,
@@ -102,15 +102,51 @@ right retention handling.
   content; `recover` removes them. A record file whose `evidenceId`
   disagrees with its file name is `corrupt-state`.
 
-## Workspace → commit promotion
+## Subject digests and promotion
+
+A **subject digest** names the content a check was measured against. Both
+subject kinds share one canonical algorithm so adapters on either side
+compute comparable values:
+
+```text
+subjectDigest = "sha256:" + sha256("doc-driven-dev:subject-tree:v1:" + <git tree oid hex>)
+```
+
+Git's tree object id is the repository's own content identity — it covers
+every tracked path, entry mode, and blob content recursively. The
+namespaced sha256 wrapper normalizes the repo's object format (sha1 or
+sha256 trees) into the record's fixed digest slot.
+
+- `treeDigestOf(cwd, commit)` computes the commit side: it resolves
+  `<commit>^{commit}^{tree}` through git, so the digest is *computed from
+  an object that provably exists*, never asserted. It returns `null`
+  when the commit does not resolve.
+- `workspaceDigestOf(treeOid)` computes the workspace side: the measuring
+  adapter snapshots the workspace it tested into a git tree oid — the
+  documented recipe is a temporary index (`GIT_INDEX_FILE=<tmp>`)
+  populated from the measured tree, then `git write-tree` — and records
+  the returned digest as `subject.snapshotDigest`.
+
+### Workspace → commit promotion
 
 A workspace outcome is **never** silently treated as commit evidence. The
-only promotion path is `promote <id> --commit <sha> --tree-digest <hex>`:
-the commit's tree digest must equal the workspace `snapshotDigest` — the
-content-identity proof that the two subjects are the same bytes. A digest
-mismatch refuses `subject-mismatch`; a commit-subject record cannot
-promote. Promotion writes a NEW immutable record with `derivedFrom` set —
-the original workspace evidence is untouched.
+only promotion path is `promote <id> --commit <sha>`: the store resolves
+the commit's tree through git — an object that must exist — computes its
+canonical digest, and requires it to equal the record's `snapshotDigest`.
+That is the content-identity check: both sides of the comparison are
+computed through one algorithm, and the commit side is verified against
+the object database. A digest mismatch refuses `subject-mismatch`; a
+commit that does not resolve refuses `invalid-argument`; a commit-subject
+record cannot promote. Promotion writes a NEW immutable record with
+`derivedFrom` set — the original workspace evidence is untouched.
+
+**Trust boundary, stated plainly:** the store verifies the *commit* side
+in the object database and verifies that both digests were computed by
+one canonical algorithm. It can never re-observe the workspace the
+measurement ran against, so `snapshotDigest` remains adapter-attested —
+promotion proves the recorded attestation and the commit name the same
+content, not that the attestation was honest. Callers that need that
+guarantee must trust the measuring adapter (or gate it out-of-band).
 
 ## Boundaries — refuse before writing
 
@@ -119,7 +155,15 @@ configured, no Git-tracked files may exist under the state root, and the
 evidence root + records dir must realpath inside the resolved root — a
 symlinked `evidence/` landing outside the root is `boundary-escape`. Record
 ids match the shared filesystem-safe pattern, so an id can never become a
-path escape or alias another id on disk.
+path escape.
+
+On **case-insensitive filesystems** (default macOS/Windows), ids that
+differ only in case still collide on disk: `EVID-A.json` and
+`EVID-a.json` name one file. The store never merges them — a same-name
+write is the usual append-once conflict (`record-conflict` for different
+content), and a stored file whose `evidenceId` does not match its file
+name is `corrupt-state`. The failure is fail-closed, not silent; callers
+must not rely on case to distinguish ids.
 
 ## CLI
 
@@ -130,23 +174,29 @@ node .apm/skills/doc-driven-dev-graph/scripts/evidence_store.js <command> \
 
 - `put --file <evidence.json> [--resolve]` — store a record; `--resolve`
   pins `claim.documentRevision`/`check.designRevision` from the live
-  Knowledge Graph (either reference failing closed stops the put).
+  Knowledge Graph (either reference failing closed stops the put, and the
+  check must target the record's claim).
 - `get <id>` / `query [--check|--claim|--outcome|--retention|
   --subject-kind|--run-id]` / `manifest`
 - `resolve <id>` — back-resolve the record: reference status +
-  `matchesPinned` per claim/check.
-- `promote <id> --commit <sha> --tree-digest <hex> [--as <new-id>]`
+  `matchesPinned` per claim/check, plus `checkTargetsClaim` — whether the
+  resolved check's `target` equals the record's `claim.ref`.
+- `promote <id> --commit <sha> [--as <new-id>]` — the store resolves and
+  digests the commit's tree itself; no digest is taken on the command
+  line.
 - `reindex` — regenerate `index.json`; `recover` — drop tmp orphans.
 
 Errors print `{ "error": <code>, "message": ..., "detail": ... }` with exit
 1; the preflight gate exits 2. Codes: `boundary-gitignore`,
-`boundary-tracked`, `boundary-escape`, `external-root-not-authorized`,
-`record-conflict`, `evidence-not-found`, `subject-mismatch`,
-`corrupt-state`, `unsupported-version`, `invalid-argument`.
+`boundary-git-unavailable`, `boundary-tracked`, `boundary-escape`,
+`external-root-not-authorized`, `record-conflict`, `evidence-not-found`,
+`subject-mismatch`, `corrupt-state`, `state-unwritable`,
+`unsupported-version`, `invalid-argument`.
 
 ## Library API
 
 `putImmutable / getById / query / buildIndex / rebuildIndex / promoteToCommit /
-loadManifest / recoverEvidence / documentRevisionOf` plus
+loadManifest / recoverEvidence / documentRevisionOf /
+workspaceDigestOf / treeDigestOf` plus
 `resolveEvidence / resolveEvidenceIn` (back-resolution, the interface
 Evidence Assessment `#241` consumes) from `src/skills/lib/evidence_store`.

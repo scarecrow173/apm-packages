@@ -15,6 +15,8 @@ export {
   rebuildIndex,
   recoverEvidence,
   requireById,
+  treeDigestOf,
+  workspaceDigestOf,
 } from "./store";
 export type {
   EvidenceInput,
@@ -27,6 +29,7 @@ export {
   EVIDENCE_RETENTIONS,
   normalizeArtifactUri,
   normalizeRevisionDigest,
+  validateIndex,
 } from "./types";
 export type {
   ArtifactAvailability,

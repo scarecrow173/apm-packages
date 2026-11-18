@@ -30,8 +30,15 @@ type EvidenceReferenceResolution =
 type EvidenceResolution = {
   claim: EvidenceReferenceResolution;
   check: EvidenceReferenceResolution;
+  // The claim↔check cross-check: when the check resolves, the record's
+  // `claim.ref` must equal the resolved check's declared `target` — a
+  // record crediting a check against a claim the check does not verify is
+  // mismatched, never current. Null when the check cannot resolve (the
+  // claim side is then moot; the record is still not current).
+  checkTargetsClaim: boolean | null;
   // Both references resolve AND both pinned revisions match the live
-  // graph — the record is current for the target it names.
+  // graph AND the check targets the claim the record credits — the
+  // record is current for the target it names.
   current: boolean;
 };
 
@@ -61,6 +68,7 @@ function resolveEvidenceIn(
   }
   const checkResolution = resolveCheckReference(graph, record.check.ref);
   let check: EvidenceResolution["check"];
+  let checkTargetsClaim: boolean | null = null;
   if (checkResolution.status !== "resolved") {
     check = { status: checkResolution.status };
   } else {
@@ -70,12 +78,18 @@ function resolveEvidenceIn(
       matchesPinned: currentRevision === record.check.designRevision,
       currentRevision,
     };
+    // Cross-check the pairing the record asserts: the check's declared
+    // target must be the record's claim — an outcome measured by CHK-NN
+    // means something only for the claim CHK-NN verifies.
+    checkTargetsClaim = checkResolution.check.target === record.claim.ref;
   }
   return {
     claim,
     check,
+    checkTargetsClaim,
     current: claim.status === "resolved" && claim.matchesPinned
-      && check.status === "resolved" && check.matchesPinned,
+      && check.status === "resolved" && check.matchesPinned
+      && checkTargetsClaim === true,
   };
 }
 

@@ -177,8 +177,9 @@ Verification results — the outcomes of Verification Checks — live in the
 `#240`): immutable Evidence Records pinning the claim document revision,
 check design revision, subject (commit or workspace snapshot), provider,
 and artifact references. Records are append-once, never updated or
-deleted; a workspace result promotes to commit evidence only with
-content-identity proof. The record schema, artifact/retention rules, and
+deleted; a workspace result promotes to commit evidence only after the
+store verifies content identity against the named commit's tree. The
+record schema, artifact/retention rules, and
 consistency model are defined in
 [`references/evidence-store-contract.md`](references/evidence-store-contract.md).
 

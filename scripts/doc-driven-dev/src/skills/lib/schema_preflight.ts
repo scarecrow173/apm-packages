@@ -30,8 +30,10 @@
 //   YAML there, and content under `.apm/state/doc-driven-dev/` outside
 //   `runs/<run-id>/` — the declared per-run layout (#236) — or outside
 //   `evidence/` — the declared Evidence Store layout (#240): files inside a
-//   run directory or the evidence records dir are current state, while
-//   loose files directly under `runs/` or anywhere else are foreign.
+//   run directory, and exactly the files the store's own scan can see
+//   (top-level `manifest.json`/`index.json`, `records/<id>.json`, and
+//   `*.tmp-*` crash residue) are current state, while loose files
+//   directly under `runs/` or anywhere else are foreign.
 //   Malformed docs stay the lint layer's business.
 //   Under a present manifest the repo has declared the v3 components, so
 //   doc-tree inconsistency with that declaration flags too: execution-bound
@@ -68,6 +70,13 @@ const MIGRATION_JOURNAL_PATH = `${DOC_DRIVEN_DEV_DIR}/migration.journal.json`;
 const EXECUTION_STATE_ROOT = ".apm/state/doc-driven-dev";
 
 const MANIFEST_SCHEMA_VERSION = 1;
+
+// The crash-residue filename shape the state stores declare — mirrors
+// `isStoreTmpFile` in execution_store/atomic.ts (imported here would be a
+// circular dependency: the store boundary reads EXECUTION_STATE_ROOT from
+// this module). A `*.tmp-N-N` file under evidence/ is accounted-for
+// residue the store's `recover` path removes, never a foreign marker.
+const EVIDENCE_TMP_PATTERN = /\.tmp-\d+-\d+$/;
 
 // The schema generations this toolchain declares and accepts. Execution runs
 // carry an independent `schemaVersion: 1` in their own run manifest (#236);
@@ -480,34 +489,42 @@ function scanExecutionState(cwd: string, issues: PreflightIssue[]): void {
     const segments = relUnderRoot.split("/").filter(Boolean);
     if (isDir) {
       // `runs/` and the per-run directories beneath it (at whatever depth a
-      // run keeps its own structure) are the declared layout; `evidence/`
-      // and its `records/` subdirectory are the Evidence Store (#240). Any
-      // other directory under the state root is foreign.
+      // run keeps its own structure) are the declared layout. Under
+      // `evidence/` the Evidence Store (#240) declares exactly two
+      // directories — the store root itself (depth 1) and `records/`
+      // (depth 2): any sibling or nested directory holds files the
+      // store's own scan (top-level `records/*.json`) can never see, so
+      // it is foreign here.
       if (segments.length === 0) return;
-      if (segments[0] !== "runs" && segments[0] !== "evidence") {
-        marker(rel, `unaccounted-for directory inside ${EXECUTION_STATE_ROOT}`);
+      if (segments[0] === "runs") return;
+      if (segments[0] === "evidence"
+        && (segments.length === 1 || (segments.length === 2 && segments[1] === "records"))) {
+        return;
       }
+      marker(rel, `unaccounted-for directory inside ${EXECUTION_STATE_ROOT}`);
       return;
     }
     if (segments[0] === "evidence") {
-      // The declared Evidence Store layout: `evidence/manifest.json` and
-      // the derived `evidence/index.json` at depth 2, immutable records at
-      // `evidence/records/<id>.json` (depth 3+). Any other file shape is
-      // unaccounted-for.
-      if (segments.length < 2) {
-        marker(rel, `content outside the evidence layout inside ${EXECUTION_STATE_ROOT}`);
-        return;
-      }
-      if (segments.length === 2) {
-        if (segments[1] !== "manifest.json" && segments[1] !== "index.json") {
+      // The declared Evidence Store layout, aligned with what the store
+      // itself can see: `manifest.json` and the derived `index.json` at
+      // depth 2; immutable records at exactly `records/<id>.json` —
+      // depth 3, lowercase `.json` (the store's scan is top-level
+      // `*.json` only). `*.tmp-N-N` names are the store's declared crash
+      // residue at any depth — the `recover` path removes them, so they
+      // are accounted-for state, not markers. Anything else is content
+      // neither layer can see: nested files, non-record names, other
+      // extensions.
+      const name = segments[segments.length - 1];
+      if (!EVIDENCE_TMP_PATTERN.test(name)) {
+        const declared =
+          (segments.length === 2 && (segments[1] === "manifest.json" || segments[1] === "index.json"))
+          || (segments.length === 3 && segments[1] === "records" && name.endsWith(".json"));
+        if (!declared) {
           marker(rel, `content outside the evidence layout inside ${EXECUTION_STATE_ROOT}`);
           return;
         }
-      } else if (segments[1] !== "records") {
-        marker(rel, `content outside the evidence layout inside ${EXECUTION_STATE_ROOT}`);
-        return;
       }
-      if (segments[1] === "manifest.json") {
+      if (segments.length === 2 && segments[1] === "manifest.json") {
         let version: unknown;
         try {
           version = (JSON.parse(fs.readFileSync(path.resolve(cwd, rel), "utf8")) as Record<string, unknown>).schemaVersion;

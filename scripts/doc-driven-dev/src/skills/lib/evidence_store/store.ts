@@ -28,6 +28,7 @@
 // records live and the retention vocabulary — the "durable manifest
 // location" the issue asks to track.
 
+import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -55,6 +56,7 @@ import {
   normalizeArtifactUri,
   normalizeRevisionDigest,
   validateEvidenceRecord,
+  validateIndex,
   validateManifest,
 } from "./types";
 import type {
@@ -84,6 +86,111 @@ function sha256(content: string): string {
 // pinned documentRevision survives a later file edit comparison.
 export function documentRevisionOf(content: string): string {
   return `sha256:${sha256(content)}`;
+}
+
+// ---------------------------------------------------------------------------
+// Canonical subject digests — the content-identity algorithm (#240)
+// ---------------------------------------------------------------------------
+//
+// A subject digest is `sha256:` over a namespaced git tree object id:
+//
+//   sha256("doc-driven-dev:subject-tree:v1:<git-tree-oid-hex>")
+//
+// Git's tree id IS the repository's native content identity — it covers
+// every tracked path, entry mode, and blob content recursively — so two
+// subjects carrying the same tree oid are the same bytes by Git's own
+// definition. The namespaced sha256 wrapper normalizes repo object format
+// (sha1 and sha256 object stores produce different oid widths) into the
+// record's fixed `sha256:<64-hex>` slot and keeps a subject digest from
+// ever colliding with a document revision or artifact digest.
+//
+// Both sides of a promotion compute through this one algorithm:
+//   commit side    — `treeDigestOf` resolves `<commit>^{tree}` in the
+//                    checkout, so the digest is COMPUTED from an object
+//                    Git proves exists, never caller-asserted;
+//   workspace side — the measuring adapter snapshots the workspace into a
+//                    git tree oid (the documented recipe is a temporary
+//                    index + `git write-tree`) and publishes
+//                    `workspaceDigestOf(treeOid)` as `snapshotDigest`.
+//                    The store can never re-observe the measured
+//                    workspace, so the snapshot stays adapter-attested —
+//                    but it is an attestation bound to one canonical
+//                    algorithm, and promotion verifies the two spell the
+//                    same content identity.
+const SUBJECT_DIGEST_NAMESPACE = "doc-driven-dev:subject-tree:v1";
+
+function subjectTreeDigest(treeOid: string): string {
+  return `sha256:${sha256(`${SUBJECT_DIGEST_NAMESPACE}:${treeOid.toLowerCase()}`)}`;
+}
+
+// Canonical `subject.snapshotDigest` for a measured workspace, given the
+// git tree oid the adapter snapshotted (temp-index `git write-tree`).
+// Returns null when the input is not a hex object id — adapters check the
+// result instead of trusting their snapshot verbatim.
+function workspaceDigestOf(treeOid: unknown): string | null {
+  if (typeof treeOid !== "string" || !/^[0-9a-f]{40,64}$/i.test(treeOid.trim())) return null;
+  return subjectTreeDigest(treeOid.trim());
+}
+
+// ---------------------------------------------------------------------------
+// Git probes — the commit side of the promotion proof
+// ---------------------------------------------------------------------------
+
+function git(args: string[], cwd: string): { status: number | null; stdout: string; stderr: string; error?: Error } {
+  const result = spawnSync("git", args, { cwd, encoding: "utf8" });
+  return {
+    status: result.status,
+    stdout: result.stdout ?? "",
+    stderr: (result.stderr ?? "").trim(),
+    error: result.error,
+  };
+}
+
+// Resolve `<commit>^{commit}` then `^{tree}` in the checkout — the only
+// verified half of the promotion proof. Returns the FULL commit oid
+// alongside the tree: a record's commit subject names the exact object
+// the proof ran against, never an abbreviation the caller typed. A value
+// that does not name a commit object in this repository has no tree to
+// digest, so promotion fails closed as invalid-argument; git itself
+// being unavailable is the boundary failure boundary.ts already names.
+function requireCommitTreeOid(cwd: string, commit: string): { commitOid: string; treeOid: string } {
+  const asCommit = git(["rev-parse", "--verify", "--quiet", `${commit}^{commit}`], cwd);
+  if (asCommit.error !== undefined) {
+    throw new StoreError(
+      "boundary-git-unavailable",
+      `cannot run git rev-parse (${asCommit.error.message}) — the commit's content identity cannot be verified`,
+    );
+  }
+  const commitOid = asCommit.stdout.trim();
+  if (asCommit.status !== 0 || !/^[0-9a-f]{40,64}$/i.test(commitOid)) {
+    throw new StoreError(
+      "invalid-argument",
+      `commit ${JSON.stringify(commit)} does not resolve to a commit object in this repository — content identity is unprovable`,
+      { commit },
+    );
+  }
+  const asTree = git(["rev-parse", "--verify", "--quiet", `${commitOid}^{tree}`], cwd);
+  const treeOid = asTree.stdout.trim();
+  if (asTree.error !== undefined || asTree.status !== 0 || !/^[0-9a-f]{40,64}$/i.test(treeOid)) {
+    throw new StoreError(
+      "boundary-git-unavailable",
+      `git could not read the tree of commit ${commitOid} — the commit's content identity cannot be verified`,
+    );
+  }
+  return { commitOid: commitOid.toLowerCase(), treeOid: treeOid.toLowerCase() };
+}
+
+// The commit side of the canonical digest, or null when `commit` does not
+// name a commit object in `cwd`'s repository (or git cannot answer).
+// Adapters verify a recorded commit subject with the same algorithm
+// promotion enforces.
+function treeDigestOf(cwd: string, commit: string): string | null {
+  if (typeof commit !== "string" || !/^[0-9a-f]{7,64}$/i.test(commit.trim())) return null;
+  try {
+    return subjectTreeDigest(requireCommitTreeOid(cwd, commit.trim()).treeOid);
+  } catch {
+    return null;
+  }
 }
 
 function nowOf(options: StoreOptions): string {
@@ -179,7 +286,28 @@ function ensureManifest(resolved: ResolvedRoot, options: StoreOptions): Evidence
   if (!validateManifest(parsed)) {
     throw new StoreError("corrupt-state", `evidence manifest at ${file} failed validation`, { path: file });
   }
+  requireManifestLocation(parsed, resolved, file);
   return parsed;
+}
+
+// A manifest must describe the root it was read from: `location` is the
+// resolved root's own spelling (repo-relative inside the checkout,
+// absolute for a declared external root). A manifest written for another
+// root is misplaced state — copied or moved stores are corrupt, never
+// silently adopted under the wrong location claim.
+function requireManifestLocation(
+  manifest: EvidenceStoreManifest,
+  resolved: ResolvedRoot,
+  file: string,
+): void {
+  const expected = resolved.repoRelative ?? resolved.root;
+  if (manifest.location !== expected) {
+    throw new StoreError(
+      "corrupt-state",
+      `evidence manifest at ${file} declares location ${JSON.stringify(manifest.location)}, expected ${JSON.stringify(expected)} — a manifest only ever describes its own resolved root`,
+      { path: file, declared: manifest.location, expected },
+    );
+  }
 }
 
 function loadManifest(cwd: string, options: StoreOptions = {}): EvidenceStoreManifest | null {
@@ -190,6 +318,7 @@ function loadManifest(cwd: string, options: StoreOptions = {}): EvidenceStoreMan
   if (!validateManifest(parsed)) {
     throw new StoreError("corrupt-state", `evidence manifest at ${file} failed validation`, { path: file });
   }
+  requireManifestLocation(parsed, resolved, file);
   return parsed;
 }
 
@@ -218,7 +347,13 @@ function appendOnceFile(file: string, content: string): boolean {
   } catch (error: unknown) {
     try { fs.rmSync(tmp, { force: true }); } catch { /* tmp stays as recovery evidence */ }
     if ((error as NodeJS.ErrnoException).code === "EEXIST") return false;
-    throw error;
+    // A link failure that is not "already exists" is still a store error —
+    // never let a raw filesystem exception leak past the contract surface.
+    throw new StoreError(
+      "state-unwritable",
+      `cannot commit ${file}: ${error instanceof Error ? error.message : String(error)}`,
+      { path: file },
+    );
   }
   try { fs.rmSync(tmp, { force: true }); } catch { /* tmp cleanup is best-effort */ }
   fsyncDirectory(path.dirname(file));
@@ -294,15 +429,44 @@ type EvidenceInput = {
     retention?: string;
     expiresAt?: string | null;
   }>;
+  // Promotion provenance — reserved: `putImmutable` refuses any non-null
+  // value; only `promoteToCommit` writes `derivedFrom`, through the
+  // internal append path, after verifying content identity. A record can
+  // never claim a lineage at put.
   derivedFrom?: string | null;
   createdAt?: string;
 };
+
+// Freeform fields are stored as their JSON round-trip form. Values that
+// cannot serialize at all (circular graphs, BigInt, functions) refuse at
+// the boundary as invalid-argument instead of surfacing a raw TypeError
+// mid-write, and spellings JSON drops (`undefined` properties) or rewrites
+// (NaN → null) normalize NOW so an idempotent re-put of the same logical
+// input compares byte-identical to the stored record.
+function normalizeJsonField(value: unknown, field: string): unknown {
+  if (value === undefined || value === null) return null;
+  let text: string | undefined;
+  try {
+    text = JSON.stringify(value);
+  } catch {
+    text = undefined;
+  }
+  if (text === undefined) {
+    throw new StoreError(
+      "invalid-argument",
+      `${field} must be JSON-serializable — circular or otherwise non-JSON values cannot be recorded verbatim`,
+    );
+  }
+  return JSON.parse(text);
+}
 
 // Build a fully validated canonical record from intake fields — field
 // normalization (refs trimmed, digests prefixed, URIs normalized) happens
 // once here so the stored form is always canonical. Everything the next
 // read would reject is refused NOW as invalid-argument, never corrupt.
-function buildRecord(input: EvidenceInput, options: StoreOptions): EvidenceRecordV1 {
+// `derivedFrom` arrives only through the promotion path — the intake
+// field is never adopted.
+function buildRecord(input: EvidenceInput, options: StoreOptions, derivedFrom: string | null): EvidenceRecordV1 {
   const evidenceId = input.evidenceId ?? generateArtifactId("EVID");
   if (!isValidId(evidenceId)) {
     throw new StoreError("invalid-argument", `invalid evidence id ${JSON.stringify(evidenceId)}`);
@@ -356,11 +520,11 @@ function buildRecord(input: EvidenceInput, options: StoreOptions): EvidenceRecor
     method: input.method as EvidenceRecordV1["method"],
     provider,
     runId: input.runId ?? null,
-    environment: input.environment ?? null,
+    environment: normalizeJsonField(input.environment, "environment"),
     outcome: input.outcome as EvidenceOutcome,
     retention,
     artifacts,
-    derivedFrom: input.derivedFrom ?? null,
+    derivedFrom,
     createdAt: input.createdAt ?? nowOf(options),
   };
   if (!validateEvidenceRecord(record)) {
@@ -376,15 +540,19 @@ function buildRecord(input: EvidenceInput, options: StoreOptions): EvidenceRecor
 // Public API — putImmutable / getById / query
 // ---------------------------------------------------------------------------
 
-function putImmutable(
+// The shared append path. `derivedFrom` is promotion provenance the
+// internal caller supplies — `putImmutable` always passes null, so the
+// field can never be forged through intake.
+function putRecord(
   cwd: string,
   input: EvidenceInput,
-  options: StoreOptions = {},
+  derivedFrom: string | null,
+  options: StoreOptions,
 ): { stored: boolean; duplicate: boolean; record: EvidenceRecordV1 } {
   const resolved = resolveStateRoot(cwd, options);
   ensureStateRootBoundary(cwd, resolved);
   ensureManifest(resolved, options);
-  const record = buildRecord(input, options);
+  const record = buildRecord(input, options, derivedFrom);
   const file = recordFileFor(resolved, record.evidenceId);
   const body = `${JSON.stringify(record, null, 2)}\n`;
   if (!appendOnceFile(file, body)) {
@@ -399,6 +567,26 @@ function putImmutable(
     );
   }
   return { stored: true, duplicate: false, record };
+}
+
+function putImmutable(
+  cwd: string,
+  input: EvidenceInput,
+  options: StoreOptions = {},
+): { stored: boolean; duplicate: boolean; record: EvidenceRecordV1 } {
+  // `derivedFrom` names a record this one was promoted from — a lineage
+  // only the promotion path can prove. Refuse it outright rather than
+  // strip it silently: a caller supplying it is asserting provenance the
+  // store cannot verify, and dropping the field would record that lie as
+  // an original measurement.
+  if (input.derivedFrom !== undefined && input.derivedFrom !== null) {
+    throw new StoreError(
+      "invalid-argument",
+      "derivedFrom is promotion provenance written only by promoteToCommit — original measurements carry null",
+      { derivedFrom: input.derivedFrom },
+    );
+  }
+  return putRecord(cwd, input, null, options);
 }
 
 function getById(cwd: string, evidenceId: string, options: StoreOptions = {}): EvidenceRecordV1 | null {
@@ -492,28 +680,37 @@ function buildIndex(records: EvidenceRecordV1[]): EvidenceIndex {
 }
 
 // Rebuild `index.json` from the records dir — a derived artifact, safe to
-// delete and regenerate at any time. Returns the index it wrote.
+// delete and regenerate at any time. The built projection is validated
+// before it lands: a derived artifact that would fail the contract read
+// is corrupt output, never a file to persist. Returns the index it wrote.
 function rebuildIndex(cwd: string, options: StoreOptions = {}): EvidenceIndex {
   const resolved = resolveStateRoot(cwd, options);
   ensureStateRootBoundary(cwd, resolved);
   ensureManifest(resolved, options);
   const index = buildIndex(scanRecords(resolved));
+  if (!validateIndex(index)) {
+    throw new StoreError("corrupt-state", "rebuilt evidence index failed validation — refusing to persist a projection the contract would reject");
+  }
   atomicWriteFile(path.join(evidenceRootFor(resolved), INDEX_FILE), `${JSON.stringify(index, null, 2)}\n`);
   return index;
 }
 
 // ---------------------------------------------------------------------------
-// Workspace → commit promotion — only with content-identity proof (#240)
+// Workspace → commit promotion — only with verified content identity (#240)
 // ---------------------------------------------------------------------------
 
 // The ONLY way a workspace-measured outcome becomes commit evidence: the
-// caller supplies the commit plus the commit's tree digest, and it must
-// equal the workspace snapshot digest — proof the two subjects have
-// identical content. Anything else refuses; there is no guess path.
+// caller names the commit, the store resolves `<commit>^{tree}` through
+// Git — an object that must provably exist — and digests it with the
+// canonical subject algorithm. The computed digest must equal the
+// workspace snapshotDigest the measuring adapter attested through the
+// same algorithm: the two subjects then name identical content by Git's
+// own tree identity. Anything else refuses; there is no guess path and
+// no caller-asserted digest.
 function promoteToCommit(
   cwd: string,
   evidenceId: string,
-  input: { newEvidenceId?: string; commit: string; treeDigest: string },
+  input: { newEvidenceId?: string; commit: string },
   options: StoreOptions = {},
 ): { stored: boolean; duplicate: boolean; record: EvidenceRecordV1 } {
   const source = requireById(cwd, evidenceId, options);
@@ -526,10 +723,8 @@ function promoteToCommit(
   if (!/^[0-9a-f]{7,64}$/i.test(input.commit)) {
     throw new StoreError("invalid-argument", `commit ${JSON.stringify(input.commit)} is not a hex object id`);
   }
-  const treeDigest = normalizeRevisionDigest(input.treeDigest);
-  if (treeDigest === null) {
-    throw new StoreError("invalid-argument", `tree digest ${JSON.stringify(input.treeDigest)} is not a sha256 digest`);
-  }
+  const { commitOid, treeOid } = requireCommitTreeOid(cwd, input.commit);
+  const treeDigest = subjectTreeDigest(treeOid);
   if (treeDigest !== source.subject.snapshotDigest) {
     throw new StoreError(
       "subject-mismatch",
@@ -537,11 +732,11 @@ function promoteToCommit(
       { expected: source.subject.snapshotDigest, got: treeDigest },
     );
   }
-  return putImmutable(cwd, {
+  return putRecord(cwd, {
     evidenceId: input.newEvidenceId ?? generateArtifactId("EVID"),
     claim: source.claim,
     check: source.check,
-    subject: { kind: "commit", commit: input.commit.toLowerCase() },
+    subject: { kind: "commit", commit: commitOid },
     method: source.method,
     provider: source.provider,
     runId: source.runId,
@@ -549,9 +744,8 @@ function promoteToCommit(
     outcome: source.outcome,
     retention: source.retention,
     artifacts: source.artifacts,
-    derivedFrom: evidenceId,
     createdAt: nowOf(options),
-  }, options);
+  }, evidenceId, options);
 }
 
 // ---------------------------------------------------------------------------
@@ -593,6 +787,8 @@ export {
   rebuildIndex,
   recoverEvidence,
   requireById,
+  treeDigestOf,
+  workspaceDigestOf,
 };
 
 export type {

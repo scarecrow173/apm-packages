@@ -16662,6 +16662,7 @@ var SCHEMA_MANIFEST_PATH = `${DOC_DRIVEN_DEV_DIR}/schema.json`;
 var MIGRATION_JOURNAL_PATH = `${DOC_DRIVEN_DEV_DIR}/migration.journal.json`;
 var EXECUTION_STATE_ROOT = ".apm/state/doc-driven-dev";
 var MANIFEST_SCHEMA_VERSION = 1;
+var EVIDENCE_TMP_PATTERN = /\.tmp-\d+-\d+$/;
 var EXPECTED_COMPONENT_VERSIONS = {
   documentRegistry: 3,
   knowledgeRelations: 1,
@@ -16901,26 +16902,23 @@ function scanExecutionState(cwd, issues) {
     const segments = relUnderRoot.split("/").filter(Boolean);
     if (isDir) {
       if (segments.length === 0) return;
-      if (segments[0] !== "runs" && segments[0] !== "evidence") {
-        marker(rel, `unaccounted-for directory inside ${EXECUTION_STATE_ROOT}`);
+      if (segments[0] === "runs") return;
+      if (segments[0] === "evidence" && (segments.length === 1 || segments.length === 2 && segments[1] === "records")) {
+        return;
       }
+      marker(rel, `unaccounted-for directory inside ${EXECUTION_STATE_ROOT}`);
       return;
     }
     if (segments[0] === "evidence") {
-      if (segments.length < 2) {
-        marker(rel, `content outside the evidence layout inside ${EXECUTION_STATE_ROOT}`);
-        return;
-      }
-      if (segments.length === 2) {
-        if (segments[1] !== "manifest.json" && segments[1] !== "index.json") {
+      const name2 = segments[segments.length - 1];
+      if (!EVIDENCE_TMP_PATTERN.test(name2)) {
+        const declared = segments.length === 2 && (segments[1] === "manifest.json" || segments[1] === "index.json") || segments.length === 3 && segments[1] === "records" && name2.endsWith(".json");
+        if (!declared) {
           marker(rel, `content outside the evidence layout inside ${EXECUTION_STATE_ROOT}`);
           return;
         }
-      } else if (segments[1] !== "records") {
-        marker(rel, `content outside the evidence layout inside ${EXECUTION_STATE_ROOT}`);
-        return;
       }
-      if (segments[1] === "manifest.json") {
+      if (segments.length === 2 && segments[1] === "manifest.json") {
         let version2;
         try {
           version2 = JSON.parse(import_node_fs2.default.readFileSync(import_node_path2.default.resolve(cwd, rel), "utf8")).schemaVersion;
@@ -38621,6 +38619,7 @@ async function scanKnowledgeGraph(options2) {
 }
 
 // src/skills/lib/evidence_store/store.ts
+var import_node_child_process2 = require("node:child_process");
 var import_node_crypto2 = __toESM(require("node:crypto"));
 var import_node_fs6 = __toESM(require("node:fs"));
 var import_node_path7 = __toESM(require("node:path"));
@@ -39138,6 +39137,10 @@ function validateManifest(value) {
   if (!isPlainObject6(value)) return false;
   return value.schemaVersion === EVIDENCE_MANIFEST_SCHEMA_VERSION && value.kind === "evidence-store" && typeof value.location === "string" && value.location.length > 0 && value.recordsDir === "records" && Array.isArray(value.retentionClasses) && value.retentionClasses.every((item) => EVIDENCE_RETENTIONS.has(item)) && isIsoTimestamp(value.createdAt);
 }
+function validateIndex(value) {
+  if (!isPlainObject6(value)) return false;
+  return value.schemaVersion === EVIDENCE_INDEX_SCHEMA_VERSION && value.generated === "evidence-index" && (value.generatedAt === null || isIsoTimestamp(value.generatedAt)) && Number.isInteger(value.recordCount) && value.recordCount >= 0 && isPlainObject6(value.counts) && isPlainObject6(value.checks) && isPlainObject6(value.claims) && isPlainObject6(value.runs);
+}
 
 // src/skills/lib/evidence_store/store.ts
 var EVIDENCE_DIR = "evidence";
@@ -39150,6 +39153,45 @@ function sha256(content3) {
 }
 function documentRevisionOf(content3) {
   return `sha256:${sha256(content3)}`;
+}
+var SUBJECT_DIGEST_NAMESPACE = "doc-driven-dev:subject-tree:v1";
+function subjectTreeDigest(treeOid) {
+  return `sha256:${sha256(`${SUBJECT_DIGEST_NAMESPACE}:${treeOid.toLowerCase()}`)}`;
+}
+function git2(args, cwd) {
+  const result = (0, import_node_child_process2.spawnSync)("git", args, { cwd, encoding: "utf8" });
+  return {
+    status: result.status,
+    stdout: result.stdout ?? "",
+    stderr: (result.stderr ?? "").trim(),
+    error: result.error
+  };
+}
+function requireCommitTreeOid(cwd, commit) {
+  const asCommit = git2(["rev-parse", "--verify", "--quiet", `${commit}^{commit}`], cwd);
+  if (asCommit.error !== void 0) {
+    throw new StoreError(
+      "boundary-git-unavailable",
+      `cannot run git rev-parse (${asCommit.error.message}) \u2014 the commit's content identity cannot be verified`
+    );
+  }
+  const commitOid = asCommit.stdout.trim();
+  if (asCommit.status !== 0 || !/^[0-9a-f]{40,64}$/i.test(commitOid)) {
+    throw new StoreError(
+      "invalid-argument",
+      `commit ${JSON.stringify(commit)} does not resolve to a commit object in this repository \u2014 content identity is unprovable`,
+      { commit }
+    );
+  }
+  const asTree = git2(["rev-parse", "--verify", "--quiet", `${commitOid}^{tree}`], cwd);
+  const treeOid = asTree.stdout.trim();
+  if (asTree.error !== void 0 || asTree.status !== 0 || !/^[0-9a-f]{40,64}$/i.test(treeOid)) {
+    throw new StoreError(
+      "boundary-git-unavailable",
+      `git could not read the tree of commit ${commitOid} \u2014 the commit's content identity cannot be verified`
+    );
+  }
+  return { commitOid: commitOid.toLowerCase(), treeOid: treeOid.toLowerCase() };
 }
 function nowOf(options2) {
   return (options2.now ?? systemClock)();
@@ -39218,7 +39260,18 @@ function ensureManifest(resolved, options2) {
   if (!validateManifest(parsed)) {
     throw new StoreError("corrupt-state", `evidence manifest at ${file2} failed validation`, { path: file2 });
   }
+  requireManifestLocation(parsed, resolved, file2);
   return parsed;
+}
+function requireManifestLocation(manifest, resolved, file2) {
+  const expected = resolved.repoRelative ?? resolved.root;
+  if (manifest.location !== expected) {
+    throw new StoreError(
+      "corrupt-state",
+      `evidence manifest at ${file2} declares location ${JSON.stringify(manifest.location)}, expected ${JSON.stringify(expected)} \u2014 a manifest only ever describes its own resolved root`,
+      { path: file2, declared: manifest.location, expected }
+    );
+  }
 }
 function loadManifest(cwd, options2 = {}) {
   const resolved = resolveStateRoot(cwd, options2);
@@ -39228,6 +39281,7 @@ function loadManifest(cwd, options2 = {}) {
   if (!validateManifest(parsed)) {
     throw new StoreError("corrupt-state", `evidence manifest at ${file2} failed validation`, { path: file2 });
   }
+  requireManifestLocation(parsed, resolved, file2);
   return parsed;
 }
 function appendOnceFile(file2, content3) {
@@ -39253,7 +39307,11 @@ function appendOnceFile(file2, content3) {
     } catch {
     }
     if (error62.code === "EEXIST") return false;
-    throw error62;
+    throw new StoreError(
+      "state-unwritable",
+      `cannot commit ${file2}: ${error62 instanceof Error ? error62.message : String(error62)}`,
+      { path: file2 }
+    );
   }
   try {
     import_node_fs6.default.rmSync(tmp, { force: true });
@@ -39298,7 +39356,23 @@ function scanRecords(resolved) {
   const recordsDir = containedDir(resolved, recordsDirFor(resolved), "records dir");
   return listRecordFiles(recordsDir).map(readRecordFile);
 }
-function buildRecord(input2, options2) {
+function normalizeJsonField(value, field) {
+  if (value === void 0 || value === null) return null;
+  let text3;
+  try {
+    text3 = JSON.stringify(value);
+  } catch {
+    text3 = void 0;
+  }
+  if (text3 === void 0) {
+    throw new StoreError(
+      "invalid-argument",
+      `${field} must be JSON-serializable \u2014 circular or otherwise non-JSON values cannot be recorded verbatim`
+    );
+  }
+  return JSON.parse(text3);
+}
+function buildRecord(input2, options2, derivedFrom) {
   const evidenceId = input2.evidenceId ?? generateArtifactId("EVID");
   if (!isValidId(evidenceId)) {
     throw new StoreError("invalid-argument", `invalid evidence id ${JSON.stringify(evidenceId)}`);
@@ -39350,11 +39424,11 @@ function buildRecord(input2, options2) {
     method: input2.method,
     provider,
     runId: input2.runId ?? null,
-    environment: input2.environment ?? null,
+    environment: normalizeJsonField(input2.environment, "environment"),
     outcome: input2.outcome,
     retention,
     artifacts,
-    derivedFrom: input2.derivedFrom ?? null,
+    derivedFrom,
     createdAt: input2.createdAt ?? nowOf(options2)
   };
   if (!validateEvidenceRecord(record2)) {
@@ -39365,11 +39439,11 @@ function buildRecord(input2, options2) {
   }
   return record2;
 }
-function putImmutable(cwd, input2, options2 = {}) {
+function putRecord(cwd, input2, derivedFrom, options2) {
   const resolved = resolveStateRoot(cwd, options2);
   ensureStateRootBoundary(cwd, resolved);
   ensureManifest(resolved, options2);
-  const record2 = buildRecord(input2, options2);
+  const record2 = buildRecord(input2, options2, derivedFrom);
   const file2 = recordFileFor(resolved, record2.evidenceId);
   const body = `${JSON.stringify(record2, null, 2)}
 `;
@@ -39385,6 +39459,16 @@ function putImmutable(cwd, input2, options2 = {}) {
     );
   }
   return { stored: true, duplicate: false, record: record2 };
+}
+function putImmutable(cwd, input2, options2 = {}) {
+  if (input2.derivedFrom !== void 0 && input2.derivedFrom !== null) {
+    throw new StoreError(
+      "invalid-argument",
+      "derivedFrom is promotion provenance written only by promoteToCommit \u2014 original measurements carry null",
+      { derivedFrom: input2.derivedFrom }
+    );
+  }
+  return putRecord(cwd, input2, null, options2);
 }
 function getById(cwd, evidenceId, options2 = {}) {
   const resolved = resolveStateRoot(cwd, options2);
@@ -39455,6 +39539,9 @@ function rebuildIndex(cwd, options2 = {}) {
   ensureStateRootBoundary(cwd, resolved);
   ensureManifest(resolved, options2);
   const index2 = buildIndex(scanRecords(resolved));
+  if (!validateIndex(index2)) {
+    throw new StoreError("corrupt-state", "rebuilt evidence index failed validation \u2014 refusing to persist a projection the contract would reject");
+  }
   atomicWriteFile(import_node_path7.default.join(evidenceRootFor(resolved), INDEX_FILE), `${JSON.stringify(index2, null, 2)}
 `);
   return index2;
@@ -39470,10 +39557,8 @@ function promoteToCommit(cwd, evidenceId, input2, options2 = {}) {
   if (!/^[0-9a-f]{7,64}$/i.test(input2.commit)) {
     throw new StoreError("invalid-argument", `commit ${JSON.stringify(input2.commit)} is not a hex object id`);
   }
-  const treeDigest = normalizeRevisionDigest(input2.treeDigest);
-  if (treeDigest === null) {
-    throw new StoreError("invalid-argument", `tree digest ${JSON.stringify(input2.treeDigest)} is not a sha256 digest`);
-  }
+  const { commitOid, treeOid } = requireCommitTreeOid(cwd, input2.commit);
+  const treeDigest = subjectTreeDigest(treeOid);
   if (treeDigest !== source.subject.snapshotDigest) {
     throw new StoreError(
       "subject-mismatch",
@@ -39481,11 +39566,11 @@ function promoteToCommit(cwd, evidenceId, input2, options2 = {}) {
       { expected: source.subject.snapshotDigest, got: treeDigest }
     );
   }
-  return putImmutable(cwd, {
+  return putRecord(cwd, {
     evidenceId: input2.newEvidenceId ?? generateArtifactId("EVID"),
     claim: source.claim,
     check: source.check,
-    subject: { kind: "commit", commit: input2.commit.toLowerCase() },
+    subject: { kind: "commit", commit: commitOid },
     method: source.method,
     provider: source.provider,
     runId: source.runId,
@@ -39493,9 +39578,8 @@ function promoteToCommit(cwd, evidenceId, input2, options2 = {}) {
     outcome: source.outcome,
     retention: source.retention,
     artifacts: source.artifacts,
-    derivedFrom: evidenceId,
     createdAt: nowOf(options2)
-  }, options2);
+  }, evidenceId, options2);
 }
 function recoverEvidence(cwd, options2 = {}) {
   const resolved = resolveStateRoot(cwd, options2);
@@ -39542,6 +39626,7 @@ function resolveEvidenceIn(graph, record2, readDocument2) {
   }
   const checkResolution = resolveCheckReference(graph, record2.check.ref);
   let check2;
+  let checkTargetsClaim = null;
   if (checkResolution.status !== "resolved") {
     check2 = { status: checkResolution.status };
   } else {
@@ -39551,11 +39636,13 @@ function resolveEvidenceIn(graph, record2, readDocument2) {
       matchesPinned: currentRevision === record2.check.designRevision,
       currentRevision
     };
+    checkTargetsClaim = checkResolution.check.target === record2.claim.ref;
   }
   return {
     claim: claim2,
     check: check2,
-    current: claim2.status === "resolved" && claim2.matchesPinned && check2.status === "resolved" && check2.matchesPinned
+    checkTargetsClaim,
+    current: claim2.status === "resolved" && claim2.matchesPinned && check2.status === "resolved" && check2.matchesPinned && checkTargetsClaim === true
   };
 }
 async function resolveEvidence(cwd, record2) {
@@ -39593,7 +39680,6 @@ function parseArgs(argv) {
     else if (arg === "--subject-kind") args.subjectKind = take(arg, i), i += 1;
     else if (arg === "--run-id") args.runId = take(arg, i), i += 1;
     else if (arg === "--commit") args.commit = take(arg, i), i += 1;
-    else if (arg === "--tree-digest") args.treeDigest = take(arg, i), i += 1;
     else if (arg === "--as") args.as = take(arg, i), i += 1;
     else if (arg === "--help" || arg === "-h") args.help = true;
     else if (!arg.startsWith("-") && args.command === void 0) args.command = arg;
@@ -39648,6 +39734,12 @@ async function resolvePinnedRevisions(cwd, input2) {
     throw new StoreError(
       "invalid-argument",
       `check reference ${JSON.stringify(input2.check?.ref)} cannot resolve (${check2.status}) \u2014 evidence only records outcomes of real checks`
+    );
+  }
+  if (check2.check.target !== String(input2.claim.ref).trim()) {
+    throw new StoreError(
+      "invalid-argument",
+      `check ${JSON.stringify(input2.check.ref)} targets ${check2.check.target}, not ${JSON.stringify(input2.claim.ref)} \u2014 evidence must record the claim its check verifies`
     );
   }
   input2.check.designRevision = check2.check.designRevision;
@@ -39708,13 +39800,12 @@ async function main() {
       return;
     }
     if (command === "promote") {
-      if (args.commit === void 0 || args.treeDigest === void 0) {
-        throw new Error("promote requires --commit <sha> and --tree-digest <sha256:hex>");
+      if (args.commit === void 0) {
+        throw new Error("promote requires --commit <sha> \u2014 the store resolves the commit's tree and verifies content identity itself");
       }
       emit(args, promoteToCommit(cwd, requireEvidenceId(args), {
         newEvidenceId: args.as,
-        commit: args.commit,
-        treeDigest: args.treeDigest
+        commit: args.commit
       }, options2));
       return;
     }

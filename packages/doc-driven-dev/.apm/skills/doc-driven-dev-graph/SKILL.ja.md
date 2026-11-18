@@ -170,8 +170,9 @@ Verification Check の結果である検証結果は、**Evidence Store**
 claim ドキュメント revision・check designRevision・subject（commit
 または workspace snapshot）・provider・artifact 参照をピン留めした
 不変の Evidence Record で、追記一度限りであり更新も削除もされませ
-ん。workspace の結果は内容同一性の証明がある場合のみ commit の
-エビデンスへ昇格します。レコードスキーマ、artifact/retention 規則、
+ん。workspace の結果は、ストアが指定された commit の tree に対して
+内容同一性を検証した場合のみ commit のエビデンスへ昇格します。
+レコードスキーマ、artifact/retention 規則、
 一貫性モデルは
 [`references/evidence-store-contract.ja.md`](references/evidence-store-contract.ja.md)
 で定義します。

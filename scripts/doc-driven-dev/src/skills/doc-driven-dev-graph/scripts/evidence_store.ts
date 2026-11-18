@@ -19,7 +19,7 @@
 //         [--subject-kind commit|workspace] [--run-id <id>]
 //   reindex
 //   resolve <evidence-id>
-//   promote <evidence-id> --commit <sha> --tree-digest <sha256:hex> [--as <id>]
+//   promote <evidence-id> --commit <sha> [--as <id>]
 //   manifest
 //   recover
 //
@@ -61,7 +61,6 @@ type CliArgs = {
   subjectKind?: string;
   runId?: string;
   commit?: string;
-  treeDigest?: string;
   as?: string;
 };
 
@@ -87,7 +86,6 @@ function parseArgs(argv: string[]): CliArgs {
     else if (arg === "--subject-kind") args.subjectKind = take(arg, i), i += 1;
     else if (arg === "--run-id") args.runId = take(arg, i), i += 1;
     else if (arg === "--commit") args.commit = take(arg, i), i += 1;
-    else if (arg === "--tree-digest") args.treeDigest = take(arg, i), i += 1;
     else if (arg === "--as") args.as = take(arg, i), i += 1;
     else if (arg === "--help" || arg === "-h") args.help = true;
     else if (!arg.startsWith("-") && args.command === undefined) args.command = arg;
@@ -134,7 +132,9 @@ function emit(args: CliArgs, payload: Record<string, unknown>): void {
 // `--resolve` pins the claim documentRevision and check designRevision
 // from the LIVE Knowledge Graph — the refs must resolve to a real claim
 // and a real check, never to whatever the caller guessed. Either ref
-// failing closed stops the put.
+// failing closed stops the put. The same claim↔check cross-check
+// resolveEvidenceIn reports applies here at write time: a record may
+// only credit a check for the claim that check actually targets.
 async function resolvePinnedRevisions(cwd: string, input: EvidenceInput): Promise<void> {
   const graph = await scanKnowledgeGraph({ cwd });
   const claim = resolveClaimReference(graph, String(input.claim?.ref ?? ""));
@@ -152,6 +152,12 @@ async function resolvePinnedRevisions(cwd: string, input: EvidenceInput): Promis
     throw new StoreError(
       "invalid-argument",
       `check reference ${JSON.stringify(input.check?.ref)} cannot resolve (${check.status}) — evidence only records outcomes of real checks`,
+    );
+  }
+  if (check.check.target !== String(input.claim.ref).trim()) {
+    throw new StoreError(
+      "invalid-argument",
+      `check ${JSON.stringify(input.check.ref)} targets ${check.check.target}, not ${JSON.stringify(input.claim.ref)} — evidence must record the claim its check verifies`,
     );
   }
   input.check.designRevision = check.check.designRevision;
@@ -214,13 +220,12 @@ async function main(): Promise<void> {
       return;
     }
     if (command === "promote") {
-      if (args.commit === undefined || args.treeDigest === undefined) {
-        throw new Error("promote requires --commit <sha> and --tree-digest <sha256:hex>");
+      if (args.commit === undefined) {
+        throw new Error("promote requires --commit <sha> — the store resolves the commit's tree and verifies content identity itself");
       }
       emit(args, promoteToCommit(cwd, requireEvidenceId(args), {
         newEvidenceId: args.as,
         commit: args.commit,
-        treeDigest: args.treeDigest,
       }, options) as unknown as Record<string, unknown>);
       return;
     }

@@ -67,9 +67,10 @@ const ARTIFACT_AVAILABILITIES: ReadonlySet<ArtifactAvailability> = new Set([
 ]);
 
 // The subject a check was measured against — either a Git commit or a
-// workspace snapshot identified by a content digest. A workspace subject
-// may only ever be promoted to a commit subject with a matching tree
-// digest — content-identity proof, handled in store.ts.
+// workspace snapshot identified by the canonical subject digest
+// (sha256 over the git tree oid; see store.ts). A workspace subject may
+// only ever be promoted to a commit subject whose resolved tree digests
+// identically — verified content identity, handled in store.ts.
 type EvidenceSubject =
   | { kind: "commit"; commit: string }
   | { kind: "workspace"; snapshotDigest: string };
@@ -112,13 +113,15 @@ type EvidenceRecordV1 = {
   // only; evidence never becomes run state.
   runId: string | null;
   // Freeform environment description (runner, os, toolchain) — opaque to
-  // the store, recorded verbatim for later assessment.
+  // the store, recorded as its JSON round-trip form for later assessment
+  // (non-serializable values are refused at intake).
   environment: unknown;
   outcome: EvidenceOutcome;
   retention: EvidenceRetention;
   artifacts: EvidenceArtifact[];
   // Set when the record was promoted from an earlier record (workspace →
-  // commit with content-identity proof); null for original measurements.
+  // commit with verified content identity); null for original
+  // measurements — intake can never assert a lineage.
   derivedFrom: string | null;
   createdAt: string;
 };
@@ -150,7 +153,8 @@ type EvidenceIndex = {
     byRetention: Record<EvidenceRetention, number>;
     bySubjectKind: { commit: number; workspace: number };
   };
-  // Qualified check ref → sorted evidence ids (latest first by createdAt).
+  // Qualified check ref → evidence ids ordered oldest-first by createdAt
+  // (the same ordering `buildIndex` emits).
   checks: Record<string, string[]>;
   claims: Record<string, string[]>;
   runs: Record<string, string[]>;

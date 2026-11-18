@@ -37,15 +37,15 @@ Execution Store と同じ state root・境界ルール（gitignore カバレッ�
 | `claim.documentRevision` | 測定時点での claim ドキュメントの `sha256:<hex>` ダイジェスト |
 | `check.ref` | 修飾 check 参照 `VD-<id>::CHK-NN` |
 | `check.designRevision` | 測定時点での check 正規ペイロードの `sha256:<hex>` |
-| `subject` | `{ kind: "commit", commit }` または `{ kind: "workspace", snapshotDigest }` —— 結果の測定対象 |
+| `subject` | `{ kind: "commit", commit }` または `{ kind: "workspace", snapshotDigest }` —— 結果の測定対象。`snapshotDigest` は正規サブジェクトダイジェスト（後述） |
 | `method` | 使用した検証メソッド（`unit`・`integration`・`e2e`・`property`・`static`・`model-checking`・`formal-proof`・`runtime-monitoring`・`manual-review`） |
 | `provider` | `{ kind: repository\|ci\|external, name }` —— 結果を生成したアダプタ |
 | `runId` | 生成元の Execution Store run、または `null` —— コンテキストのみで run の状態ではない |
-| `environment` | runner/os/ツールチェーンの自由記述（そのまま記録） |
+| `environment` | runner/os/ツールチェーンの自由記述 —— JSON ラウンドトリップ後の形で記録。シリアライズ不能な値（循環・BigInt・関数）は `invalid-argument` で拒否 |
 | `outcome` | `passed`・`failed`・`inconclusive`・`error`・`not-run` |
 | `retention` | `transient`・`release`・`durable` —— 保存ポリシー（後述） |
 | `artifacts` | 記録された artifact 参照（後述） |
-| `derivedFrom` | 他レコードから昇格した場合の元 evidence id、それ以外は `null` |
+| `derivedFrom` | 他レコードから昇格した場合の元 evidence id、それ以外は `null` —— `promote` のみが書き込み、intake での指定は拒否 |
 | `createdAt` | ISO-8601 の作成タイムスタンプ |
 
 レコードからは常に逆引きできます。測定した claim/check、それらを測定
@@ -105,16 +105,54 @@ Retention はレコードごとです（artifact は独自の期限を持てま�
   内容ではありません。`recover` が除去します。`evidenceId` が
   ファイル名と一致しないレコードは `corrupt-state` です。
 
-## workspace → commit 昇格
+## サブジェクトダイジェストと昇格
+
+**サブジェクトダイジェスト**は check が測定した内容を指し示します。
+両方のサブジェクト種別が同一の正規アルゴリズムを共有するため、
+どちら側のアダプタも比較可能な値を計算できます。
+
+```text
+subjectDigest = "sha256:" + sha256("doc-driven-dev:subject-tree:v1:" + <git tree oid hex>)
+```
+
+Git の tree オブジェクト id はリポジトリ自身の内容同一性です ——
+追跡される全パス・エントリモード・blob 内容を再帰的にカバーします。
+名前空間付きの sha256 ラッパーは、リポジトリのオブジェクト形式
+（sha1 / sha256 の tree）をレコード固定のダイジェスト形に正規化し
+ます。
+
+- `treeDigestOf(cwd, commit)` は commit 側を計算します。git を通じて
+  `<commit>^{commit}^{tree}` を解決するため、ダイジェストは**存在が
+  証明されたオブジェクトから計算**され、呼び出し側の主張ではありま
+  せん。commit が解決できなければ `null` を返します。
+- `workspaceDigestOf(treeOid)` は workspace 側を計算します。測定
+  アダプタは検証対象の workspace を git tree oid にスナップショット
+  します —— 規定の手順は一時インデックス（`GIT_INDEX_FILE=<tmp>`）
+  に測定ツリーを取り込んで `git write-tree` —— し、返された
+  ダイジェストを `subject.snapshotDigest` として記録します。
+
+### workspace → commit 昇格
 
 workspace の結果が commit のエビデンスとして**黙って扱われることは
-ありません。** 昇格の経路は `promote <id> --commit <sha>
---tree-digest <hex>` のみです。commit の tree ダイジェストが
-workspace の `snapshotDigest` と一致する必要があります —— 2 つの
-対象が同一バイトであることの内容同一性の証明です。ダイジェスト不一致
-は `subject-mismatch` で拒否され、commit 対象のレコードは昇格できま
-せん。昇格は `derivedFrom` を持つ**新しい**不変レコードを書き込みま
-す —— 元の workspace エビデンスは変更されません。
+ありません。** 昇格の経路は `promote <id> --commit <sha>` のみです。
+ストアは commit の tree を git で解決し —— 存在しなければならない
+オブジェクト —— 正規ダイジェストを計算して、レコードの
+`snapshotDigest` との一致を要求します。これが内容同一性チェックで
+す。比較の両側が同一アルゴリズムで計算され、commit 側はオブジェクト
+データベースに対して検証されます。ダイジェスト不一致は
+`subject-mismatch`、解決できない commit は `invalid-argument` で
+拒否され、commit 対象のレコードは昇格できません。昇格は
+`derivedFrom` を持つ**新しい**不変レコードを書き込みます —— 元の
+workspace エビデンスは変更されません。
+
+**信頼境界を明確に述べます。** ストアは *commit* 側をオブジェクト
+データベースで検証し、両ダイジェストが同一の正規アルゴリズムで計算
+されたことを確認します。しかし測定時の workspace を再観測することは
+できないため、`snapshotDigest` はアダプタの証明（attestation）の
+ままです —— 昇格が証明するのは「記録された証明と commit が同一の
+内容を指す」ことであって、「証明が正直だった」ことではありません。
+その保証が必要な呼び出し側は、測定アダプタを信頼する（あるいは帯域
+外でゲートする）必要があります。
 
 ## 境界 —— 書き込み前に拒否
 
@@ -123,8 +161,16 @@ Execution Store と同じゲートです。`/.apm/state/` の ignore カバレ�
 こと、evidence ルートと records ディレクトリが解決済みルート内に
 realpath されること —— ルート外に落ちる `evidence/` シンボリンクは
 `boundary-escape` です。レコード id は共有のファイルシステム安全
-パターンに一致するため、id がパス脱出やディスク上の別 id への別名に
-なることはありません。
+パターンに一致するため、id がパス脱出になることはありません。
+
+**大文字小文字を区別しないファイルシステム**（既定の macOS/Windows）
+では、大文字小文字だけが異なる id もディスク上では衝突します。
+`EVID-A.json` と `EVID-a.json` は同一ファイルです。ストアが両者を
+統合することはありません —— 同名への書き込みは通常の追記一度限り
+の衝突（内容が異なれば `record-conflict`）であり、ファイル名と
+`evidenceId` が一致しない格納ファイルは `corrupt-state` です。
+失敗はサイレントではなく fail-closed です。呼び出し側は大文字小文字
+の違いで id を区別してはいけません。
 
 ## CLI
 
@@ -136,25 +182,30 @@ node .apm/skills/doc-driven-dev-graph/scripts/evidence_store.js <command> \
 - `put --file <evidence.json> [--resolve]` —— レコードを保存。
   `--resolve` は `claim.documentRevision`/`check.designRevision` を
   稼働中の Knowledge Graph からピン留めします（どちらかの参照が解決
-  できなければ put は中断されます）。
+  できなければ put は中断され、check はレコードの claim を対象に
+  していなければなりません）。
 - `get <id>` / `query [--check|--claim|--outcome|--retention|
   --subject-kind|--run-id]` / `manifest`
 - `resolve <id>` —— レコードの逆引き: 参照の状態 + claim/check ごとの
-  `matchesPinned`。
-- `promote <id> --commit <sha> --tree-digest <hex> [--as <new-id>]`
+  `matchesPinned`、さらに `checkTargetsClaim` —— 解決された check
+  の `target` がレコードの `claim.ref` と一致するか。
+- `promote <id> --commit <sha> [--as <new-id>]` —— ストア自身が
+  commit の tree を解決してダイジェストを計算します。コマンド
+  ラインでダイジェストは受け取りません。
 - `reindex` —— `index.json` を再生成。`recover` —— tmp の残りを除去。
 
 エラーは `{ "error": <code>, "message": ..., "detail": ... }` を終了
 コード 1 で出力します。preflight ゲートは終了コード 2 です。コード:
-`boundary-gitignore`・`boundary-tracked`・`boundary-escape`・
-`external-root-not-authorized`・`record-conflict`・`evidence-not-found`・
-`subject-mismatch`・`corrupt-state`・`unsupported-version`・
-`invalid-argument`。
+`boundary-gitignore`・`boundary-git-unavailable`・`boundary-tracked`・
+`boundary-escape`・`external-root-not-authorized`・`record-conflict`・
+`evidence-not-found`・`subject-mismatch`・`corrupt-state`・
+`state-unwritable`・`unsupported-version`・`invalid-argument`。
 
 ## ライブラリ API
 
 `putImmutable / getById / query / buildIndex / rebuildIndex / promoteToCommit /
-loadManifest / recoverEvidence / documentRevisionOf` に加え、
+loadManifest / recoverEvidence / documentRevisionOf /
+workspaceDigestOf / treeDigestOf` に加え、
 `resolveEvidence / resolveEvidenceIn`（逆引き —— Evidence Assessment
 `#241` が消費するインターフェース）を
 `src/skills/lib/evidence_store` から提供します。
