@@ -27083,6 +27083,15 @@ function configFor(type) {
   }
   throw new Error(`Unknown document type: ${type}`);
 }
+function resolveDocType(name) {
+  const entry = registry2[name];
+  if (entry) {
+    return entry.persistence === "durable" ? { kind: "durable", entry } : { kind: "ephemeral", entry };
+  }
+  const legacy = legacyAliases.get(name);
+  if (legacy) return { kind: "legacy", entry: legacyDocTypes[legacy] };
+  return { kind: "unknown", entry: null };
+}
 function executionBoundTypeNames() {
   return [
     ...executionTypes,
@@ -27379,10 +27388,14 @@ function indexCell(value) {
   return String(value).replace(/\|/g, "\\|").replace(/\s+/g, " ").trim();
 }
 function isForeignDocType(typeValue, expected, relativeDir) {
-  if (typeof typeValue !== "string" || typeValue === expected) return false;
-  if (!docTypes.includes(typeValue)) return false;
+  if (typeof typeValue !== "string") return false;
+  const actual = resolveDocType(typeValue);
+  const resident = resolveDocType(expected);
+  if (resident.entry !== null && resident.entry === actual.entry) return false;
+  if (actual.kind === "legacy" || actual.kind === "ephemeral") return true;
+  if (actual.kind !== "durable") return false;
   const normalized = normalizeDir(relativeDir);
-  return configFor(typeValue).dirs.map((dir) => normalizeDir(dir)).includes(normalized);
+  return actual.entry.dirs.map((dir) => normalizeDir(dir)).includes(normalized);
 }
 
 // src/skills/impl-doc/scripts/lib/impl_doc_utils.ts

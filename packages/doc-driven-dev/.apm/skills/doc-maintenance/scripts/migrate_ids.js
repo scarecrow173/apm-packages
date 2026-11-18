@@ -36835,10 +36835,14 @@ function isGeneratedIndex(content3, legacyTitle) {
   return Boolean(legacyTitle) && content3.startsWith(`# ${legacyTitle}`) && /Directory: `/.test(content3);
 }
 function isForeignDocType(typeValue, expected, relativeDir) {
-  if (typeof typeValue !== "string" || typeValue === expected) return false;
-  if (!docTypes.includes(typeValue)) return false;
+  if (typeof typeValue !== "string") return false;
+  const actual = resolveDocType(typeValue);
+  const resident = resolveDocType(expected);
+  if (resident.entry !== null && resident.entry === actual.entry) return false;
+  if (actual.kind === "legacy" || actual.kind === "ephemeral") return true;
+  if (actual.kind !== "durable") return false;
   const normalized = normalizeDir(relativeDir);
-  return configFor(typeValue).dirs.map((dir) => normalizeDir(dir)).includes(normalized);
+  return actual.entry.dirs.map((dir) => normalizeDir(dir)).includes(normalized);
 }
 async function titleFromDocument(content3, fallback, headingToTitle) {
   const parsed = parseDoc(content3);
@@ -38181,7 +38185,7 @@ async function scanRepository(options2) {
     const canonical = expectedTypes.length > 0;
     const docDirName = normalizeDir(import_node_path6.default.posix.dirname(repoPath));
     const indexNamed = isIndexFileName(import_node_path6.default.posix.basename(repoPath));
-    const kind = canonical ? indexNamed ? "index" : "canonical" : migrationDirs.some((dir) => docDirName === dir || isUnderDir2(docDirName, dir)) ? indexNamed ? "index" : "legacy" : "unmanaged";
+    const dirKind = canonical ? indexNamed ? "index" : "canonical" : migrationDirs.some((dir) => docDirName === dir || isUnderDir2(docDirName, dir)) ? indexNamed ? "index" : "legacy" : "unmanaged";
     let content3 = "";
     let readError = null;
     try {
@@ -38194,12 +38198,14 @@ async function scanRepository(options2) {
     const structure = await extractMarkdownStructure(parsed.body, bodyStartLine);
     const data = parsed.data;
     const owners = Array.isArray(data.owners) ? data.owners.filter((owner) => typeof owner === "string" && Boolean(owner.trim())) : [];
+    const declaredType = stringField(data, "type");
+    const kind = dirKind === "canonical" && declaredType !== null && (resolveDocType(declaredType).kind === "ephemeral" || resolveDocType(declaredType).kind === "legacy") ? "legacy" : dirKind;
     files.push({
       path: repoPath,
       absolutePath: absolute,
       kind,
       expectedTypes,
-      type: stringField(data, "type"),
+      type: declaredType,
       id: stringField(data, "id"),
       status: stringField(data, "status"),
       lifecycle: stringField(data, "lifecycle"),
@@ -39183,6 +39189,8 @@ function executionOwnedDirs() {
   return [...dirs];
 }
 var EXECUTION_DIRS = executionOwnedDirs();
+var MIGRATE_HINT = "run doc_maintenance.js migrate plan --json";
+var MIGRATION_DIRS = migrationOwnedDirs();
 var EVIDENCE_REASON_RULES = {
   "claim-unresolved": { ruleId: "unresolved-evidence-claim", severity: "warning", blocking: true, message: "evidence claim ref no longer resolves in the Knowledge Graph" },
   "check-unresolved": { ruleId: "unresolved-evidence-check", severity: "warning", blocking: true, message: "evidence check ref no longer resolves in the Knowledge Graph" },
@@ -39203,13 +39211,19 @@ var EVIDENCE_REASON_RULES = {
 var EVIDENCE_RULE_IDS = new Set(
   Object.values(EVIDENCE_REASON_RULES).map((rule) => rule.ruleId)
 );
-var TRACKED_DOC_RULE_IDS = /* @__PURE__ */ new Set([
+var EVIDENCE_STORE_RULE_IDS = /* @__PURE__ */ new Set([
+  "corrupt-evidence-store",
+  "unmanifested-evidence-store"
+]);
+var CORPUS_DOC_RULE_IDS = /* @__PURE__ */ new Set([
+  "legacy-corpus-doc",
   "tracked-execution-doc",
   "tracked-legacy-doc"
 ]);
 var REPO_LEVEL_RULE_IDS = /* @__PURE__ */ new Set([
-  ...TRACKED_DOC_RULE_IDS,
-  ...EVIDENCE_RULE_IDS
+  ...CORPUS_DOC_RULE_IDS,
+  ...EVIDENCE_RULE_IDS,
+  ...EVIDENCE_STORE_RULE_IDS
 ]);
 
 // src/skills/lib/doc_lint.ts
@@ -39950,6 +39964,26 @@ var GRAPH_ISSUE_RULES = {
   "check-anchor-mismatch": { ruleId: "check-anchor-mismatch", category: "relation", severity: "warning", blocking: true, repair: "manual" },
   "misplaced-check-anchor": { ruleId: "misplaced-check-anchor", category: "relation", severity: "warning", blocking: true, repair: "manual" }
 };
+function lintMisplacedLegacyDocs(scope) {
+  const findings = [];
+  for (const document3 of scope.files) {
+    if (typeof document3.type !== "string") continue;
+    const resolved = resolveDocType(document3.type);
+    if (resolved.kind === "durable" || resolved.kind === "unknown") continue;
+    findings.push(finding({
+      ruleId: "legacy-doc-in-durable-dir",
+      category: "migration",
+      severity: "warning",
+      blocking: true,
+      path: document3.path,
+      artifactId: document3.id,
+      message: `${resolved.kind === "ephemeral" ? "execution-bound" : "legacy"} ${document3.type} document declares a type with no durable Git form under Document Registry 3 \u2014 it is migration corpus in a durable directory, never a ${scope.type} document or index row; ${MIGRATE_HINT} to plan the migration`,
+      target: document3.type,
+      repair: "migration"
+    }));
+  }
+  return findings;
+}
 function lintKnowledgeGraph(model, scope) {
   const graph = projectKnowledgeGraph(model);
   const findings = [];
@@ -40387,6 +40421,7 @@ function lintScope(model, type, directory, profile = "materialized") {
       findings.push(...lintUnmanagedRelations(model, document3));
     }
   }
+  findings.push(...lintMisplacedLegacyDocs(scope));
   findings.push(...lintKnowledgeGraph(model, scope));
   findings.push(...lintLegacyIdReferences(model, scope.files));
   findings.push(...lintDuplicateIds(model, scope));

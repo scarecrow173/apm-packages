@@ -253,11 +253,18 @@ function renderGraph(snapshot: DashboardSnapshot): string {
   // Verification (Evidence) panel (Issue #246): the derived Verification
   // Summary — measured check outcomes from the immutable Evidence Store,
   // never Effect Receipts. Effect Receipts prove a graph effect ran and
-  // stay on the run side; they are deliberately absent here.
+  // stay on the run side; they are deliberately absent here. The store's
+  // own marker state rides alongside: an absent store is honest "no
+  // store" text, never a fabricated zero-coverage store, while a torn or
+  // missing manifest flags that the records' integrity is unverifiable.
   const verification = snapshot.state.verification;
+  const store = snapshot.evidenceStore;
   const verificationPanel = (() => {
     if (verification === null) {
-      return `<div class="probe-panel"><h3>verification（Evidence）</h3><p class="empty">Evidence Store なし — 検証サマリ未提供</p></div>`;
+      const note = store.integrity === "absent"
+        ? "Evidence Store なし — 検証サマリ未提供"
+        : "検証サマリ未提供";
+      return `<div class="probe-panel"><h3>verification（Evidence）</h3><p class="empty">${note}</p></div>`;
     }
     const summary = verification.summary;
     const binding = verification.boundToHead === null
@@ -265,6 +272,11 @@ function renderGraph(snapshot: DashboardSnapshot): string {
       : verification.boundToHead
         ? `<span class="badge badge-runnable">HEAD 一致</span>`
         : `<span class="badge badge-blocked">HEAD と不一致</span>`;
+    const storeBadge = store.integrity === "ok"
+      ? ""
+      : store.integrity === "absent"
+        ? ` <span class="badge">Evidence Store なし</span>`
+        : ` <span class="badge badge-blocked">store ${e(store.integrity)}</span>`;
     const counts = summary.counts;
     const facts: Array<[string, string | number]> = [
       ["verdict", summary.verdict],
@@ -273,7 +285,12 @@ function renderGraph(snapshot: DashboardSnapshot): string {
       ["evidence", `${counts.evidence.total} assessed（sufficient ${counts.evidence.sufficient} / insufficient ${counts.evidence.insufficient}）`],
       ["VD 文書", verification.documents.length],
     ];
-    return `<div class="probe-panel"><h3>verification（Evidence）</h3><p><span class="status-pill status-${summary.verdict === "verified" ? "done" : summary.verdict === "failed" ? "blocked" : "in-progress"}">${e(summary.verdict)}</span> ${binding}</p><dl class="facts">${facts.map(([label, value]) => `<div><dt>${e(label)}</dt><dd>${e(value)}</dd></div>`).join("")}</dl><p class="probe-note">Evidence Store の不変記録から導出 — run の Effect Receipt とは別権威です</p></div>`;
+    const note = store.integrity === "absent"
+      ? "Evidence Store なし — サマリは 0 レコードで導出（ストア未初期化）"
+      : store.integrity === "ok"
+        ? "Evidence Store の不変記録から導出 — run の Effect Receipt とは別権威です"
+        : `Evidence Store の整合性は未検証（${e(store.integrity)}）— 記録を信頼できるストア状態として証明できません`;
+    return `<div class="probe-panel"><h3>verification（Evidence）</h3><p><span class="status-pill status-${summary.verdict === "verified" ? "done" : summary.verdict === "failed" ? "blocked" : "in-progress"}">${e(summary.verdict)}</span> ${binding}${storeBadge}</p><dl class="facts">${facts.map(([label, value]) => `<div><dt>${e(label)}</dt><dd>${e(value)}</dd></div>`).join("")}</dl><p class="probe-note">${note}</p></div>`;
   })();
   const canvas = `<div class="graph-canvas"><div class="canvas-head"><span class="canvas-eyebrow">Execution Graph</span><span class="graph-meta">${e(snapshot.definition.graphId)} · ${snapshot.definition.nodes.length} nodes · ${snapshot.definition.edges.length} edges</span></div><div class="graph-stage">${renderExecutionSvg(snapshot.definition, { current: snapshot.requested.current, edgeId: route?.edgeId ?? null })}</div><ul class="graph-legend"><li><span class="legend-swatch sw-action"></span>action</li><li><span class="legend-swatch sw-delegate"></span>delegate</li><li><span class="legend-swatch sw-audit"></span>audit</li><li><span class="legend-swatch sw-terminal"></span>terminal</li><li><span class="legend-line sw-fwd"></span>前進遷移</li><li><span class="legend-line sw-back"></span>戻り・修復</li><li><span class="legend-line sw-retry"></span>リトライ</li><li><span class="legend-swatch swatch-current"></span>指定ノード（現在）</li><li><span class="legend-swatch swatch-edge"></span>選択 edge</li><li>ノードにカーソルを合わせると接続 edge が強調されます</li></ul></div>`;
   return `<section id="graph" aria-labelledby="graph-heading"><h2 id="graph-heading">Graph</h2><div class="probe-grid">${routeSummary}<div class="probe-side">${signalPanel}${gatePanel}${verificationPanel}</div></div>${canvas}</section>`;

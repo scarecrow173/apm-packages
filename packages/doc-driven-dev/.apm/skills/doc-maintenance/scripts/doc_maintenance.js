@@ -4292,7 +4292,7 @@ var require_parse2 = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs16 = require("fs");
+    var fs17 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify = require_stringify2();
@@ -4376,7 +4376,7 @@ var require_gray_matter = __commonJS({
       return stringify(file2, data, options2);
     };
     matter5.read = function(filepath, options2) {
-      const str2 = fs16.readFileSync(filepath, "utf8");
+      const str2 = fs17.readFileSync(filepath, "utf8");
       const file2 = matter5(str2, options2);
       file2.path = filepath;
       return file2;
@@ -13585,21 +13585,21 @@ var init_unist_util_visit = __esm({
 });
 
 // src/skills/doc-maintenance/scripts/doc_maintenance.ts
-var import_node_fs15 = __toESM(require("node:fs"));
+var import_node_fs16 = __toESM(require("node:fs"));
 var import_node_path16 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_maintenance.ts
-var import_node_fs10 = __toESM(require("node:fs"));
+var import_node_fs11 = __toESM(require("node:fs"));
 var import_node_path11 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_evidence_lint.ts
-var import_node_fs7 = __toESM(require("node:fs"));
+var import_node_fs8 = __toESM(require("node:fs"));
 var import_node_path8 = __toESM(require("node:path"));
 
 // src/skills/lib/evidence_store/store.ts
-var import_node_child_process = require("node:child_process");
+var import_node_child_process2 = require("node:child_process");
 var import_node_crypto2 = __toESM(require("node:crypto"));
-var import_node_fs4 = __toESM(require("node:fs"));
+var import_node_fs5 = __toESM(require("node:fs"));
 var import_node_path4 = __toESM(require("node:path"));
 
 // src/skills/lib/artifact_id.ts
@@ -13639,6 +13639,8 @@ function readJsonFile(file2) {
 }
 
 // src/skills/lib/execution_store/boundary.ts
+var import_node_child_process = require("node:child_process");
+var import_node_fs4 = __toESM(require("node:fs"));
 var import_node_path3 = __toESM(require("node:path"));
 
 // src/skills/lib/document_utils.ts
@@ -17345,6 +17347,37 @@ function resolveStateRoot(cwd, options2 = {}) {
   }
   return { root, external: true, repoRelative: null };
 }
+function git(args, cwd) {
+  const result = (0, import_node_child_process.spawnSync)("git", args, { cwd, encoding: "utf8" });
+  return {
+    status: result.status,
+    stdout: result.stdout ?? "",
+    stderr: (result.stderr ?? "").trim()
+  };
+}
+function gitContext(cwd) {
+  const probe = git(["rev-parse", "--is-inside-work-tree"], cwd);
+  if (probe.status === 0 && probe.stdout.trim() === "true") {
+    return { kind: "worktree" };
+  }
+  if (import_node_fs4.default.existsSync(import_node_path3.default.join(cwd, ".git"))) {
+    throw new StoreError(
+      "boundary-git-unavailable",
+      `.git exists at ${cwd} but \`git rev-parse\` failed (${probe.stderr || `exit ${probe.status}`}) \u2014 execution-state coverage cannot be verified`
+    );
+  }
+  return { kind: "none" };
+}
+function gitTrackedPaths(cwd, pathspec = ".") {
+  const result = git(["ls-files", "-z", "--", pathspec], cwd);
+  if (result.status !== 0) {
+    throw new StoreError(
+      "boundary-git-unavailable",
+      `git ls-files failed (${result.stderr || `exit ${result.status}`}) \u2014 tracked files cannot be ruled out`
+    );
+  }
+  return new Set(result.stdout.split("\0").filter(Boolean));
+}
 
 // src/skills/lib/claim_ids.ts
 var CLAIM_KEY_PATTERN = /^[A-Z][A-Z0-9]*-\d+$/;
@@ -17748,8 +17781,8 @@ var SUBJECT_DIGEST_NAMESPACE = "doc-driven-dev:subject-tree:v1";
 function subjectTreeDigest(treeOid) {
   return `sha256:${sha256(`${SUBJECT_DIGEST_NAMESPACE}:${treeOid.toLowerCase()}`)}`;
 }
-function git(args, cwd) {
-  const result = (0, import_node_child_process.spawnSync)("git", args, { cwd, encoding: "utf8" });
+function git2(args, cwd) {
+  const result = (0, import_node_child_process2.spawnSync)("git", args, { cwd, encoding: "utf8" });
   return {
     status: result.status,
     stdout: result.stdout ?? "",
@@ -17758,7 +17791,7 @@ function git(args, cwd) {
   };
 }
 function requireCommitTreeOid(cwd, commit) {
-  const asCommit = git(["rev-parse", "--verify", "--quiet", `${commit}^{commit}`], cwd);
+  const asCommit = git2(["rev-parse", "--verify", "--quiet", `${commit}^{commit}`], cwd);
   if (asCommit.error !== void 0) {
     throw new StoreError(
       "boundary-git-unavailable",
@@ -17773,7 +17806,7 @@ function requireCommitTreeOid(cwd, commit) {
       { commit }
     );
   }
-  const asTree = git(["rev-parse", "--verify", "--quiet", `${commitOid}^{tree}`], cwd);
+  const asTree = git2(["rev-parse", "--verify", "--quiet", `${commitOid}^{tree}`], cwd);
   const treeOid = asTree.stdout.trim();
   if (asTree.error !== void 0 || asTree.status !== 0 || !/^[0-9a-f]{40,64}$/i.test(treeOid)) {
     throw new StoreError(
@@ -17799,8 +17832,8 @@ function insideResolvedRoot(resolved, candidate) {
   let real;
   let realRoot;
   try {
-    real = import_node_fs4.default.realpathSync(candidate);
-    realRoot = import_node_fs4.default.realpathSync(resolved.root);
+    real = import_node_fs5.default.realpathSync(candidate);
+    realRoot = import_node_fs5.default.realpathSync(resolved.root);
   } catch {
     return false;
   }
@@ -17815,8 +17848,8 @@ function recordsDirFor(resolved) {
   return import_node_path4.default.join(evidenceRootFor(resolved), RECORDS_DIR);
 }
 function containedDir(resolved, dir, label) {
-  if (import_node_fs4.default.existsSync(dir)) {
-    if (!import_node_fs4.default.statSync(dir).isDirectory()) {
+  if (import_node_fs5.default.existsSync(dir)) {
+    if (!import_node_fs5.default.statSync(dir).isDirectory()) {
       throw new StoreError("corrupt-state", `${dir} is not a directory`);
     }
     if (!insideResolvedRoot(resolved, dir)) {
@@ -17838,7 +17871,7 @@ function requireManifestLocation(manifest, resolved, file2) {
 function loadManifest(cwd, options2 = {}) {
   const resolved = resolveStateRoot(cwd, options2);
   const file2 = import_node_path4.default.join(evidenceRootFor(resolved), MANIFEST_FILE);
-  if (!import_node_fs4.default.existsSync(file2)) return null;
+  if (!import_node_fs5.default.existsSync(file2)) return null;
   const parsed = readJsonFile(file2);
   if (!validateManifest2(parsed)) {
     throw new StoreError("corrupt-state", `evidence manifest at ${file2} failed validation`, { path: file2 });
@@ -17847,8 +17880,8 @@ function loadManifest(cwd, options2 = {}) {
   return parsed;
 }
 function listRecordFiles(recordsDir) {
-  if (!import_node_fs4.default.existsSync(recordsDir)) return [];
-  return import_node_fs4.default.readdirSync(recordsDir, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith(".json")).map((entry) => import_node_path4.default.join(recordsDir, entry.name)).sort();
+  if (!import_node_fs5.default.existsSync(recordsDir)) return [];
+  return import_node_fs5.default.readdirSync(recordsDir, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith(".json")).map((entry) => import_node_path4.default.join(recordsDir, entry.name)).sort();
 }
 function readRecordFile(file2) {
   const parsed = readJsonFile(file2);
@@ -17887,13 +17920,35 @@ function query(cwd, filter = {}, options2 = {}) {
     return true;
   }).sort((a, b) => a.createdAt === b.createdAt ? a.evidenceId.localeCompare(b.evidenceId) : a.createdAt.localeCompare(b.createdAt));
 }
+function inspectEvidenceStore(cwd, options2 = {}) {
+  const resolved = resolveStateRoot(cwd, options2);
+  const evidenceRoot = evidenceRootFor(resolved);
+  const manifestFile = import_node_path4.default.join(evidenceRoot, MANIFEST_FILE);
+  if (!import_node_fs5.default.existsSync(manifestFile)) {
+    const recordsDir = containedDir(resolved, recordsDirFor(resolved), "records dir");
+    const count = listRecordFiles(recordsDir).length;
+    return count === 0 ? { integrity: "absent", detail: null } : {
+      integrity: "unmanifested",
+      detail: `${count} record file(s) exist under ${recordsDir} with no ${MANIFEST_FILE} \u2014 the store's declared boundary is missing`
+    };
+  }
+  try {
+    loadManifest(cwd, options2);
+  } catch (error62) {
+    if (error62 instanceof StoreError && (error62.code === "corrupt-state" || error62.code === "state-unreadable")) {
+      return { integrity: "corrupt", detail: error62.message };
+    }
+    throw error62;
+  }
+  return { integrity: "ok", detail: null };
+}
 
 // src/skills/lib/doc_repository.ts
-var import_node_fs6 = __toESM(require("node:fs"));
+var import_node_fs7 = __toESM(require("node:fs"));
 var import_node_path7 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_suite_utils.ts
-var import_node_fs5 = __toESM(require("node:fs"));
+var import_node_fs6 = __toESM(require("node:fs"));
 var import_node_path5 = __toESM(require("node:path"));
 var import_gray_matter2 = __toESM(require_gray_matter());
 
@@ -37923,10 +37978,14 @@ function isGeneratedIndex(content3, legacyTitle) {
   return Boolean(legacyTitle) && content3.startsWith(`# ${legacyTitle}`) && /Directory: `/.test(content3);
 }
 function isForeignDocType(typeValue, expected, relativeDir) {
-  if (typeof typeValue !== "string" || typeValue === expected) return false;
-  if (!docTypes.includes(typeValue)) return false;
+  if (typeof typeValue !== "string") return false;
+  const actual = resolveDocType(typeValue);
+  const resident = resolveDocType(expected);
+  if (resident.entry !== null && resident.entry === actual.entry) return false;
+  if (actual.kind === "legacy" || actual.kind === "ephemeral") return true;
+  if (actual.kind !== "durable") return false;
   const normalized = normalizeDir(relativeDir);
-  return configFor(typeValue).dirs.map((dir) => normalizeDir(dir)).includes(normalized);
+  return actual.entry.dirs.map((dir) => normalizeDir(dir)).includes(normalized);
 }
 async function titleFromDocument(content3, fallback, headingToTitle) {
   const parsed = parseDoc(content3);
@@ -37944,7 +38003,7 @@ async function docEntries(cwd, type, explicitDir) {
   const indexRow = configFor(type).indexRow;
   const entries = await Promise.all(docFiles(dir).map(async (file2) => {
     const fullPath = import_node_path5.default.join(dir, file2);
-    const content3 = import_node_fs5.default.readFileSync(fullPath, "utf8");
+    const content3 = import_node_fs6.default.readFileSync(fullPath, "utf8");
     const data = parseDoc(content3).data;
     const entryType = typeof data.type === "string" ? data.type : null;
     const hooks = entryType === null || entryType === type ? indexRow : void 0;
@@ -38006,8 +38065,8 @@ function isMarkdownSource(file2) {
   return file2.endsWith(".md") && !isIndexFileName(import_node_path5.default.basename(file2));
 }
 function walkMarkdownFiles(baseDir) {
-  if (!import_node_fs5.default.existsSync(baseDir)) return [];
-  const entries = import_node_fs5.default.readdirSync(baseDir, { withFileTypes: true });
+  if (!import_node_fs6.default.existsSync(baseDir)) return [];
+  const entries = import_node_fs6.default.readdirSync(baseDir, { withFileTypes: true });
   return entries.flatMap((entry) => {
     if (entry.isSymbolicLink()) return [];
     const fullPath = import_node_path5.default.join(baseDir, entry.name);
@@ -38019,14 +38078,14 @@ async function writeGeneratedIndex(cwd, type, relativeDir, options2) {
   const indexPath = import_node_path5.default.join(cwd, relativeDir, options2.indexFile ?? "README.md");
   const relIndex = import_node_path5.default.relative(cwd, indexPath).replace(/\\/g, "/");
   if (options2.noIndex) return { path: relIndex, written: false, reason: "disabled" };
-  const existing = import_node_fs5.default.existsSync(indexPath) ? import_node_fs5.default.readFileSync(indexPath, "utf8") : null;
+  const existing = import_node_fs6.default.existsSync(indexPath) ? import_node_fs6.default.readFileSync(indexPath, "utf8") : null;
   const isGenerated = existing === null || existing.includes(GENERATED_INDEX_MARKER);
   if (!isGenerated && !options2.forceIndex) {
     return { path: relIndex, written: false, reason: "hand-curated" };
   }
   const generated = await renderManagedIndex(cwd, relativeDir, type, options2.types);
   const content3 = existing !== null && existing.includes(GENERATED_INDEX_MARKER) ? mergeManagedIndex(existing, generated) : generated;
-  import_node_fs5.default.writeFileSync(indexPath, content3, "utf8");
+  import_node_fs6.default.writeFileSync(indexPath, content3, "utf8");
   return { path: relIndex, written: true, reason: null };
 }
 
@@ -38227,10 +38286,10 @@ function isExternalReference(value) {
   return EXTERNAL_REFERENCE.test(trimmed);
 }
 function walkMarkdownFiles2(root) {
-  if (!import_node_fs6.default.existsSync(root) || !import_node_fs6.default.statSync(root).isDirectory()) return [];
+  if (!import_node_fs7.default.existsSync(root) || !import_node_fs7.default.statSync(root).isDirectory()) return [];
   const files = [];
   const visitDir = (dir) => {
-    const entries = import_node_fs6.default.readdirSync(dir, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name));
+    const entries = import_node_fs7.default.readdirSync(dir, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name));
     for (const entry of entries) {
       const full = import_node_path7.default.join(dir, entry.name);
       if (entry.isDirectory()) {
@@ -38325,9 +38384,9 @@ function localeSiblingsFor(repoPath, siblingsByDir) {
 }
 function defaultScanRoots(cwd) {
   const roots = /* @__PURE__ */ new Set();
-  if (import_node_fs6.default.existsSync(import_node_path7.default.join(cwd, "docs"))) roots.add("docs");
+  if (import_node_fs7.default.existsSync(import_node_path7.default.join(cwd, "docs"))) roots.add("docs");
   for (const dir of managedDocDirs()) {
-    if (import_node_fs6.default.existsSync(import_node_path7.default.join(cwd, dir))) roots.add(dir);
+    if (import_node_fs7.default.existsSync(import_node_path7.default.join(cwd, dir))) roots.add(dir);
   }
   return [...roots].sort(compareStrings);
 }
@@ -38344,7 +38403,7 @@ async function scanRepository(options2) {
     for (const file2 of walkMarkdownFiles2(import_node_path7.default.join(cwd, root))) absoluteFiles.add(file2);
   }
   if (options2.includeTopLevelMarkdown !== false) {
-    for (const entry of import_node_fs6.default.readdirSync(cwd, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name))) {
+    for (const entry of import_node_fs7.default.readdirSync(cwd, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name))) {
       if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
         absoluteFiles.add(import_node_path7.default.join(cwd, entry.name));
       }
@@ -38366,11 +38425,11 @@ async function scanRepository(options2) {
     const canonical = expectedTypes.length > 0;
     const docDirName = normalizeDir(import_node_path7.default.posix.dirname(repoPath));
     const indexNamed = isIndexFileName(import_node_path7.default.posix.basename(repoPath));
-    const kind = canonical ? indexNamed ? "index" : "canonical" : migrationDirs.some((dir) => docDirName === dir || isUnderDir2(docDirName, dir)) ? indexNamed ? "index" : "legacy" : "unmanaged";
+    const dirKind = canonical ? indexNamed ? "index" : "canonical" : migrationDirs.some((dir) => docDirName === dir || isUnderDir2(docDirName, dir)) ? indexNamed ? "index" : "legacy" : "unmanaged";
     let content3 = "";
     let readError = null;
     try {
-      content3 = import_node_fs6.default.readFileSync(absolute, "utf8");
+      content3 = import_node_fs7.default.readFileSync(absolute, "utf8");
     } catch (error62) {
       readError = error62 instanceof Error ? error62.message : String(error62);
     }
@@ -38379,12 +38438,14 @@ async function scanRepository(options2) {
     const structure = await extractMarkdownStructure(parsed.body, bodyStartLine);
     const data = parsed.data;
     const owners = Array.isArray(data.owners) ? data.owners.filter((owner) => typeof owner === "string" && Boolean(owner.trim())) : [];
+    const declaredType = stringField(data, "type");
+    const kind = dirKind === "canonical" && declaredType !== null && (resolveDocType(declaredType).kind === "ephemeral" || resolveDocType(declaredType).kind === "legacy") ? "legacy" : dirKind;
     files.push({
       path: repoPath,
       absolutePath: absolute,
       kind,
       expectedTypes,
-      type: stringField(data, "type"),
+      type: declaredType,
       id: stringField(data, "id"),
       status: stringField(data, "status"),
       lifecycle: stringField(data, "lifecycle"),
@@ -38414,7 +38475,7 @@ async function scanRepository(options2) {
   }
   const insideRoot = (absolute) => isInside(cwd, absolute);
   const fileExistsInsideRoot = (absolute) => {
-    return isInsideCheckout(cwd, absolute) && import_node_fs6.default.existsSync(absolute) && import_node_fs6.default.statSync(absolute).isFile();
+    return isInsideCheckout(cwd, absolute) && import_node_fs7.default.existsSync(absolute) && import_node_fs7.default.statSync(absolute).isFile();
   };
   const splitTarget = (raw) => {
     const trimmed = raw.trim();
@@ -39549,20 +39610,27 @@ function isUnderDir3(child, parent) {
   return c === p || c.startsWith(`${p}/`);
 }
 var MIGRATE_HINT = "run doc_maintenance.js migrate plan --json";
+var MIGRATION_DIRS = migrationOwnedDirs();
 function lintTrackedExecutionDocs(model) {
+  const context = gitContext(model.root);
+  const tracked = context.kind === "worktree" ? gitTrackedPaths(model.root) : null;
   const findings = [];
   for (const document3 of model.legacyDocuments) {
     const dir = normalizeDir(import_node_path8.default.posix.dirname(document3.path));
-    const executionBound = EXECUTION_DIRS.some((root) => isUnderDir3(dir, root));
+    const declared = document3.type === null ? null : resolveDocType(document3.type).kind;
+    const executionBound = declared === "ephemeral" || declared !== "legacy" && EXECUTION_DIRS.some((root) => isUnderDir3(dir, root));
+    const inMigrationDir = MIGRATION_DIRS.some((root) => isUnderDir3(dir, root));
+    const placement = inMigrationDir ? "under a migration-owned directory" : "inside a durable directory";
     const typeName = document3.type ?? "untyped";
+    const isTracked = tracked !== null && tracked.has(document3.path);
     findings.push(finding({
-      ruleId: executionBound ? "tracked-execution-doc" : "tracked-legacy-doc",
+      ruleId: isTracked ? executionBound ? "tracked-execution-doc" : "tracked-legacy-doc" : "legacy-corpus-doc",
       category: "migration",
       severity: "warning",
       blocking: true,
       path: document3.path,
       artifactId: document3.id,
-      message: executionBound ? `Git-tracked ${typeName} document has no durable Git form under Document Registry 3 \u2014 plan/task state lives in the Execution Store; ${MIGRATE_HINT} to inventory the migration` : `Git-tracked ${typeName} document is a legacy format under Document Registry 3 \u2014 migration tooling owns its interpretation; ${MIGRATE_HINT} to plan the migration`,
+      message: isTracked ? executionBound ? `Git-tracked ${typeName} document has no durable Git form under Document Registry 3 \u2014 plan/task state lives in the Execution Store; ${MIGRATE_HINT} to inventory the migration` : `Git-tracked ${typeName} document is a legacy format under Document Registry 3 \u2014 migration tooling owns its interpretation; ${MIGRATE_HINT} to plan the migration` : tracked === null ? `${typeName} document sits ${placement} where Git tracking cannot be verified (no usable work tree) \u2014 corpus the migration sweep still owns; ${MIGRATE_HINT} to plan the migration` : `untracked ${typeName} document sits ${placement} \u2014 corpus the migration sweep still owns, never durable Git state; ${MIGRATE_HINT} to plan the migration`,
       target: document3.type,
       repair: "migration"
     }));
@@ -39589,23 +39657,28 @@ var EVIDENCE_REASON_RULES = {
 var EVIDENCE_RULE_IDS = new Set(
   Object.values(EVIDENCE_REASON_RULES).map((rule) => rule.ruleId)
 );
-var TRACKED_DOC_RULE_IDS = /* @__PURE__ */ new Set([
+var EVIDENCE_STORE_RULE_IDS = /* @__PURE__ */ new Set([
+  "corrupt-evidence-store",
+  "unmanifested-evidence-store"
+]);
+var CORPUS_DOC_RULE_IDS = /* @__PURE__ */ new Set([
+  "legacy-corpus-doc",
   "tracked-execution-doc",
   "tracked-legacy-doc"
 ]);
 var REPO_LEVEL_RULE_IDS = /* @__PURE__ */ new Set([
-  ...TRACKED_DOC_RULE_IDS,
-  ...EVIDENCE_RULE_IDS
+  ...CORPUS_DOC_RULE_IDS,
+  ...EVIDENCE_RULE_IDS,
+  ...EVIDENCE_STORE_RULE_IDS
 ]);
-function evidenceFindings(graph, record2, cwd, now) {
-  const head = resolveCommitSubject(cwd, "HEAD");
+function evidenceFindings(graph, record2, cwd, now, head) {
   const assessment = assessEvidenceIn(graph, record2, {
     subject: { kind: "commit", commit: "HEAD" },
     subjectDigest: head === null ? null : head.subjectDigest
   }, {
     readDocument: (docPath) => {
       try {
-        return import_node_fs7.default.readFileSync(import_node_path8.default.join(cwd, docPath), "utf8");
+        return import_node_fs8.default.readFileSync(import_node_path8.default.join(cwd, docPath), "utf8");
       } catch {
         return null;
       }
@@ -39635,21 +39708,34 @@ function evidenceFindings(graph, record2, cwd, now) {
 }
 async function lintEvidenceStore(cwd, model, options2 = {}) {
   const { now: optionNow, ...storeOptions } = options2;
-  if (loadManifest(cwd, storeOptions) === null) return [];
+  const store = inspectEvidenceStore(cwd, storeOptions);
+  const findings = [];
+  if (store.integrity === "corrupt" || store.integrity === "unmanifested") {
+    findings.push(finding({
+      ruleId: store.integrity === "corrupt" ? "corrupt-evidence-store" : "unmanifested-evidence-store",
+      category: "evidence",
+      severity: store.integrity === "corrupt" ? "error" : "warning",
+      blocking: true,
+      path: null,
+      message: store.integrity === "corrupt" ? `Evidence Store manifest cannot certify the store \u2014 record integrity is unverifiable: ${store.detail}` : `Evidence records exist without the store's manifest marker \u2014 record integrity is unverifiable: ${store.detail}`,
+      repair: "manual"
+    }));
+  }
+  if (store.integrity === "absent") return findings;
   const records = query(cwd, {}, storeOptions);
-  if (records.length === 0) return [];
+  if (records.length === 0) return findings;
   const graph = projectKnowledgeGraph(model);
   const root = import_node_path8.default.resolve(cwd);
+  const head = resolveCommitSubject(root, "HEAD");
   const now = optionNow ?? (/* @__PURE__ */ new Date()).toISOString();
-  const findings = [];
   for (const record2 of records) {
-    findings.push(...evidenceFindings(graph, record2, root, now));
+    findings.push(...evidenceFindings(graph, record2, root, now, head));
   }
   return findings;
 }
 
 // src/skills/lib/doc_lint.ts
-var import_node_fs9 = __toESM(require("node:fs"));
+var import_node_fs10 = __toESM(require("node:fs"));
 var import_node_path10 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_provenance_lint.ts
@@ -39777,7 +39863,7 @@ function lintStaleUpstreams(model, scope) {
 }
 
 // src/skills/lib/doc_structure_lint.ts
-var import_node_fs8 = __toESM(require("node:fs"));
+var import_node_fs9 = __toESM(require("node:fs"));
 var import_node_path9 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_index_tiers.ts
@@ -39861,11 +39947,11 @@ function parseManagedIndexLayout(content3) {
 function caseInsensitiveExists(model, absolute) {
   const dir = import_node_path9.default.dirname(absolute);
   const base = import_node_path9.default.basename(absolute).toLowerCase();
-  if (!import_node_fs8.default.existsSync(dir)) return null;
-  const match = import_node_fs8.default.readdirSync(dir).find((entry) => entry.toLowerCase() === base);
+  if (!import_node_fs9.default.existsSync(dir)) return null;
+  const match = import_node_fs9.default.readdirSync(dir).find((entry) => entry.toLowerCase() === base);
   if (!match) return null;
   const candidate = import_node_path9.default.join(dir, match);
-  return import_node_fs8.default.existsSync(candidate) && import_node_fs8.default.statSync(candidate).isFile() ? candidate : null;
+  return import_node_fs9.default.existsSync(candidate) && import_node_fs9.default.statSync(candidate).isFile() ? candidate : null;
 }
 function lintDocumentLinks(model, scope) {
   const findings = [];
@@ -39928,7 +40014,7 @@ function lintDocumentLinks(model, scope) {
         })();
         const absolute = import_node_path9.default.resolve(model.root, resolved.path);
         const dir = import_node_path9.default.dirname(absolute);
-        const actualBase = import_node_fs8.default.existsSync(dir) ? import_node_fs8.default.readdirSync(dir).find((entry) => entry.toLowerCase() === targetBase.toLowerCase()) : void 0;
+        const actualBase = import_node_fs9.default.existsSync(dir) ? import_node_fs9.default.readdirSync(dir).find((entry) => entry.toLowerCase() === targetBase.toLowerCase()) : void 0;
         if (actualBase && actualBase !== targetBase) {
           findings.push(finding({
             ruleId: "link-case-mismatch",
@@ -40159,7 +40245,7 @@ function lintIndexConsistency(model, scope, index2) {
   );
   let lineOffset = 0;
   try {
-    lineOffset = frontMatterEndLine(import_node_fs8.default.readFileSync(import_node_path9.default.join(model.root, index2.path), "utf8"));
+    lineOffset = frontMatterEndLine(import_node_fs9.default.readFileSync(import_node_path9.default.join(model.root, index2.path), "utf8"));
   } catch {
     lineOffset = 0;
   }
@@ -40386,6 +40472,26 @@ var GRAPH_ISSUE_RULES = {
   "check-anchor-mismatch": { ruleId: "check-anchor-mismatch", category: "relation", severity: "warning", blocking: true, repair: "manual" },
   "misplaced-check-anchor": { ruleId: "misplaced-check-anchor", category: "relation", severity: "warning", blocking: true, repair: "manual" }
 };
+function lintMisplacedLegacyDocs(scope) {
+  const findings = [];
+  for (const document3 of scope.files) {
+    if (typeof document3.type !== "string") continue;
+    const resolved = resolveDocType(document3.type);
+    if (resolved.kind === "durable" || resolved.kind === "unknown") continue;
+    findings.push(finding({
+      ruleId: "legacy-doc-in-durable-dir",
+      category: "migration",
+      severity: "warning",
+      blocking: true,
+      path: document3.path,
+      artifactId: document3.id,
+      message: `${resolved.kind === "ephemeral" ? "execution-bound" : "legacy"} ${document3.type} document declares a type with no durable Git form under Document Registry 3 \u2014 it is migration corpus in a durable directory, never a ${scope.type} document or index row; ${MIGRATE_HINT} to plan the migration`,
+      target: document3.type,
+      repair: "migration"
+    }));
+  }
+  return findings;
+}
 function lintKnowledgeGraph(model, scope) {
   const graph = projectKnowledgeGraph(model);
   const findings = [];
@@ -40737,10 +40843,10 @@ function legacyIdPrefixes() {
 }
 function experimentNumbers(root) {
   const expDir = import_node_path10.default.join(root, IMPL_EXP_DIR);
-  if (!import_node_fs9.default.existsSync(expDir)) return /* @__PURE__ */ new Map();
+  if (!import_node_fs10.default.existsSync(expDir)) return /* @__PURE__ */ new Map();
   if (!isInsideRealpath(root, expDir)) return /* @__PURE__ */ new Map();
   const counts = /* @__PURE__ */ new Map();
-  for (const name of import_node_fs9.default.readdirSync(expDir)) {
+  for (const name of import_node_fs10.default.readdirSync(expDir)) {
     if (isSymlinkPath(import_node_path10.default.join(expDir, name))) continue;
     const match = NUMBERED_EXPERIMENT_FILE.exec(name);
     if (match) counts.set(match[1], (counts.get(match[1]) ?? 0) + 1);
@@ -40749,7 +40855,7 @@ function experimentNumbers(root) {
 }
 function isSymlinkPath(p) {
   try {
-    return import_node_fs9.default.lstatSync(p).isSymbolicLink();
+    return import_node_fs10.default.lstatSync(p).isSymbolicLink();
   } catch {
     return false;
   }
@@ -40823,6 +40929,7 @@ function lintScope(model, type, directory, profile = "materialized") {
       findings.push(...lintUnmanagedRelations(model, document3));
     }
   }
+  findings.push(...lintMisplacedLegacyDocs(scope));
   findings.push(...lintKnowledgeGraph(model, scope));
   findings.push(...lintLegacyIdReferences(model, scope.files));
   findings.push(...lintDuplicateIds(model, scope));
@@ -40953,8 +41060,8 @@ async function planMaintenance(cwd, query2, options2) {
       if (INDEX_REBUILD_RULES.has(finding2.ruleId)) {
         const indexPath = scopeIndexPath(collected.model, directory) ?? `${directory}/README.md`;
         const indexAbsolute = import_node_path11.default.join(resolvedCwd, indexPath);
-        const indexExists = import_node_fs10.default.existsSync(indexAbsolute);
-        const indexGenerated = !indexExists || isGeneratedIndex(import_node_fs10.default.readFileSync(indexAbsolute, "utf8"));
+        const indexExists = import_node_fs11.default.existsSync(indexAbsolute);
+        const indexGenerated = !indexExists || isGeneratedIndex(import_node_fs11.default.readFileSync(indexAbsolute, "utf8"));
         const plan = indexPlans.get(indexPath) ?? {
           directory,
           exists: indexExists,
@@ -41031,8 +41138,8 @@ async function planMaintenance(cwd, query2, options2) {
 function actualEntryName(absolute) {
   const dir = import_node_path11.default.dirname(absolute);
   const base = import_node_path11.default.basename(absolute).toLowerCase();
-  if (!import_node_fs10.default.existsSync(dir)) return null;
-  return import_node_fs10.default.readdirSync(dir).find((entry) => entry.toLowerCase() === base) ?? null;
+  if (!import_node_fs11.default.existsSync(dir)) return null;
+  return import_node_fs11.default.readdirSync(dir).find((entry) => entry.toLowerCase() === base) ?? null;
 }
 function applyLinkCaseFix(cwd, action, model) {
   if (!action.linkTarget) return false;
@@ -41048,7 +41155,7 @@ function applyLinkCaseFix(cwd, action, model) {
   const fixed = `${dirPart}${actual}${suffix}`;
   if (fixed === action.linkTarget) return false;
   const full = import_node_path11.default.join(cwd, action.path);
-  const lines = import_node_fs10.default.readFileSync(full, "utf8").split("\n");
+  const lines = import_node_fs11.default.readFileSync(full, "utf8").split("\n");
   let lineIndex = (action.linkLine ?? 0) - 1;
   if (lineIndex < 0 || lineIndex >= lines.length || !lines[lineIndex].includes(`(${action.linkTarget})`)) {
     lineIndex = lines.findIndex((line) => line.includes(`(${action.linkTarget})`));
@@ -41057,7 +41164,7 @@ function applyLinkCaseFix(cwd, action, model) {
   const updated = lines[lineIndex].replace(`(${action.linkTarget})`, `(${fixed})`);
   if (updated === lines[lineIndex]) return false;
   lines[lineIndex] = updated;
-  import_node_fs10.default.writeFileSync(full, lines.join("\n"), "utf8");
+  import_node_fs11.default.writeFileSync(full, lines.join("\n"), "utf8");
   return true;
 }
 async function applyMaintenance(cwd, query2, options2) {
@@ -41071,7 +41178,7 @@ async function applyMaintenance(cwd, query2, options2) {
         blocked.push({ action, reason: "unresolvable index scope" });
         continue;
       }
-      import_node_fs10.default.mkdirSync(import_node_path11.default.dirname(import_node_path11.default.join(resolvedCwd, action.path)), { recursive: true });
+      import_node_fs11.default.mkdirSync(import_node_path11.default.dirname(import_node_path11.default.join(resolvedCwd, action.path)), { recursive: true });
       const result = await writeGeneratedIndex(resolvedCwd, action.scopeTypes[0], action.scopeDir, {
         forceIndex: options2?.forceIndex,
         types: action.scopeTypes,
@@ -41106,11 +41213,11 @@ async function applyMaintenance(cwd, query2, options2) {
 
 // src/skills/doc-maintenance/scripts/lib/index_materialize.ts
 var import_node_crypto3 = require("node:crypto");
-var import_node_fs12 = __toESM(require("node:fs"));
+var import_node_fs13 = __toESM(require("node:fs"));
 var import_node_path13 = __toESM(require("node:path"));
 
 // src/skills/adr-doc/scripts/lib/adr_utils.ts
-var import_node_fs11 = __toESM(require("node:fs"));
+var import_node_fs12 = __toESM(require("node:fs"));
 var import_node_path12 = __toESM(require("node:path"));
 var import_gray_matter3 = __toESM(require_gray_matter());
 var relationFields2 = [
@@ -41119,12 +41226,12 @@ var relationFields2 = [
 ];
 function writeIndexFile(adrDir, content3, force = false) {
   const indexPath = import_node_path12.default.join(adrDir, "README.md");
-  const existing = import_node_fs11.default.existsSync(indexPath) ? import_node_fs11.default.readFileSync(indexPath, "utf8") : null;
+  const existing = import_node_fs12.default.existsSync(indexPath) ? import_node_fs12.default.readFileSync(indexPath, "utf8") : null;
   if (!force && existing !== null && !isGeneratedIndex(existing, "Architecture Decision Records")) {
     return { written: false, reason: "hand-curated" };
   }
   const output2 = existing !== null && existing.includes(GENERATED_INDEX_MARKER) ? mergeManagedIndex(existing, content3) : content3;
-  import_node_fs11.default.writeFileSync(indexPath, output2, "utf8");
+  import_node_fs12.default.writeFileSync(indexPath, output2, "utf8");
   return { written: true, reason: null };
 }
 async function buildIndex3(cwd, relativeDir) {
@@ -41136,7 +41243,7 @@ function sha256Text(content3) {
   return (0, import_node_crypto3.createHash)("sha256").update(content3, "utf8").digest("hex");
 }
 function sha256File(file2) {
-  return (0, import_node_crypto3.createHash)("sha256").update(import_node_fs12.default.readFileSync(file2)).digest("hex");
+  return (0, import_node_crypto3.createHash)("sha256").update(import_node_fs13.default.readFileSync(file2)).digest("hex");
 }
 function cellsEqual(left, right) {
   return left.length === right.length && left.every((cell, index2) => cell === right[index2]);
@@ -41177,8 +41284,8 @@ function computeSourcePins(dirAbs, files) {
   };
 }
 function indexFileNameForDir(dirAbs) {
-  if (!import_node_fs12.default.existsSync(dirAbs)) return "README.md";
-  const candidates = import_node_fs12.default.readdirSync(dirAbs).filter((file2) => isIndexFileName(file2));
+  if (!import_node_fs13.default.existsSync(dirAbs)) return "README.md";
+  const candidates = import_node_fs13.default.readdirSync(dirAbs).filter((file2) => isIndexFileName(file2));
   const readme = candidates.find((file2) => /^readme\.md$/i.test(file2));
   return readme ?? candidates.sort()[0] ?? "README.md";
 }
@@ -41186,7 +41293,7 @@ function detectedDocTypes(dirAbs, files) {
   const found = /* @__PURE__ */ new Set();
   for (const file2 of files) {
     try {
-      const typeValue = parseDoc(import_node_fs12.default.readFileSync(import_node_path13.default.join(dirAbs, file2), "utf8")).data.type;
+      const typeValue = parseDoc(import_node_fs13.default.readFileSync(import_node_path13.default.join(dirAbs, file2), "utf8")).data.type;
       if (typeof typeValue === "string" && docTypes.includes(typeValue)) {
         found.add(typeValue);
       }
@@ -41198,7 +41305,7 @@ function detectedDocTypes(dirAbs, files) {
 function inspectIndex(indexAbs) {
   let stats;
   try {
-    stats = import_node_fs12.default.lstatSync(indexAbs);
+    stats = import_node_fs13.default.lstatSync(indexAbs);
   } catch {
     return { status: "missing", existing: null, pin: null };
   }
@@ -41213,7 +41320,7 @@ function inspectIndex(indexAbs) {
   }
   if (!stats.isFile()) return { status: "not-file", existing: null, pin: null };
   try {
-    const existing = import_node_fs12.default.readFileSync(indexAbs, "utf8");
+    const existing = import_node_fs13.default.readFileSync(indexAbs, "utf8");
     return { status: "file", existing, pin: sha256Text(existing) };
   } catch {
     return { status: "unreadable", existing: null, pin: null };
@@ -41408,7 +41515,7 @@ async function computeIndexMaterialization(cwd, explicitDir) {
     }
     const kind = kindForDir(directory);
     const dirAbs = import_node_path13.default.join(cwd, directory);
-    if (import_node_fs12.default.existsSync(dirAbs) && !import_node_fs12.default.statSync(dirAbs).isDirectory()) continue;
+    if (import_node_fs13.default.existsSync(dirAbs) && !import_node_fs13.default.statSync(dirAbs).isDirectory()) continue;
     if (kind === null) {
       targets.push(rejectedTarget(cwd, directory, `${directory}/README.md`, "impl container has no managed index", true));
       continue;
@@ -41457,22 +41564,22 @@ function verifyTargetPins(cwd, target) {
 }
 function isSymlink(indexAbs) {
   try {
-    return import_node_fs12.default.lstatSync(indexAbs).isSymbolicLink();
+    return import_node_fs13.default.lstatSync(indexAbs).isSymbolicLink();
   } catch {
     return false;
   }
 }
 function writeSharedIndex(cwd, target) {
   const indexAbs = import_node_path13.default.join(cwd, target.indexPath);
-  import_node_fs12.default.mkdirSync(import_node_path13.default.dirname(indexAbs), { recursive: true });
+  import_node_fs13.default.mkdirSync(import_node_path13.default.dirname(indexAbs), { recursive: true });
   const tmpPath = import_node_path13.default.join(import_node_path13.default.dirname(indexAbs), `.${import_node_path13.default.basename(indexAbs)}.tmp-${process.pid}-${Date.now()}`);
   try {
-    import_node_fs12.default.writeFileSync(tmpPath, target.content ?? "", "utf8");
-    import_node_fs12.default.renameSync(tmpPath, indexAbs);
+    import_node_fs13.default.writeFileSync(tmpPath, target.content ?? "", "utf8");
+    import_node_fs13.default.renameSync(tmpPath, indexAbs);
     return null;
   } catch (error62) {
     try {
-      import_node_fs12.default.rmSync(tmpPath, { force: true });
+      import_node_fs13.default.rmSync(tmpPath, { force: true });
     } catch {
     }
     return error62 instanceof Error ? error62.message : String(error62);
@@ -41509,7 +41616,7 @@ async function applyIndexMaterialization(cwd, options2) {
     }
     const internal = internals.get(target.indexPath);
     if (target.kind === "adr") {
-      import_node_fs12.default.mkdirSync(import_node_path13.default.dirname(indexAbs), { recursive: true });
+      import_node_fs13.default.mkdirSync(import_node_path13.default.dirname(indexAbs), { recursive: true });
       const result = writeIndexFile(import_node_path13.default.dirname(indexAbs), internal?.generated ?? target.content ?? "");
       if (result.written) {
         written.push(target.indexPath);
@@ -41529,12 +41636,12 @@ async function applyIndexMaterialization(cwd, options2) {
 }
 
 // src/skills/doc-maintenance/scripts/lib/schema_migrate.ts
-var import_node_fs14 = __toESM(require("node:fs"));
+var import_node_fs15 = __toESM(require("node:fs"));
 var import_node_path15 = __toESM(require("node:path"));
 
 // src/skills/doc-maintenance/scripts/lib/migration_inventory.ts
 var import_node_crypto4 = __toESM(require("node:crypto"));
-var import_node_fs13 = __toESM(require("node:fs"));
+var import_node_fs14 = __toESM(require("node:fs"));
 var import_node_path14 = __toESM(require("node:path"));
 var import_gray_matter4 = __toESM(require_gray_matter());
 function compareCodeUnits(left, right) {
@@ -41578,7 +41685,7 @@ var V1_RELATION_FIELDS = new Set(knowledgeRelationFields());
 var DURABLE_DIRS = new Set(
   docTypes.flatMap((type) => configs[type].dirs.map((dir) => normalizeDir(dir)))
 );
-var MIGRATION_DIRS = new Set(
+var MIGRATION_DIRS2 = new Set(
   [
     ...Object.values(ephemeralConfigs).flatMap((entry) => entry.formerDirs),
     ...Object.values(legacyDocTypes).flatMap((entry) => [...entry.formerDirs, ...entry.scopeDirs])
@@ -41618,7 +41725,7 @@ function isUnderDir5(rel, dir) {
 function owningManagedDir(rel) {
   const dir = normalizeDir(import_node_path14.default.posix.dirname(rel));
   let best = null;
-  for (const candidate of [...DURABLE_DIRS, ...MIGRATION_DIRS]) {
+  for (const candidate of [...DURABLE_DIRS, ...MIGRATION_DIRS2]) {
     if (!isUnderDir5(dir, candidate)) continue;
     if (best === null || candidate.length > best.dir.length) {
       best = { dir: candidate, kind: DURABLE_DIRS.has(candidate) ? "durable" : "migration-owned" };
@@ -41665,7 +41772,7 @@ function collectFiles(cwd) {
     const abs = import_node_path14.default.resolve(cwd, root);
     let key = abs;
     try {
-      key = import_node_fs13.default.realpathSync(abs);
+      key = import_node_fs14.default.realpathSync(abs);
     } catch {
     }
     if (walked.has(key)) continue;
@@ -41686,10 +41793,10 @@ function collectFiles(cwd) {
         });
       }
     );
-    if (!ok3 && import_node_fs13.default.existsSync(abs)) {
+    if (!ok3 && import_node_fs14.default.existsSync(abs)) {
       let directory = false;
       try {
-        directory = import_node_fs13.default.statSync(abs).isDirectory();
+        directory = import_node_fs14.default.statSync(abs).isDirectory();
       } catch {
       }
       escapes.push({
@@ -41706,7 +41813,7 @@ function readRawDoc(cwd, rel) {
   const abs = import_node_path14.default.join(cwd, rel);
   let raw = "";
   try {
-    raw = import_node_fs13.default.readFileSync(abs, "utf8");
+    raw = import_node_fs14.default.readFileSync(abs, "utf8");
   } catch (error62) {
     return { path: rel, raw, data: {}, body: "", parseError: error62 instanceof Error ? error62.message : String(error62) };
   }
@@ -41836,7 +41943,7 @@ function buildIndexes(files) {
   for (const file2 of files.filter((entry) => entry.cls === "index")) {
     let generated = false;
     try {
-      generated = import_node_fs13.default.readFileSync(file2.abs, "utf8").includes(GENERATED_INDEX_MARKER2);
+      generated = import_node_fs14.default.readFileSync(file2.abs, "utf8").includes(GENERATED_INDEX_MARKER2);
     } catch {
     }
     const dirKind = dirKindForDoc(file2.path) === "migration-owned" ? "migration-owned" : "durable";
@@ -41858,7 +41965,7 @@ function buildExperiments(files) {
   for (const file2 of files.filter((entry) => entry.cls === "exp")) {
     let raw = "";
     try {
-      raw = import_node_fs13.default.readFileSync(file2.abs, "utf8");
+      raw = import_node_fs14.default.readFileSync(file2.abs, "utf8");
     } catch {
     }
     let events = 0;
@@ -41908,7 +42015,7 @@ function buildRuns(files) {
     let manifest = null;
     if (manifestFile) {
       try {
-        const parsed = JSON.parse(import_node_fs13.default.readFileSync(manifestFile.abs, "utf8"));
+        const parsed = JSON.parse(import_node_fs14.default.readFileSync(manifestFile.abs, "utf8"));
         if (validateManifest(parsed) && parsed.runId === runId) manifest = parsed;
       } catch {
       }
@@ -41978,7 +42085,7 @@ function buildMigrationPlan(cwd) {
   const unreadableInputs = /* @__PURE__ */ new Set();
   const inputHash = inputFiles.length === 0 ? sha2562("[]") : sha2562(inputFiles.map((rel) => {
     try {
-      return `${rel}:${sha2562(import_node_fs13.default.readFileSync(import_node_path14.default.join(root, rel), "utf8"))}`;
+      return `${rel}:${sha2562(import_node_fs14.default.readFileSync(import_node_path14.default.join(root, rel), "utf8"))}`;
     } catch {
       unreadableInputs.add(rel);
       return `${rel}:unreadable`;
@@ -43096,17 +43203,17 @@ function writeManifest(cwd) {
   const dir = import_node_path15.default.dirname(abs);
   const escaped = `${DOC_DRIVEN_DEV_DIR} resolves outside the checkout \u2014 refusing to write the manifest`;
   let probe = dir;
-  while (!import_node_fs14.default.existsSync(probe)) {
+  while (!import_node_fs15.default.existsSync(probe)) {
     const parent = import_node_path15.default.dirname(probe);
     if (parent === probe) return `cannot verify ${DOC_DRIVEN_DEV_DIR} stays inside the checkout`;
     probe = parent;
   }
   if (!isInsideCheckout(cwd, probe)) return escaped;
-  import_node_fs14.default.mkdirSync(dir, { recursive: true });
+  import_node_fs15.default.mkdirSync(dir, { recursive: true });
   if (!isInsideCheckout(cwd, dir)) return escaped;
   const tmp = `${abs}.tmp-${process.pid}`;
-  import_node_fs14.default.writeFileSync(tmp, schemaManifestText(), "utf8");
-  import_node_fs14.default.renameSync(tmp, abs);
+  import_node_fs15.default.writeFileSync(tmp, schemaManifestText(), "utf8");
+  import_node_fs15.default.renameSync(tmp, abs);
   return null;
 }
 function migrateApply(cwd, expect) {
@@ -43361,7 +43468,7 @@ async function main() {
     const cwd = import_node_path16.default.resolve(args.cwd);
     if (args.command === "migrate") {
       validateMigrateArgs(args);
-      if (!import_node_fs15.default.existsSync(cwd) || !import_node_fs15.default.statSync(cwd).isDirectory()) {
+      if (!import_node_fs16.default.existsSync(cwd) || !import_node_fs16.default.statSync(cwd).isDirectory()) {
         throw new Error(`--cwd does not exist or is not a directory: ${args.cwd}`);
       }
       runMigrate(args, cwd);

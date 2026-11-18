@@ -39,7 +39,7 @@ import path from "node:path";
 import { scanKnowledgeGraph, resolveCheckReference, resolveClaimReference } from "../knowledge_graph";
 import type { KnowledgeGraph } from "../knowledge_graph";
 import { isPlainObject } from "../execution_store/types";
-import { query, resolveCommitSubject } from "../evidence_store/store";
+import { inspectEvidenceStore, query, resolveCommitSubject } from "../evidence_store/store";
 import type { StoreOptions } from "../evidence_store/store";
 import type {
   EvidenceRecordV1,
@@ -615,12 +615,13 @@ async function buildVerificationSummary(
 ): Promise<VerificationSummary> {
   const root = path.resolve(cwd);
   const graph = await scanKnowledgeGraph({ cwd: root });
+  const storeQueried = input.records === undefined;
   const records = input.records ?? query(root, { runId: input.runId }, options);
   const target = normalizeTarget(root, input);
   // The serialized summary must carry the NORMALIZED subject — a `HEAD`
   // revspec spelling is not a subject the file contract admits; the
   // resolved full oid is what a downstream gate can pin against.
-  return buildVerificationSummaryIn(graph, { ...input, subject: target.subject, records, subjectDigest: target.subjectDigest }, {
+  const summary = buildVerificationSummaryIn(graph, { ...input, subject: target.subject, records, subjectDigest: target.subjectDigest }, {
     readDocument: (docPath) => {
       try {
         return fs.readFileSync(path.join(root, docPath), "utf8");
@@ -630,6 +631,21 @@ async function buildVerificationSummary(
     },
     resolveSubjectDigest: (subject) => recordSubjectDigest(root, subject),
   });
+  // The store's own marker is part of what the summary claims: records
+  // read from a store whose manifest is torn or missing cannot be
+  // certified as store state, so the summary degrades instead of
+  // certifying coverage it cannot prove (Issue #246 — the same boundary
+  // the repo-level lint reports as `*-evidence-store`). An ABSENT store
+  // stays a legitimate empty input; a caller-supplied record list is the
+  // caller's own authority and is never re-inspected.
+  if (storeQueried) {
+    const store = inspectEvidenceStore(root, options);
+    if (store.integrity === "corrupt" || store.integrity === "unmanifested") {
+      if (summary.verdict === "verified") summary.verdict = "indeterminate";
+      summary.reasons = [...new Set([...summary.reasons, `evidence-store-${store.integrity}`])].sort();
+    }
+  }
+  return summary;
 }
 
 export { buildVerificationSummary, buildVerificationSummaryIn, normalizeTarget };

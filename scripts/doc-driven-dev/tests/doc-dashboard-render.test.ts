@@ -60,6 +60,7 @@ function snapshot(inventory: InventoryItem[] = []): DashboardSnapshot {
       focus: [], gates: {}, signals: [], blockers: [], hardBlockers: [],
     },
     decision: null,
+    evidenceStore: { integrity: "absent", detail: null },
     inventory,
     runs: [], findings: [],
     health: {
@@ -155,6 +156,9 @@ test("verification panel renders the Evidence-derived summary, never Effect Rece
   const emptyHtml = renderDashboard(value);
   assert.match(emptyHtml, /<h3>verification（Evidence）<\/h3><p class="empty">Evidence Store なし — 検証サマリ未提供<\/p>/);
 
+  // A store that certified the summary renders the store-backed note —
+  // `別権威` separates Evidence from run Effect Receipts.
+  value.evidenceStore = { integrity: "ok", detail: null };
   value.state.verification = {
     boundToHead: true,
     documents: ["docs/verification/vd.md"],
@@ -195,6 +199,31 @@ test("verification panel renders the Evidence-derived summary, never Effect Rece
   assert.match(html, /<dd>1 satisfied \/ 0 failed \/ 0 open（required 1）<\/dd>/);
   assert.match(html, /<dd>1\/1 covered<\/dd>/);
   assert.match(html, /別権威/, "the panel must separate verification Evidence from run Effect Receipts");
+
+  // A summary computed over an absent store still renders — with the
+  // honest "no store" badge + derived-from-zero-records note, never the
+  // store-backed wording (Issue #246).
+  const absent = snapshot();
+  absent.state.verification = value.state.verification;
+  const absentHtml = renderDashboard(absent);
+  assert.match(absentHtml, /<span class="badge">Evidence Store なし<\/span>/);
+  assert.match(absentHtml, /ストア未初期化/);
+  assert.doesNotMatch(absentHtml, /別権威/);
+
+  // A degraded marker flags the records' integrity as unverifiable.
+  const torn = snapshot();
+  torn.evidenceStore = { integrity: "corrupt", detail: "manifest parse failed" };
+  torn.state.verification = value.state.verification;
+  const tornHtml = renderDashboard(torn);
+  assert.match(tornHtml, /<span class="badge badge-blocked">store corrupt<\/span>/);
+  assert.match(tornHtml, /整合性は未検証/);
+
+  // A missing summary over a real store never claims the store is absent.
+  const noSummary = snapshot();
+  noSummary.evidenceStore = { integrity: "ok", detail: null };
+  const noSummaryHtml = renderDashboard(noSummary);
+  assert.match(noSummaryHtml, /<p class="empty">検証サマリ未提供<\/p>/);
+  assert.doesNotMatch(noSummaryHtml, /Evidence Store なし/);
 });
 
 test("attention section stays neutral when nothing blocks progress", () => {

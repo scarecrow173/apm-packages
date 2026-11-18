@@ -662,6 +662,65 @@ function query(cwd: string, filter: EvidenceQuery = {}, options: StoreOptions = 
 }
 
 // ---------------------------------------------------------------------------
+// Store integrity probe — what kind of store lives at the root
+// ---------------------------------------------------------------------------
+
+type EvidenceStoreIntegrity = "absent" | "unmanifested" | "corrupt" | "ok";
+
+type EvidenceStoreInspection = {
+  integrity: EvidenceStoreIntegrity;
+  detail: string | null;
+};
+
+// Probe the store's own marker surface WITHOUT parsing a single record
+// body. `loadManifest === null` alone cannot distinguish a checkout with
+// no store at all from a records dir whose write-once marker never
+// landed — and `loadManifest` throws on a torn manifest where the audit
+// path wants a state to report. This probe makes the three states
+// explicit so lint, summary, and dashboard consumers degrade the same
+// way (Issue #246):
+//
+//   absent        nothing under `evidence/` at all — a store that was
+//                 never initialized is a legitimate state (zero records
+//                 is honest coverage, not corruption).
+//   unmanifested  record files exist but `manifest.json` does not — the
+//                 store's self-declared boundary is missing, so nothing
+//                 the records claim is verifiable as store state.
+//   corrupt       the manifest exists but fails to read or validate —
+//                 the marker can no longer certify the records under it.
+//   ok            manifest present and valid.
+//
+// Access failures still throw: an unauthorized external root, a
+// contained-dir escape, or an unreadable records dir is a boundary
+// violation the caller must see, never a store state to downgrade.
+function inspectEvidenceStore(cwd: string, options: StoreOptions = {}): EvidenceStoreInspection {
+  const resolved = resolveStateRoot(cwd, options);
+  const evidenceRoot = evidenceRootFor(resolved);
+  const manifestFile = path.join(evidenceRoot, MANIFEST_FILE);
+  if (!fs.existsSync(manifestFile)) {
+    const recordsDir = containedDir(resolved, recordsDirFor(resolved), "records dir");
+    const count = listRecordFiles(recordsDir).length;
+    return count === 0
+      ? { integrity: "absent", detail: null }
+      : {
+        integrity: "unmanifested",
+        detail: `${count} record file(s) exist under ${recordsDir} with no ${MANIFEST_FILE} — the store's declared boundary is missing`,
+      };
+  }
+  try {
+    loadManifest(cwd, options);
+  } catch (error: unknown) {
+    // `loadManifest` can only fail as unreadable bytes or failed
+    // validation — both mean the marker cannot certify the store.
+    if (error instanceof StoreError && (error.code === "corrupt-state" || error.code === "state-unreadable")) {
+      return { integrity: "corrupt", detail: error.message };
+    }
+    throw error;
+  }
+  return { integrity: "ok", detail: null };
+}
+
+// ---------------------------------------------------------------------------
 // Derived index — regenerated from records, never written on append
 // ---------------------------------------------------------------------------
 
@@ -803,6 +862,7 @@ function recoverEvidence(
 export {
   buildIndex,
   getById,
+  inspectEvidenceStore,
   loadManifest,
   promoteToCommit,
   putImmutable,
@@ -818,5 +878,7 @@ export {
 export type {
   EvidenceInput,
   EvidenceQuery,
+  EvidenceStoreInspection,
+  EvidenceStoreIntegrity,
   StoreOptions,
 };

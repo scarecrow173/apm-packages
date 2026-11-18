@@ -107,18 +107,29 @@ scope です。`plan`/`task` は execution-bound(状態は Execution Store に�
 
    絞り込みのない query —— `--type all`、または `--dir` なしで `--type`
    を省略 —— は、追加で 2 つの repo-level gate を実行します。
-   `execution-boundary` gate は migration 所有 directory 配下の
-   Git-tracked Markdown を指摘します。旧 `plan`/`task` ホームには
-   `tracked-execution-doc`（durable な Git 形式はもう存在しない ——
-   その状態は Execution Store にある）、legacy の
-   `test-spec`/`impl`/`exp` コーパスには `tracked-legacy-doc` を
-   報告します。どちらも blocking の `migration` finding で、repair
-   class は `migration` であり、safe な修正経路ではありません。
-   `evidence` gate は全 Evidence Store record を live な Knowledge
-   Graph と checkout の `HEAD` subject に対して再評価します ——
-   失敗した軸ごとに 1 finding（rule 一覧は後述）。`--type` や
-   `--dir` で絞り込んだ query はこれらの gate を実行せず、レポートの
-   `gates` envelope では `skipped` に列挙されます。
+   `execution-boundary` gate は、リポジトリモデルが migration コーパスと
+   分類するすべてのファイルを棚卸しします。migration 所有 directory
+   配下の Markdown（旧 `plan`/`task` ホームと legacy
+   `test-spec`/`impl`/`exp` scope）に加え、`plan`、`task`、`test-spec`、
+   `impl`、`exp` を type 宣言したファイルはどこに置かれていても対象です
+   —— durable な directory がそれらを durable 文書にすることはありません。
+   `git ls-files` が tracking の権威です。Git-tracked なファイルには
+   `tracked-execution-doc` または `tracked-legacy-doc` を報告します
+   （durable な Git 形式はもう存在しない —— その状態は Execution Store
+   にあるか migration ツールの管轄）。index が track していない
+   コンテンツ —— untracked の残存物、gitignore されたファイル、または
+   利用可能な Git work tree がない場所のコーパス —— には
+   `legacy-corpus-doc` を報告し、推測で tracked とはしません。いずれも
+   blocking の `migration` finding で、repair class は `migration` であり、
+   safe な修正経路ではありません。
+   `evidence` gate はまず Evidence Store 自身の marker を監査します
+   —— 破損または不正な `manifest.json` には `corrupt-evidence-store`、
+   manifest のない record ファイルには `unmanifested-evidence-store`、
+   store が存在しなければ何も報告しません —— そのうえで全 record を
+   live な Knowledge Graph と checkout の `HEAD` subject に対して
+   再評価します —— 失敗した軸ごとに 1 finding（rule 一覧は後述）。
+   `--type` や `--dir` で絞り込んだ query はこれらの gate を実行せず、
+   レポートの `gates` envelope では `skipped` に列挙されます。
 
    `doc-driven-dev-graph` の named audit は次のコマンドに対応します:
    durable 文書型（`spec`, `adr`, `design`, `idea`, `brainstorm`,
@@ -238,12 +249,30 @@ profile と、実行・スキップされたチェック群を報告する。対
   `external-link-unverifiable` — `audit_docs.js --external-links` による
   opt-in の外部リンク確認。デフォルトでは無効で、監査は決定的かつ
   オフライン安全を維持する。
-- `tracked-execution-doc`, `tracked-legacy-doc` — migration 所有
-  directory（旧 `plan`/`task` ホームと legacy の
-  `test-spec`/`impl`/`exp` scope）配下の Git-tracked Markdown を対象に
-  する repo-level の migration sweep。blocking の `migration` category
-  マーカーで、修復は `doc_maintenance.js` の `migrate` 系が所有する。
+- `legacy-doc-in-durable-dir` — durable scope 内にあるファイルで、宣言
+  `type:` に durable な Git 形式がないもの（execution-bound な
+  `plan`/`task`、legacy な `test-spec`/`impl`/`exp`）。そのファイルは
+  migration コーパスであり、その scope の文書ではない —— scope の
+  どの rule も index 行も適用されない。scoped / repo-wide いずれの
+  query でも blocking の `migration` マーカーを報告する。
+- `tracked-execution-doc`, `tracked-legacy-doc`, `legacy-corpus-doc` —
+  リポジトリモデルが migration コーパスと分類する Markdown を対象に
+  する repo-level の migration sweep（旧 `plan`/`task` ホーム、legacy
+  `test-spec`/`impl`/`exp` scope、および execution-bound / legacy な
+  type を持つファイルは設置場所を問わない）。`git ls-files` が
+  tracking の権威: tracked なファイルには
+  `tracked-execution-doc`/`tracked-legacy-doc`、untracked・gitignore・
+  検証不能なコンテンツには `legacy-corpus-doc` を報告 —— 推測で
+  tracked とはしない。blocking の `migration` category マーカーで、
+  修復は `doc_maintenance.js` の `migrate` 系が所有する。
   repo-wide query のみ。
+- `corrupt-evidence-store`, `unmanifested-evidence-store` — Evidence
+  Store の marker 整合性: 読み取れない、または検証に失敗する
+  `manifest.json` には `corrupt-evidence-store`（blocking error）、
+  write-once manifest のない record ファイルには
+  `unmanifested-evidence-store`（blocking warning）。証明できない
+  marker 配下の record にも個別軸の評価は行う。store が存在しない
+  場合は何も報告しない。repo-wide query のみ。
 - `unresolved-evidence-claim`, `unresolved-evidence-check`,
   `stale-evidence-revision`, `evidence-check-target-mismatch`,
   `evidence-method-mismatch`, `stale-evidence-subject`,

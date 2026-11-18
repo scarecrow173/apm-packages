@@ -37420,7 +37420,7 @@ async function scanRepository(options2) {
     const canonical = expectedTypes.length > 0;
     const docDirName = normalizeDir(import_node_path4.default.posix.dirname(repoPath));
     const indexNamed = isIndexFileName(import_node_path4.default.posix.basename(repoPath));
-    const kind = canonical ? indexNamed ? "index" : "canonical" : migrationDirs.some((dir) => docDirName === dir || isUnderDir2(docDirName, dir)) ? indexNamed ? "index" : "legacy" : "unmanaged";
+    const dirKind = canonical ? indexNamed ? "index" : "canonical" : migrationDirs.some((dir) => docDirName === dir || isUnderDir2(docDirName, dir)) ? indexNamed ? "index" : "legacy" : "unmanaged";
     let content3 = "";
     let readError = null;
     try {
@@ -37433,12 +37433,14 @@ async function scanRepository(options2) {
     const structure = await extractMarkdownStructure(parsed.body, bodyStartLine);
     const data = parsed.data;
     const owners = Array.isArray(data.owners) ? data.owners.filter((owner) => typeof owner === "string" && Boolean(owner.trim())) : [];
+    const declaredType = stringField(data, "type");
+    const kind = dirKind === "canonical" && declaredType !== null && (resolveDocType(declaredType).kind === "ephemeral" || resolveDocType(declaredType).kind === "legacy") ? "legacy" : dirKind;
     files.push({
       path: repoPath,
       absolutePath: absolute,
       kind,
       expectedTypes,
-      type: stringField(data, "type"),
+      type: declaredType,
       id: stringField(data, "id"),
       status: stringField(data, "status"),
       lifecycle: stringField(data, "lifecycle"),
@@ -38974,6 +38976,16 @@ function gitContext(cwd) {
   }
   return { kind: "none" };
 }
+function gitTrackedPaths(cwd, pathspec = ".") {
+  const result = git(["ls-files", "-z", "--", pathspec], cwd);
+  if (result.status !== 0) {
+    throw new StoreError(
+      "boundary-git-unavailable",
+      `git ls-files failed (${result.stderr || `exit ${result.status}`}) \u2014 tracked files cannot be ruled out`
+    );
+  }
+  return new Set(result.stdout.split("\0").filter(Boolean));
+}
 function parseIgnorePattern(raw) {
   let line = raw.replace(/\r$/, "");
   line = line.replace(/(?<!\\) +$/, "");
@@ -39122,18 +39134,12 @@ function requireNoTrackedState(cwd, resolved, context) {
   if (context.kind !== "worktree") return;
   const realRoot = realRootRelative(cwd, resolved);
   const trackedRoot = realRoot.startsWith(".apm/state") ? ".apm/state" : realRoot;
-  const result = git(["ls-files", "-z", "--", `${trackedRoot}`], cwd);
-  if (result.status !== 0) {
-    throw new StoreError(
-      "boundary-git-unavailable",
-      `git ls-files failed (${result.stderr || `exit ${result.status}`}) \u2014 tracked execution state cannot be ruled out`
-    );
-  }
-  if (result.stdout.length > 0) {
-    const tracked = result.stdout.split("\0").filter(Boolean).slice(0, 5);
+  const trackedPaths = gitTrackedPaths(cwd, trackedRoot);
+  if (trackedPaths.size > 0) {
+    const tracked = [...trackedPaths].sort().slice(0, 5);
     throw new StoreError(
       "boundary-tracked",
-      `${resolved.repoRelative} already contains Git-tracked files (${tracked.join(", ")}${result.stdout.split("\0").filter(Boolean).length > 5 ? ", \u2026" : ""}) \u2014 untrack them before writing execution state`,
+      `${resolved.repoRelative} already contains Git-tracked files (${tracked.join(", ")}${trackedPaths.size > 5 ? ", \u2026" : ""}) \u2014 untrack them before writing execution state`,
       { tracked }
     );
   }

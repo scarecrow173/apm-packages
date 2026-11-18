@@ -57,8 +57,13 @@ verdictピル、HEAD bindingバッジ、satisfied / failed / openのcheck件数�
 カバレッジ、評価済みevidence件数、verification文書数。Evidenceとして明示的に
 ラベルされ、不変のEvidence Store recordから導出されることを明記します ——
 Effect Receiptは別の権威であり、verification Evidenceとして表示されることは
-ありません。Evidence Storeが存在しない場合は、カバレッジを捏造せずその旨を
-表示します。Graph topology issueは存在する
+ありません。スナップショットはstore自身のmarker状態を保持するため、パネルが
+storeを捏造することはありません: storeが存在しない場合は `Evidence Store なし`
+と表示し（サマリーが存在する場合も表示され、未初期化store上のrecord 0件から
+導出された旨を注記）、manifestがrecordを証明できないstoreにはblockedの
+`store <state>` バッジとrecordの整合性が検証不能である旨の注記を付けます ——
+別権威の注記は有効なstoreがサマリーを裏付ける場合にのみ表示されます。
+Graph topology issueは存在する
 ときだけsignalsパネルにdanger chipとして表示し、node / edge / gateの検査表は
 キャンバスとパネルが同じ情報を持つため省略します。run別 `<summary>` 行は
 run status pillを持ちます — 1行が1つのExecution Store runで、それぞれが
@@ -130,7 +135,7 @@ mise exec -- node <doc-dashboard-skill-dir>/../doc-driven-dev-graph/scripts/buil
 | `--current <node>` | route previewを有効化。不明nodeは生成前に失敗します。 |
 | `--signal <signal>` | 明示signal。未宣言signalは生成前に失敗します。 |
 | `--run <run-id>` | task graphを投影するExecution Store run。既定はrun集合を推定します。 |
-| `--state-root <path>` | Execution/Evidenceのstate root。既定は `.apm/state/doc-driven-dev`。 |
+| `--state-root <path>` | Execution/Evidenceのstate root。既定は `.apm/state/doc-driven-dev`。1つの選択がすべてのstore読み取りをスコープします —— run view・verification summary・marker状態・repo-level `evidence` gateのfindingはすべて同じrootを読み、既定rootへの暗黙のフォールバックはありません。 |
 | `--allow-external-root` | checkout外の `--state-root` を許可します。指定がなければ外部rootはfail closedします。 |
 | `--out <file.html>` | `--cwd` 相対の保存先。既定は `reports/doc-driven-dev/index.html`。 |
 | `--force` | 明示的に再生成を求めた既存レポートを、先に削除せず置換します。 |

@@ -65,8 +65,13 @@ satisfied/failed/open check counts, claim coverage, assessed evidence
 counts, and the verification-document count. It is labeled as Evidence and
 explicitly derived from the immutable Evidence Store records — Effect
 Receipts are a separate authority and are never shown as verification
-Evidence. When no Evidence Store exists the panel says so instead of
-fabricating coverage. Graph topology issues surface as danger chips inside the
+Evidence. The snapshot carries the store's own marker state, so the panel
+never fabricates a store: an absent store is labeled `Evidence Store
+なし` (a present summary still renders, noted as derived from zero
+records over an uninitialized store), and a store whose manifest cannot
+certify its records carries a blocked `store <state>` badge with a note
+that the records' integrity is unverifiable — the separate-authority note
+only appears when a valid store backs the summary. Graph topology issues surface as danger chips inside the
 signals panel only when present; node/edge/gate inspection tables are omitted
 because the canvas and panels already carry that information. Per-run
 `<summary>` rows carry the run status pill — one Execution Store run per row,
@@ -148,7 +153,7 @@ mise exec -- node <doc-dashboard-skill-dir>/../doc-driven-dev-graph/scripts/buil
 | `--current <node>` | Enables route preview; an unknown node fails before generation. |
 | `--signal <signal>` | Repeatable explicit signal; undeclared signals fail before generation. |
 | `--run <run-id>` | Execution Store run projected for the task graph; default infers the run set. |
-| `--state-root <path>` | Execution/Evidence state root; default `.apm/state/doc-driven-dev`. |
+| `--state-root <path>` | Execution/Evidence state root; default `.apm/state/doc-driven-dev`. One selection scopes every store read — run views, the verification summary, the marker state, and the repo-level `evidence` gate's findings all read the same root, never a silent fallback to the default. |
 | `--allow-external-root` | Authorizes a `--state-root` outside the checkout; without it an external root fails closed. |
 | `--out <file.html>` | Output relative to `--cwd`; default is `reports/doc-driven-dev/index.html`. |
 | `--force` | Replaces an explicitly requested existing report without deleting it first. |

@@ -102,6 +102,34 @@ right retention handling.
   content; `recover` removes them. A record file whose `evidenceId`
   disagrees with its file name is `corrupt-state`.
 
+### Store marker integrity
+
+`manifest.json` is the marker that certifies the directory as a store —
+the write-once declaration of location and retention vocabulary. Because
+queries scan `records/` directly and never consult it, the marker's own
+state is a separate question consumers answer through the shared probe
+(`inspectEvidenceStore`):
+
+- **absent** — nothing under `evidence/` at all. A store that was never
+  initialized is a legitimate state: zero records is honest coverage,
+  not corruption.
+- **unmanifested** — record files exist but `manifest.json` does not.
+  The store's declared boundary is missing, so nothing the records claim
+  is verifiable as store state.
+- **corrupt** — the manifest exists but cannot be read or fails
+  validation. The marker can no longer certify the records under it.
+- **ok** — manifest present and valid.
+
+Degraded markers never silently pass as an empty store: the repo-level
+lint reports them as blocking `corrupt-evidence-store` /
+`unmanifested-evidence-store` findings, the Verification Summary caps
+its verdict at `indeterminate` with the matching `evidence-store-*`
+reason, and the dashboard surfaces the marker state in its verification
+panel. Boundary failures are a different axis and still throw: an
+unauthorized external root, a containment escape, or an unreadable
+records dir is a violation the caller must see, never a store state to
+downgrade.
+
 ## Subject digests and promotion
 
 A **subject digest** names the content a check was measured against. Both

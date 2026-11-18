@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import { collectFindings, summarizeHealth } from "../../../lib/doc_report";
+import { inspectEvidenceStore } from "../../../lib/evidence_store";
 import { buildVerificationSummary } from "../../../lib/verification_assessment";
 import { scanArtifactGraph } from "./artifact_graph";
 import { loadGraphDefinition } from "./graph_definition";
@@ -48,14 +49,23 @@ export async function collectDashboard(options: CollectDashboardOptions): Promis
     stateRoot: options.stateRoot,
     allowExternalRoot: options.allowExternalRoot,
   };
-  const collected = await collectFindings(options.cwd, { type: "all", externalLinks: false });
+  // The findings sweep reads the SAME store the summary and run views do —
+  // a selected `--state-root` scopes the repo-level `evidence` gate, never
+  // silently falls back to the default root (Issue #246).
+  const collected = await collectFindings(options.cwd, {
+    type: "all",
+    externalLinks: false,
+    ...storeOptions,
+  });
   const artifacts = scanArtifactGraph({ cwd: options.cwd });
   // The preview must show the same verification authority routing sees
   // (Issues #243/#246): derive the HEAD-bound Verification Summary exactly
   // like route_graph's auto-compute — an empty Evidence Store is still a
   // legitimate input (its checks report undetermined), while a missing
   // summary would leave the phantom `verification-summary` blocker that
-  // #243 fixed. A corrupt store fails closed here, matching the router.
+  // #243 fixed. The store's own marker state rides alongside so the
+  // panel can tell an absent store from an initialized empty one.
+  const evidenceStore = inspectEvidenceStore(options.cwd, storeOptions);
   const verificationSummary = await buildVerificationSummary(options.cwd, {
     subject: { kind: "commit", commit: "HEAD" },
   }, storeOptions);
@@ -137,6 +147,7 @@ export async function collectDashboard(options: CollectDashboardOptions): Promis
     definition: inspectGraphDefinition(definition),
     state,
     decision,
+    evidenceStore,
     inventory,
     runs,
     findings: collected.findings,

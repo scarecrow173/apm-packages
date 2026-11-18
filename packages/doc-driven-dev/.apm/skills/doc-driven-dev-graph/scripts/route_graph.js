@@ -36826,7 +36826,7 @@ async function scanRepository(options2) {
     const canonical = expectedTypes.length > 0;
     const docDirName = normalizeDir(import_node_path3.default.posix.dirname(repoPath));
     const indexNamed = isIndexFileName(import_node_path3.default.posix.basename(repoPath));
-    const kind = canonical ? indexNamed ? "index" : "canonical" : migrationDirs.some((dir) => docDirName === dir || isUnderDir(docDirName, dir)) ? indexNamed ? "index" : "legacy" : "unmanaged";
+    const dirKind = canonical ? indexNamed ? "index" : "canonical" : migrationDirs.some((dir) => docDirName === dir || isUnderDir(docDirName, dir)) ? indexNamed ? "index" : "legacy" : "unmanaged";
     let content3 = "";
     let readError = null;
     try {
@@ -36839,12 +36839,14 @@ async function scanRepository(options2) {
     const structure = await extractMarkdownStructure(parsed.body, bodyStartLine);
     const data = parsed.data;
     const owners = Array.isArray(data.owners) ? data.owners.filter((owner) => typeof owner === "string" && Boolean(owner.trim())) : [];
+    const declaredType = stringField(data, "type");
+    const kind = dirKind === "canonical" && declaredType !== null && (resolveDocType(declaredType).kind === "ephemeral" || resolveDocType(declaredType).kind === "legacy") ? "legacy" : dirKind;
     files.push({
       path: repoPath,
       absolutePath: absolute,
       kind,
       expectedTypes,
-      type: stringField(data, "type"),
+      type: declaredType,
       id: stringField(data, "id"),
       status: stringField(data, "status"),
       lifecycle: stringField(data, "lifecycle"),
@@ -39014,6 +39016,7 @@ var import_node_path7 = __toESM(require("node:path"));
 
 // src/skills/lib/evidence_store/types.ts
 var EVIDENCE_RECORD_SCHEMA_VERSION = 1;
+var EVIDENCE_MANIFEST_SCHEMA_VERSION = 1;
 var EVIDENCE_RETENTIONS = /* @__PURE__ */ new Set([
   "transient",
   "release",
@@ -39125,10 +39128,15 @@ function validateEvidenceRecord(value) {
     return parsed !== null && /^CHK-\d+$/.test(parsed.key);
   })() && isRevisionDigest(check2.designRevision) && validateSubject(value.subject) && VERIFICATION_METHODS.includes(value.method) && validateProvider(value.provider) && (value.runId === null || isValidId(value.runId)) && EVIDENCE_OUTCOMES.has(value.outcome) && EVIDENCE_RETENTIONS.has(value.retention) && Array.isArray(value.artifacts) && value.artifacts.every(validateArtifact) && (value.derivedFrom === null || isValidId(value.derivedFrom)) && isIsoTimestamp2(value.createdAt);
 }
+function validateManifest2(value) {
+  if (!isPlainObject6(value)) return false;
+  return value.schemaVersion === EVIDENCE_MANIFEST_SCHEMA_VERSION && value.kind === "evidence-store" && typeof value.location === "string" && value.location.length > 0 && value.recordsDir === "records" && Array.isArray(value.retentionClasses) && value.retentionClasses.every((item) => EVIDENCE_RETENTIONS.has(item)) && isIsoTimestamp2(value.createdAt);
+}
 
 // src/skills/lib/evidence_store/store.ts
 var EVIDENCE_DIR = "evidence";
 var RECORDS_DIR = "records";
+var MANIFEST_FILE = "manifest.json";
 function sha2562(content3) {
   return import_node_crypto3.default.createHash("sha256").update(content3, "utf8").digest("hex");
 }
@@ -39216,6 +39224,27 @@ function containedDir(resolved, dir, label) {
   }
   return dir;
 }
+function requireManifestLocation(manifest, resolved, file2) {
+  const expected = resolved.repoRelative ?? resolved.root;
+  if (manifest.location !== expected) {
+    throw new StoreError(
+      "corrupt-state",
+      `evidence manifest at ${file2} declares location ${JSON.stringify(manifest.location)}, expected ${JSON.stringify(expected)} \u2014 a manifest only ever describes its own resolved root`,
+      { path: file2, declared: manifest.location, expected }
+    );
+  }
+}
+function loadManifest(cwd, options2 = {}) {
+  const resolved = resolveStateRoot(cwd, options2);
+  const file2 = import_node_path7.default.join(evidenceRootFor(resolved), MANIFEST_FILE);
+  if (!import_node_fs6.default.existsSync(file2)) return null;
+  const parsed = readJsonFile(file2);
+  if (!validateManifest2(parsed)) {
+    throw new StoreError("corrupt-state", `evidence manifest at ${file2} failed validation`, { path: file2 });
+  }
+  requireManifestLocation(parsed, resolved, file2);
+  return parsed;
+}
 function listRecordFiles2(recordsDir) {
   if (!import_node_fs6.default.existsSync(recordsDir)) return [];
   return import_node_fs6.default.readdirSync(recordsDir, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith(".json")).map((entry) => import_node_path7.default.join(recordsDir, entry.name)).sort();
@@ -39256,6 +39285,28 @@ function query(cwd, filter = {}, options2 = {}) {
     if (filter.runId !== void 0 && record2.runId !== filter.runId) return false;
     return true;
   }).sort((a, b) => a.createdAt === b.createdAt ? a.evidenceId.localeCompare(b.evidenceId) : a.createdAt.localeCompare(b.createdAt));
+}
+function inspectEvidenceStore(cwd, options2 = {}) {
+  const resolved = resolveStateRoot(cwd, options2);
+  const evidenceRoot = evidenceRootFor(resolved);
+  const manifestFile = import_node_path7.default.join(evidenceRoot, MANIFEST_FILE);
+  if (!import_node_fs6.default.existsSync(manifestFile)) {
+    const recordsDir = containedDir(resolved, recordsDirFor(resolved), "records dir");
+    const count = listRecordFiles2(recordsDir).length;
+    return count === 0 ? { integrity: "absent", detail: null } : {
+      integrity: "unmanifested",
+      detail: `${count} record file(s) exist under ${recordsDir} with no ${MANIFEST_FILE} \u2014 the store's declared boundary is missing`
+    };
+  }
+  try {
+    loadManifest(cwd, options2);
+  } catch (error62) {
+    if (error62 instanceof StoreError && (error62.code === "corrupt-state" || error62.code === "state-unreadable")) {
+      return { integrity: "corrupt", detail: error62.message };
+    }
+    throw error62;
+  }
+  return { integrity: "ok", detail: null };
 }
 
 // src/skills/lib/evidence_store/resolve.ts
@@ -40008,9 +40059,10 @@ function normalizeTarget(cwd, input2) {
 async function buildVerificationSummary(cwd, input2, options2 = {}) {
   const root = import_node_path8.default.resolve(cwd);
   const graph = await scanKnowledgeGraph({ cwd: root });
+  const storeQueried = input2.records === void 0;
   const records = input2.records ?? query(root, { runId: input2.runId }, options2);
   const target = normalizeTarget(root, input2);
-  return buildVerificationSummaryIn(graph, { ...input2, subject: target.subject, records, subjectDigest: target.subjectDigest }, {
+  const summary = buildVerificationSummaryIn(graph, { ...input2, subject: target.subject, records, subjectDigest: target.subjectDigest }, {
     readDocument: (docPath) => {
       try {
         return import_node_fs7.default.readFileSync(import_node_path8.default.join(root, docPath), "utf8");
@@ -40020,6 +40072,14 @@ async function buildVerificationSummary(cwd, input2, options2 = {}) {
     },
     resolveSubjectDigest: (subject) => recordSubjectDigest(root, subject)
   });
+  if (storeQueried) {
+    const store = inspectEvidenceStore(root, options2);
+    if (store.integrity === "corrupt" || store.integrity === "unmanifested") {
+      if (summary.verdict === "verified") summary.verdict = "indeterminate";
+      summary.reasons = [.../* @__PURE__ */ new Set([...summary.reasons, `evidence-store-${store.integrity}`])].sort();
+    }
+  }
+  return summary;
 }
 
 // src/skills/lib/markdown_sections.ts

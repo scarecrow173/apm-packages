@@ -28,12 +28,13 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { resolveCommitSubject, loadManifest, query } from "./evidence_store";
+import { inspectEvidenceStore, resolveCommitSubject, query } from "./evidence_store";
 import type { StoreRootOptions } from "./execution_store";
+import { gitContext, gitTrackedPaths } from "./execution_store/boundary";
 import type { EvidenceRecordV1 } from "./evidence_store";
-import { finding } from "./doc_repository";
+import { finding, migrationOwnedDirs } from "./doc_repository";
 import type { DocumentRepository, Finding } from "./doc_repository";
-import { ephemeralConfigs, executionTypes } from "./doc_types";
+import { ephemeralConfigs, executionTypes, resolveDocType } from "./doc_types";
 import { normalizeDir } from "./document_utils";
 import { projectKnowledgeGraph } from "./knowledge_graph";
 import type { KnowledgeGraph } from "./knowledge_graph";
@@ -64,26 +65,52 @@ function isUnderDir(child: string, parent: string): boolean {
 
 const MIGRATE_HINT = "run doc_maintenance.js migrate plan --json";
 
-// The repo model already classifies every non-index Markdown file under a
-// migration-owned dir as `legacy` — typed or not, front matter or not.
-// Emit one marker per document so a migration sweep can count and locate
-// the leftovers it still owns.
+// The model's `legacy` classification is the corpus boundary — non-index
+// Markdown under a migration-owned dir, plus any file whose declared
+// `type:` has no durable home wherever it sits (Issue #246). Whether Git
+// tracks it is a separate question only the work tree can answer:
+// `git ls-files` is the authority, so untracked leftovers and gitignored
+// files report as corpus the migration sweep still owns, never as
+// tracked state. Where no usable work tree exists, tracking cannot be
+// verified at all — the same corpus marker reports that honestly rather
+// than guessing either way. A `.git` marker git cannot read still fails
+// closed inside `gitContext`, matching the state-root boundary probes.
+const MIGRATION_DIRS = migrationOwnedDirs();
+
 function lintTrackedExecutionDocs(model: DocumentRepository): Finding[] {
+  const context = gitContext(model.root);
+  const tracked = context.kind === "worktree" ? gitTrackedPaths(model.root) : null;
   const findings: Finding[] = [];
   for (const document of model.legacyDocuments) {
     const dir = normalizeDir(path.posix.dirname(document.path));
-    const executionBound = EXECUTION_DIRS.some((root) => isUnderDir(dir, root));
+    // The corpus family is type-aware first: an execution-bound spelling
+    // (plan/task) is execution corpus wherever it lands, a legacy
+    // spelling (test-spec/impl/exp) is legacy corpus — a durable dir
+    // cannot re-brand either. Untyped or durable-typed leftovers keep
+    // the directory's answer.
+    const declared = document.type === null ? null : resolveDocType(document.type).kind;
+    const executionBound = declared === "ephemeral"
+      || (declared !== "legacy" && EXECUTION_DIRS.some((root) => isUnderDir(dir, root)));
+    const inMigrationDir = MIGRATION_DIRS.some((root) => isUnderDir(dir, root));
+    const placement = inMigrationDir ? "under a migration-owned directory" : "inside a durable directory";
     const typeName = document.type ?? "untyped";
+    const isTracked = tracked !== null && tracked.has(document.path);
     findings.push(finding({
-      ruleId: executionBound ? "tracked-execution-doc" : "tracked-legacy-doc",
+      ruleId: isTracked
+        ? (executionBound ? "tracked-execution-doc" : "tracked-legacy-doc")
+        : "legacy-corpus-doc",
       category: "migration",
       severity: "warning",
       blocking: true,
       path: document.path,
       artifactId: document.id,
-      message: executionBound
-        ? `Git-tracked ${typeName} document has no durable Git form under Document Registry 3 — plan/task state lives in the Execution Store; ${MIGRATE_HINT} to inventory the migration`
-        : `Git-tracked ${typeName} document is a legacy format under Document Registry 3 — migration tooling owns its interpretation; ${MIGRATE_HINT} to plan the migration`,
+      message: isTracked
+        ? (executionBound
+          ? `Git-tracked ${typeName} document has no durable Git form under Document Registry 3 — plan/task state lives in the Execution Store; ${MIGRATE_HINT} to inventory the migration`
+          : `Git-tracked ${typeName} document is a legacy format under Document Registry 3 — migration tooling owns its interpretation; ${MIGRATE_HINT} to plan the migration`)
+        : (tracked === null
+          ? `${typeName} document sits ${placement} where Git tracking cannot be verified (no usable work tree) — corpus the migration sweep still owns; ${MIGRATE_HINT} to plan the migration`
+          : `untracked ${typeName} document sits ${placement} — corpus the migration sweep still owns, never durable Git state; ${MIGRATE_HINT} to plan the migration`),
       target: document.type,
       repair: "migration",
     }));
@@ -127,7 +154,19 @@ const EVIDENCE_RULE_IDS: ReadonlySet<string> = new Set(
   Object.values(EVIDENCE_REASON_RULES).map((rule) => rule.ruleId),
 );
 
-const TRACKED_DOC_RULE_IDS: ReadonlySet<string> = new Set([
+// Store-level markers — not per-record axes, but the state of the store
+// surface itself (`inspectEvidenceStore`). A torn or missing manifest can
+// never certify the records under it, so the marker is blocking.
+const EVIDENCE_STORE_RULE_IDS: ReadonlySet<string> = new Set([
+  "corrupt-evidence-store",
+  "unmanifested-evidence-store",
+]);
+
+// Migration-corpus markers — tracked leftovers name their committed
+// state, untracked/unverifiable corpus names only that the sweep still
+// owns it.
+const CORPUS_DOC_RULE_IDS: ReadonlySet<string> = new Set([
+  "legacy-corpus-doc",
   "tracked-execution-doc",
   "tracked-legacy-doc",
 ]);
@@ -136,20 +175,23 @@ const TRACKED_DOC_RULE_IDS: ReadonlySet<string> = new Set([
 // doc_maintenance reads these off the collected findings as skipped
 // (never repairable by the safe whitelist).
 const REPO_LEVEL_RULE_IDS: ReadonlySet<string> = new Set([
-  ...TRACKED_DOC_RULE_IDS,
+  ...CORPUS_DOC_RULE_IDS,
   ...EVIDENCE_RULE_IDS,
+  ...EVIDENCE_STORE_RULE_IDS,
 ]);
 
 // Re-assess one record against the live graph and the checkout's HEAD
 // subject — the same axes the Verification Summary consumes, reported as
 // per-reason findings so a lint run names exactly which axis failed.
+// `head` is the caller's single HEAD resolution — re-resolving per record
+// would pay a git probe for every row (Issue #246).
 function evidenceFindings(
   graph: KnowledgeGraph,
   record: EvidenceRecordV1,
   cwd: string,
   now: string,
+  head: { commitOid: string; subjectDigest: string } | null,
 ): Finding[] {
-  const head = resolveCommitSubject(cwd, "HEAD");
   const assessment = assessEvidenceIn(graph, record, {
     subject: { kind: "commit", commit: "HEAD" },
     subjectDigest: head === null ? null : head.subjectDigest,
@@ -185,10 +227,12 @@ function evidenceFindings(
   return findings;
 }
 
-// No manifest → the Evidence Store was never initialized here: there is
-// nothing to audit (absent coverage is the Verification Summary's
-// judgment, not a per-record lint finding). A corrupt manifest fails
-// closed exactly like the store's other readers.
+// The store's own marker surface is audited once per run, before any
+// record body is read (`inspectEvidenceStore`): a manifest that cannot
+// certify its records is a blocking `evidence` finding, never a silent
+// skip and never a thrown error that aborts the whole lint. An absent
+// store is legitimate — there is nothing to audit and absent coverage is
+// the Verification Summary's judgment, not a per-record lint finding.
 async function lintEvidenceStore(
   cwd: string,
   model: DocumentRepository,
@@ -197,23 +241,42 @@ async function lintEvidenceStore(
   // `now` is the assessment instant (a timestamp string), not the store's
   // write clock — strip it so store reads see only the selector options.
   const { now: optionNow, ...storeOptions } = options;
-  if (loadManifest(cwd, storeOptions) === null) return [];
+  const store = inspectEvidenceStore(cwd, storeOptions);
+  const findings: Finding[] = [];
+  if (store.integrity === "corrupt" || store.integrity === "unmanifested") {
+    findings.push(finding({
+      ruleId: store.integrity === "corrupt" ? "corrupt-evidence-store" : "unmanifested-evidence-store",
+      category: "evidence",
+      severity: store.integrity === "corrupt" ? "error" : "warning",
+      blocking: true,
+      path: null,
+      message: store.integrity === "corrupt"
+        ? `Evidence Store manifest cannot certify the store — record integrity is unverifiable: ${store.detail}`
+        : `Evidence records exist without the store's manifest marker — record integrity is unverifiable: ${store.detail}`,
+      repair: "manual",
+    }));
+  }
+  if (store.integrity === "absent") return findings;
   const records = query(cwd, {}, storeOptions);
-  if (records.length === 0) return [];
+  if (records.length === 0) return findings;
   const graph = projectKnowledgeGraph(model);
   const root = path.resolve(cwd);
+  // HEAD resolves once per lint run — the target subject is identical for
+  // every record, so a per-record git probe only paid for redundancy.
+  const head = resolveCommitSubject(root, "HEAD");
   const now = optionNow ?? new Date().toISOString();
-  const findings: Finding[] = [];
   for (const record of records) {
-    findings.push(...evidenceFindings(graph, record, root, now));
+    findings.push(...evidenceFindings(graph, record, root, now, head));
   }
   return findings;
 }
 
 export {
+  CORPUS_DOC_RULE_IDS,
   EVIDENCE_RULE_IDS,
+  EVIDENCE_STORE_RULE_IDS,
   lintEvidenceStore,
   lintTrackedExecutionDocs,
+  MIGRATE_HINT,
   REPO_LEVEL_RULE_IDS,
-  TRACKED_DOC_RULE_IDS,
 };

@@ -51,10 +51,14 @@ Never auto-repaired (semantic inference is refused):
 Findings outside the whitelist are reported as skipped with a `manual` or
 `migration` reason so the caller can route them to a human or to migration.
 The repo-level `doc-status` findings — `tracked-execution-doc`,
-`tracked-legacy-doc`, and every Evidence Store axis — are skip-only by
-contract: tracked plan/task and legacy Markdown is migration inventory the
+`tracked-legacy-doc`, `legacy-corpus-doc`, every Evidence Store axis, and
+the `*-evidence-store` marker findings — are skip-only by contract:
+tracked plan/task and legacy Markdown is migration inventory the
 `migrate` flow owns, and Evidence records are immutable — this skill never
-repairs, rewrites, or copies them into durable Markdown.
+repairs, rewrites, or copies them into durable Markdown. The scope-level
+`legacy-doc-in-durable-dir` marker is the same class: a legacy or
+execution-bound typed file sitting in a durable directory is migration
+corpus only the `migrate` flow resolves.
 
 ## Commands
 

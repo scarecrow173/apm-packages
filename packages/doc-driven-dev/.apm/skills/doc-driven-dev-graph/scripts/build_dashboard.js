@@ -4292,7 +4292,7 @@ var require_parse2 = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs16 = require("fs");
+    var fs17 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify = require_stringify2();
@@ -4376,7 +4376,7 @@ var require_gray_matter = __commonJS({
       return stringify(file2, data, options2);
     };
     matter4.read = function(filepath, options2) {
-      const str2 = fs16.readFileSync(filepath, "utf8");
+      const str2 = fs17.readFileSync(filepath, "utf8");
       const file2 = matter4(str2, options2);
       file2.path = filepath;
       return file2;
@@ -13586,20 +13586,20 @@ var init_unist_util_visit = __esm({
 
 // src/skills/doc-driven-dev-graph/scripts/lib/dashboard_cli.ts
 var import_node_crypto4 = require("node:crypto");
-var import_node_fs15 = __toESM(require("node:fs"));
+var import_node_fs16 = __toESM(require("node:fs"));
 var import_node_path16 = __toESM(require("node:path"));
 
 // src/skills/doc-driven-dev-graph/scripts/lib/dashboard_collect.ts
 var import_node_path14 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_evidence_lint.ts
-var import_node_fs7 = __toESM(require("node:fs"));
+var import_node_fs8 = __toESM(require("node:fs"));
 var import_node_path8 = __toESM(require("node:path"));
 
 // src/skills/lib/evidence_store/store.ts
-var import_node_child_process = require("node:child_process");
+var import_node_child_process2 = require("node:child_process");
 var import_node_crypto2 = __toESM(require("node:crypto"));
-var import_node_fs4 = __toESM(require("node:fs"));
+var import_node_fs5 = __toESM(require("node:fs"));
 var import_node_path4 = __toESM(require("node:path"));
 
 // src/skills/lib/artifact_id.ts
@@ -13652,6 +13652,8 @@ function readLockRecord(lockFile) {
 }
 
 // src/skills/lib/execution_store/boundary.ts
+var import_node_child_process = require("node:child_process");
+var import_node_fs4 = __toESM(require("node:fs"));
 var import_node_path3 = __toESM(require("node:path"));
 
 // src/skills/lib/document_utils.ts
@@ -17381,6 +17383,37 @@ function resolveStateRoot(cwd, options2 = {}) {
   }
   return { root, external: true, repoRelative: null };
 }
+function git(args, cwd) {
+  const result = (0, import_node_child_process.spawnSync)("git", args, { cwd, encoding: "utf8" });
+  return {
+    status: result.status,
+    stdout: result.stdout ?? "",
+    stderr: (result.stderr ?? "").trim()
+  };
+}
+function gitContext(cwd) {
+  const probe = git(["rev-parse", "--is-inside-work-tree"], cwd);
+  if (probe.status === 0 && probe.stdout.trim() === "true") {
+    return { kind: "worktree" };
+  }
+  if (import_node_fs4.default.existsSync(import_node_path3.default.join(cwd, ".git"))) {
+    throw new StoreError(
+      "boundary-git-unavailable",
+      `.git exists at ${cwd} but \`git rev-parse\` failed (${probe.stderr || `exit ${probe.status}`}) \u2014 execution-state coverage cannot be verified`
+    );
+  }
+  return { kind: "none" };
+}
+function gitTrackedPaths(cwd, pathspec = ".") {
+  const result = git(["ls-files", "-z", "--", pathspec], cwd);
+  if (result.status !== 0) {
+    throw new StoreError(
+      "boundary-git-unavailable",
+      `git ls-files failed (${result.stderr || `exit ${result.status}`}) \u2014 tracked files cannot be ruled out`
+    );
+  }
+  return new Set(result.stdout.split("\0").filter(Boolean));
+}
 function runDirFor(resolved, runId) {
   if (!isValidId(runId)) {
     throw new StoreError(
@@ -17796,8 +17829,8 @@ var SUBJECT_DIGEST_NAMESPACE = "doc-driven-dev:subject-tree:v1";
 function subjectTreeDigest(treeOid) {
   return `sha256:${sha256(`${SUBJECT_DIGEST_NAMESPACE}:${treeOid.toLowerCase()}`)}`;
 }
-function git(args, cwd) {
-  const result = (0, import_node_child_process.spawnSync)("git", args, { cwd, encoding: "utf8" });
+function git2(args, cwd) {
+  const result = (0, import_node_child_process2.spawnSync)("git", args, { cwd, encoding: "utf8" });
   return {
     status: result.status,
     stdout: result.stdout ?? "",
@@ -17806,7 +17839,7 @@ function git(args, cwd) {
   };
 }
 function requireCommitTreeOid(cwd, commit) {
-  const asCommit = git(["rev-parse", "--verify", "--quiet", `${commit}^{commit}`], cwd);
+  const asCommit = git2(["rev-parse", "--verify", "--quiet", `${commit}^{commit}`], cwd);
   if (asCommit.error !== void 0) {
     throw new StoreError(
       "boundary-git-unavailable",
@@ -17821,7 +17854,7 @@ function requireCommitTreeOid(cwd, commit) {
       { commit }
     );
   }
-  const asTree = git(["rev-parse", "--verify", "--quiet", `${commitOid}^{tree}`], cwd);
+  const asTree = git2(["rev-parse", "--verify", "--quiet", `${commitOid}^{tree}`], cwd);
   const treeOid = asTree.stdout.trim();
   if (asTree.error !== void 0 || asTree.status !== 0 || !/^[0-9a-f]{40,64}$/i.test(treeOid)) {
     throw new StoreError(
@@ -17847,8 +17880,8 @@ function insideResolvedRoot(resolved, candidate) {
   let real;
   let realRoot;
   try {
-    real = import_node_fs4.default.realpathSync(candidate);
-    realRoot = import_node_fs4.default.realpathSync(resolved.root);
+    real = import_node_fs5.default.realpathSync(candidate);
+    realRoot = import_node_fs5.default.realpathSync(resolved.root);
   } catch {
     return false;
   }
@@ -17863,8 +17896,8 @@ function recordsDirFor(resolved) {
   return import_node_path4.default.join(evidenceRootFor(resolved), RECORDS_DIR);
 }
 function containedDir(resolved, dir, label) {
-  if (import_node_fs4.default.existsSync(dir)) {
-    if (!import_node_fs4.default.statSync(dir).isDirectory()) {
+  if (import_node_fs5.default.existsSync(dir)) {
+    if (!import_node_fs5.default.statSync(dir).isDirectory()) {
       throw new StoreError("corrupt-state", `${dir} is not a directory`);
     }
     if (!insideResolvedRoot(resolved, dir)) {
@@ -17886,7 +17919,7 @@ function requireManifestLocation(manifest, resolved, file2) {
 function loadManifest(cwd, options2 = {}) {
   const resolved = resolveStateRoot(cwd, options2);
   const file2 = import_node_path4.default.join(evidenceRootFor(resolved), MANIFEST_FILE);
-  if (!import_node_fs4.default.existsSync(file2)) return null;
+  if (!import_node_fs5.default.existsSync(file2)) return null;
   const parsed = readJsonFile(file2);
   if (!validateManifest2(parsed)) {
     throw new StoreError("corrupt-state", `evidence manifest at ${file2} failed validation`, { path: file2 });
@@ -17895,8 +17928,8 @@ function loadManifest(cwd, options2 = {}) {
   return parsed;
 }
 function listRecordFiles(recordsDir) {
-  if (!import_node_fs4.default.existsSync(recordsDir)) return [];
-  return import_node_fs4.default.readdirSync(recordsDir, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith(".json")).map((entry) => import_node_path4.default.join(recordsDir, entry.name)).sort();
+  if (!import_node_fs5.default.existsSync(recordsDir)) return [];
+  return import_node_fs5.default.readdirSync(recordsDir, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith(".json")).map((entry) => import_node_path4.default.join(recordsDir, entry.name)).sort();
 }
 function readRecordFile(file2) {
   const parsed = readJsonFile(file2);
@@ -17935,9 +17968,31 @@ function query(cwd, filter = {}, options2 = {}) {
     return true;
   }).sort((a, b) => a.createdAt === b.createdAt ? a.evidenceId.localeCompare(b.evidenceId) : a.createdAt.localeCompare(b.createdAt));
 }
+function inspectEvidenceStore(cwd, options2 = {}) {
+  const resolved = resolveStateRoot(cwd, options2);
+  const evidenceRoot = evidenceRootFor(resolved);
+  const manifestFile = import_node_path4.default.join(evidenceRoot, MANIFEST_FILE);
+  if (!import_node_fs5.default.existsSync(manifestFile)) {
+    const recordsDir = containedDir(resolved, recordsDirFor(resolved), "records dir");
+    const count = listRecordFiles(recordsDir).length;
+    return count === 0 ? { integrity: "absent", detail: null } : {
+      integrity: "unmanifested",
+      detail: `${count} record file(s) exist under ${recordsDir} with no ${MANIFEST_FILE} \u2014 the store's declared boundary is missing`
+    };
+  }
+  try {
+    loadManifest(cwd, options2);
+  } catch (error62) {
+    if (error62 instanceof StoreError && (error62.code === "corrupt-state" || error62.code === "state-unreadable")) {
+      return { integrity: "corrupt", detail: error62.message };
+    }
+    throw error62;
+  }
+  return { integrity: "ok", detail: null };
+}
 
 // src/skills/lib/doc_repository.ts
-var import_node_fs5 = __toESM(require("node:fs"));
+var import_node_fs6 = __toESM(require("node:fs"));
 var import_node_path6 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_suite_utils.ts
@@ -37910,10 +37965,14 @@ function parseDoc(content3) {
   }
 }
 function isForeignDocType(typeValue, expected, relativeDir) {
-  if (typeof typeValue !== "string" || typeValue === expected) return false;
-  if (!docTypes.includes(typeValue)) return false;
+  if (typeof typeValue !== "string") return false;
+  const actual = resolveDocType(typeValue);
+  const resident = resolveDocType(expected);
+  if (resident.entry !== null && resident.entry === actual.entry) return false;
+  if (actual.kind === "legacy" || actual.kind === "ephemeral") return true;
+  if (actual.kind !== "durable") return false;
   const normalized = normalizeDir(relativeDir);
-  return configFor(typeValue).dirs.map((dir) => normalizeDir(dir)).includes(normalized);
+  return actual.entry.dirs.map((dir) => normalizeDir(dir)).includes(normalized);
 }
 
 // src/skills/lib/doc_repository.ts
@@ -38113,10 +38172,10 @@ function isExternalReference(value) {
   return EXTERNAL_REFERENCE.test(trimmed);
 }
 function walkMarkdownFiles(root) {
-  if (!import_node_fs5.default.existsSync(root) || !import_node_fs5.default.statSync(root).isDirectory()) return [];
+  if (!import_node_fs6.default.existsSync(root) || !import_node_fs6.default.statSync(root).isDirectory()) return [];
   const files = [];
   const visitDir = (dir) => {
-    const entries = import_node_fs5.default.readdirSync(dir, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name));
+    const entries = import_node_fs6.default.readdirSync(dir, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name));
     for (const entry of entries) {
       const full = import_node_path6.default.join(dir, entry.name);
       if (entry.isDirectory()) {
@@ -38211,9 +38270,9 @@ function localeSiblingsFor(repoPath, siblingsByDir) {
 }
 function defaultScanRoots(cwd) {
   const roots = /* @__PURE__ */ new Set();
-  if (import_node_fs5.default.existsSync(import_node_path6.default.join(cwd, "docs"))) roots.add("docs");
+  if (import_node_fs6.default.existsSync(import_node_path6.default.join(cwd, "docs"))) roots.add("docs");
   for (const dir of managedDocDirs()) {
-    if (import_node_fs5.default.existsSync(import_node_path6.default.join(cwd, dir))) roots.add(dir);
+    if (import_node_fs6.default.existsSync(import_node_path6.default.join(cwd, dir))) roots.add(dir);
   }
   return [...roots].sort(compareStrings);
 }
@@ -38230,7 +38289,7 @@ async function scanRepository(options2) {
     for (const file2 of walkMarkdownFiles(import_node_path6.default.join(cwd, root))) absoluteFiles.add(file2);
   }
   if (options2.includeTopLevelMarkdown !== false) {
-    for (const entry of import_node_fs5.default.readdirSync(cwd, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name))) {
+    for (const entry of import_node_fs6.default.readdirSync(cwd, { withFileTypes: true }).sort((a, b) => compareStrings(a.name, b.name))) {
       if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
         absoluteFiles.add(import_node_path6.default.join(cwd, entry.name));
       }
@@ -38252,11 +38311,11 @@ async function scanRepository(options2) {
     const canonical = expectedTypes.length > 0;
     const docDirName = normalizeDir(import_node_path6.default.posix.dirname(repoPath));
     const indexNamed = isIndexFileName(import_node_path6.default.posix.basename(repoPath));
-    const kind = canonical ? indexNamed ? "index" : "canonical" : migrationDirs.some((dir) => docDirName === dir || isUnderDir2(docDirName, dir)) ? indexNamed ? "index" : "legacy" : "unmanaged";
+    const dirKind = canonical ? indexNamed ? "index" : "canonical" : migrationDirs.some((dir) => docDirName === dir || isUnderDir2(docDirName, dir)) ? indexNamed ? "index" : "legacy" : "unmanaged";
     let content3 = "";
     let readError = null;
     try {
-      content3 = import_node_fs5.default.readFileSync(absolute, "utf8");
+      content3 = import_node_fs6.default.readFileSync(absolute, "utf8");
     } catch (error62) {
       readError = error62 instanceof Error ? error62.message : String(error62);
     }
@@ -38265,12 +38324,14 @@ async function scanRepository(options2) {
     const structure = await extractMarkdownStructure(parsed.body, bodyStartLine);
     const data = parsed.data;
     const owners = Array.isArray(data.owners) ? data.owners.filter((owner) => typeof owner === "string" && Boolean(owner.trim())) : [];
+    const declaredType = stringField(data, "type");
+    const kind = dirKind === "canonical" && declaredType !== null && (resolveDocType(declaredType).kind === "ephemeral" || resolveDocType(declaredType).kind === "legacy") ? "legacy" : dirKind;
     files.push({
       path: repoPath,
       absolutePath: absolute,
       kind,
       expectedTypes,
-      type: stringField(data, "type"),
+      type: declaredType,
       id: stringField(data, "id"),
       status: stringField(data, "status"),
       lifecycle: stringField(data, "lifecycle"),
@@ -38300,7 +38361,7 @@ async function scanRepository(options2) {
   }
   const insideRoot = (absolute) => isInside(cwd, absolute);
   const fileExistsInsideRoot = (absolute) => {
-    return isInsideCheckout(cwd, absolute) && import_node_fs5.default.existsSync(absolute) && import_node_fs5.default.statSync(absolute).isFile();
+    return isInsideCheckout(cwd, absolute) && import_node_fs6.default.existsSync(absolute) && import_node_fs6.default.statSync(absolute).isFile();
   };
   const splitTarget = (raw) => {
     const trimmed = raw.trim();
@@ -39444,7 +39505,7 @@ function recordSubjectDigest(cwd, subject) {
 }
 
 // src/skills/lib/verification_assessment/summary.ts
-var import_node_fs6 = __toESM(require("node:fs"));
+var import_node_fs7 = __toESM(require("node:fs"));
 var import_node_path7 = __toESM(require("node:path"));
 
 // src/skills/lib/verification_assessment/waivers.ts
@@ -39856,18 +39917,27 @@ function normalizeTarget(cwd, input2) {
 async function buildVerificationSummary(cwd, input2, options2 = {}) {
   const root = import_node_path7.default.resolve(cwd);
   const graph = await scanKnowledgeGraph({ cwd: root });
+  const storeQueried = input2.records === void 0;
   const records = input2.records ?? query(root, { runId: input2.runId }, options2);
   const target = normalizeTarget(root, input2);
-  return buildVerificationSummaryIn(graph, { ...input2, subject: target.subject, records, subjectDigest: target.subjectDigest }, {
+  const summary = buildVerificationSummaryIn(graph, { ...input2, subject: target.subject, records, subjectDigest: target.subjectDigest }, {
     readDocument: (docPath) => {
       try {
-        return import_node_fs6.default.readFileSync(import_node_path7.default.join(root, docPath), "utf8");
+        return import_node_fs7.default.readFileSync(import_node_path7.default.join(root, docPath), "utf8");
       } catch {
         return null;
       }
     },
     resolveSubjectDigest: (subject) => recordSubjectDigest(root, subject)
   });
+  if (storeQueried) {
+    const store = inspectEvidenceStore(root, options2);
+    if (store.integrity === "corrupt" || store.integrity === "unmanifested") {
+      if (summary.verdict === "verified") summary.verdict = "indeterminate";
+      summary.reasons = [.../* @__PURE__ */ new Set([...summary.reasons, `evidence-store-${store.integrity}`])].sort();
+    }
+  }
+  return summary;
 }
 
 // src/skills/lib/doc_evidence_lint.ts
@@ -39885,20 +39955,27 @@ function isUnderDir3(child, parent) {
   return c === p || c.startsWith(`${p}/`);
 }
 var MIGRATE_HINT = "run doc_maintenance.js migrate plan --json";
+var MIGRATION_DIRS = migrationOwnedDirs();
 function lintTrackedExecutionDocs(model) {
+  const context = gitContext(model.root);
+  const tracked = context.kind === "worktree" ? gitTrackedPaths(model.root) : null;
   const findings = [];
   for (const document3 of model.legacyDocuments) {
     const dir = normalizeDir(import_node_path8.default.posix.dirname(document3.path));
-    const executionBound = EXECUTION_DIRS.some((root) => isUnderDir3(dir, root));
+    const declared = document3.type === null ? null : resolveDocType(document3.type).kind;
+    const executionBound = declared === "ephemeral" || declared !== "legacy" && EXECUTION_DIRS.some((root) => isUnderDir3(dir, root));
+    const inMigrationDir = MIGRATION_DIRS.some((root) => isUnderDir3(dir, root));
+    const placement = inMigrationDir ? "under a migration-owned directory" : "inside a durable directory";
     const typeName = document3.type ?? "untyped";
+    const isTracked = tracked !== null && tracked.has(document3.path);
     findings.push(finding({
-      ruleId: executionBound ? "tracked-execution-doc" : "tracked-legacy-doc",
+      ruleId: isTracked ? executionBound ? "tracked-execution-doc" : "tracked-legacy-doc" : "legacy-corpus-doc",
       category: "migration",
       severity: "warning",
       blocking: true,
       path: document3.path,
       artifactId: document3.id,
-      message: executionBound ? `Git-tracked ${typeName} document has no durable Git form under Document Registry 3 \u2014 plan/task state lives in the Execution Store; ${MIGRATE_HINT} to inventory the migration` : `Git-tracked ${typeName} document is a legacy format under Document Registry 3 \u2014 migration tooling owns its interpretation; ${MIGRATE_HINT} to plan the migration`,
+      message: isTracked ? executionBound ? `Git-tracked ${typeName} document has no durable Git form under Document Registry 3 \u2014 plan/task state lives in the Execution Store; ${MIGRATE_HINT} to inventory the migration` : `Git-tracked ${typeName} document is a legacy format under Document Registry 3 \u2014 migration tooling owns its interpretation; ${MIGRATE_HINT} to plan the migration` : tracked === null ? `${typeName} document sits ${placement} where Git tracking cannot be verified (no usable work tree) \u2014 corpus the migration sweep still owns; ${MIGRATE_HINT} to plan the migration` : `untracked ${typeName} document sits ${placement} \u2014 corpus the migration sweep still owns, never durable Git state; ${MIGRATE_HINT} to plan the migration`,
       target: document3.type,
       repair: "migration"
     }));
@@ -39925,23 +40002,28 @@ var EVIDENCE_REASON_RULES = {
 var EVIDENCE_RULE_IDS = new Set(
   Object.values(EVIDENCE_REASON_RULES).map((rule) => rule.ruleId)
 );
-var TRACKED_DOC_RULE_IDS = /* @__PURE__ */ new Set([
+var EVIDENCE_STORE_RULE_IDS = /* @__PURE__ */ new Set([
+  "corrupt-evidence-store",
+  "unmanifested-evidence-store"
+]);
+var CORPUS_DOC_RULE_IDS = /* @__PURE__ */ new Set([
+  "legacy-corpus-doc",
   "tracked-execution-doc",
   "tracked-legacy-doc"
 ]);
 var REPO_LEVEL_RULE_IDS = /* @__PURE__ */ new Set([
-  ...TRACKED_DOC_RULE_IDS,
-  ...EVIDENCE_RULE_IDS
+  ...CORPUS_DOC_RULE_IDS,
+  ...EVIDENCE_RULE_IDS,
+  ...EVIDENCE_STORE_RULE_IDS
 ]);
-function evidenceFindings(graph, record2, cwd, now) {
-  const head = resolveCommitSubject(cwd, "HEAD");
+function evidenceFindings(graph, record2, cwd, now, head) {
   const assessment = assessEvidenceIn(graph, record2, {
     subject: { kind: "commit", commit: "HEAD" },
     subjectDigest: head === null ? null : head.subjectDigest
   }, {
     readDocument: (docPath) => {
       try {
-        return import_node_fs7.default.readFileSync(import_node_path8.default.join(cwd, docPath), "utf8");
+        return import_node_fs8.default.readFileSync(import_node_path8.default.join(cwd, docPath), "utf8");
       } catch {
         return null;
       }
@@ -39971,21 +40053,34 @@ function evidenceFindings(graph, record2, cwd, now) {
 }
 async function lintEvidenceStore(cwd, model, options2 = {}) {
   const { now: optionNow, ...storeOptions } = options2;
-  if (loadManifest(cwd, storeOptions) === null) return [];
+  const store = inspectEvidenceStore(cwd, storeOptions);
+  const findings = [];
+  if (store.integrity === "corrupt" || store.integrity === "unmanifested") {
+    findings.push(finding({
+      ruleId: store.integrity === "corrupt" ? "corrupt-evidence-store" : "unmanifested-evidence-store",
+      category: "evidence",
+      severity: store.integrity === "corrupt" ? "error" : "warning",
+      blocking: true,
+      path: null,
+      message: store.integrity === "corrupt" ? `Evidence Store manifest cannot certify the store \u2014 record integrity is unverifiable: ${store.detail}` : `Evidence records exist without the store's manifest marker \u2014 record integrity is unverifiable: ${store.detail}`,
+      repair: "manual"
+    }));
+  }
+  if (store.integrity === "absent") return findings;
   const records = query(cwd, {}, storeOptions);
-  if (records.length === 0) return [];
+  if (records.length === 0) return findings;
   const graph = projectKnowledgeGraph(model);
   const root = import_node_path8.default.resolve(cwd);
+  const head = resolveCommitSubject(root, "HEAD");
   const now = optionNow ?? (/* @__PURE__ */ new Date()).toISOString();
-  const findings = [];
   for (const record2 of records) {
-    findings.push(...evidenceFindings(graph, record2, root, now));
+    findings.push(...evidenceFindings(graph, record2, root, now, head));
   }
   return findings;
 }
 
 // src/skills/lib/doc_lint.ts
-var import_node_fs9 = __toESM(require("node:fs"));
+var import_node_fs10 = __toESM(require("node:fs"));
 var import_node_path10 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_provenance_lint.ts
@@ -40113,7 +40208,7 @@ function lintStaleUpstreams(model, scope) {
 }
 
 // src/skills/lib/doc_structure_lint.ts
-var import_node_fs8 = __toESM(require("node:fs"));
+var import_node_fs9 = __toESM(require("node:fs"));
 var import_node_path9 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_index_tiers.ts
@@ -40197,11 +40292,11 @@ function parseManagedIndexLayout(content3) {
 function caseInsensitiveExists(model, absolute) {
   const dir = import_node_path9.default.dirname(absolute);
   const base = import_node_path9.default.basename(absolute).toLowerCase();
-  if (!import_node_fs8.default.existsSync(dir)) return null;
-  const match = import_node_fs8.default.readdirSync(dir).find((entry) => entry.toLowerCase() === base);
+  if (!import_node_fs9.default.existsSync(dir)) return null;
+  const match = import_node_fs9.default.readdirSync(dir).find((entry) => entry.toLowerCase() === base);
   if (!match) return null;
   const candidate = import_node_path9.default.join(dir, match);
-  return import_node_fs8.default.existsSync(candidate) && import_node_fs8.default.statSync(candidate).isFile() ? candidate : null;
+  return import_node_fs9.default.existsSync(candidate) && import_node_fs9.default.statSync(candidate).isFile() ? candidate : null;
 }
 function lintDocumentLinks(model, scope) {
   const findings = [];
@@ -40264,7 +40359,7 @@ function lintDocumentLinks(model, scope) {
         })();
         const absolute = import_node_path9.default.resolve(model.root, resolved.path);
         const dir = import_node_path9.default.dirname(absolute);
-        const actualBase = import_node_fs8.default.existsSync(dir) ? import_node_fs8.default.readdirSync(dir).find((entry) => entry.toLowerCase() === targetBase.toLowerCase()) : void 0;
+        const actualBase = import_node_fs9.default.existsSync(dir) ? import_node_fs9.default.readdirSync(dir).find((entry) => entry.toLowerCase() === targetBase.toLowerCase()) : void 0;
         if (actualBase && actualBase !== targetBase) {
           findings.push(finding({
             ruleId: "link-case-mismatch",
@@ -40495,7 +40590,7 @@ function lintIndexConsistency(model, scope, index2) {
   );
   let lineOffset = 0;
   try {
-    lineOffset = frontMatterEndLine(import_node_fs8.default.readFileSync(import_node_path9.default.join(model.root, index2.path), "utf8"));
+    lineOffset = frontMatterEndLine(import_node_fs9.default.readFileSync(import_node_path9.default.join(model.root, index2.path), "utf8"));
   } catch {
     lineOffset = 0;
   }
@@ -40722,6 +40817,26 @@ var GRAPH_ISSUE_RULES = {
   "check-anchor-mismatch": { ruleId: "check-anchor-mismatch", category: "relation", severity: "warning", blocking: true, repair: "manual" },
   "misplaced-check-anchor": { ruleId: "misplaced-check-anchor", category: "relation", severity: "warning", blocking: true, repair: "manual" }
 };
+function lintMisplacedLegacyDocs(scope) {
+  const findings = [];
+  for (const document3 of scope.files) {
+    if (typeof document3.type !== "string") continue;
+    const resolved = resolveDocType(document3.type);
+    if (resolved.kind === "durable" || resolved.kind === "unknown") continue;
+    findings.push(finding({
+      ruleId: "legacy-doc-in-durable-dir",
+      category: "migration",
+      severity: "warning",
+      blocking: true,
+      path: document3.path,
+      artifactId: document3.id,
+      message: `${resolved.kind === "ephemeral" ? "execution-bound" : "legacy"} ${document3.type} document declares a type with no durable Git form under Document Registry 3 \u2014 it is migration corpus in a durable directory, never a ${scope.type} document or index row; ${MIGRATE_HINT} to plan the migration`,
+      target: document3.type,
+      repair: "migration"
+    }));
+  }
+  return findings;
+}
 function lintKnowledgeGraph(model, scope) {
   const graph = projectKnowledgeGraph(model);
   const findings = [];
@@ -41073,10 +41188,10 @@ function legacyIdPrefixes() {
 }
 function experimentNumbers(root) {
   const expDir = import_node_path10.default.join(root, IMPL_EXP_DIR);
-  if (!import_node_fs9.default.existsSync(expDir)) return /* @__PURE__ */ new Map();
+  if (!import_node_fs10.default.existsSync(expDir)) return /* @__PURE__ */ new Map();
   if (!isInsideRealpath(root, expDir)) return /* @__PURE__ */ new Map();
   const counts = /* @__PURE__ */ new Map();
-  for (const name of import_node_fs9.default.readdirSync(expDir)) {
+  for (const name of import_node_fs10.default.readdirSync(expDir)) {
     if (isSymlinkPath(import_node_path10.default.join(expDir, name))) continue;
     const match = NUMBERED_EXPERIMENT_FILE.exec(name);
     if (match) counts.set(match[1], (counts.get(match[1]) ?? 0) + 1);
@@ -41085,7 +41200,7 @@ function experimentNumbers(root) {
 }
 function isSymlinkPath(p) {
   try {
-    return import_node_fs9.default.lstatSync(p).isSymbolicLink();
+    return import_node_fs10.default.lstatSync(p).isSymbolicLink();
   } catch {
     return false;
   }
@@ -41159,6 +41274,7 @@ function lintScope(model, type, directory, profile = "materialized") {
       findings.push(...lintUnmanagedRelations(model, document3));
     }
   }
+  findings.push(...lintMisplacedLegacyDocs(scope));
   findings.push(...lintKnowledgeGraph(model, scope));
   findings.push(...lintLegacyIdReferences(model, scope.files));
   findings.push(...lintDuplicateIds(model, scope));
@@ -41303,7 +41419,7 @@ function summarizeHealth(collected, findings) {
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/artifact_graph.ts
-var import_node_fs10 = __toESM(require("node:fs"));
+var import_node_fs11 = __toESM(require("node:fs"));
 var import_node_path11 = __toESM(require("node:path"));
 var import_gray_matter3 = __toESM(require_gray_matter());
 var LINEAGE_RELATIONS = /* @__PURE__ */ new Set([
@@ -41346,10 +41462,10 @@ function resolveContainedTaskDir(cwd, taskDir) {
   return resolveContainedDir(cwd, taskDir ?? "docs/tasks", "--task-dir");
 }
 function markdownFiles(dir) {
-  if (!import_node_fs10.default.existsSync(dir) || !import_node_fs10.default.statSync(dir).isDirectory()) return [];
+  if (!import_node_fs11.default.existsSync(dir) || !import_node_fs11.default.statSync(dir).isDirectory()) return [];
   const files = [];
   const visit3 = (current) => {
-    for (const entry of import_node_fs10.default.readdirSync(current, { withFileTypes: true }).sort((a, b) => compareStrings2(a.name, b.name))) {
+    for (const entry of import_node_fs11.default.readdirSync(current, { withFileTypes: true }).sort((a, b) => compareStrings2(a.name, b.name))) {
       const full = import_node_path11.default.join(current, entry.name);
       if (entry.isDirectory()) visit3(full);
       else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md") && !/^(?:readme|index)\.md$/i.test(entry.name)) files.push(full);
@@ -41396,14 +41512,14 @@ function readRecords(options2, collector) {
     if (seenRoots.has(key)) continue;
     seenRoots.add(key);
     const absolute = import_node_path11.default.join(cwd, directory);
-    if (import_node_fs10.default.existsSync(absolute) && !isInsideRealpath(cwd, absolute)) continue;
+    if (import_node_fs11.default.existsSync(absolute) && !isInsideRealpath(cwd, absolute)) continue;
     directories.push(directory);
   }
   const files = sortedUnique(directories.flatMap((directory) => markdownFiles(import_node_path11.default.join(cwd, directory))));
   const records = [];
   for (const absolutePath of files.map((file2) => import_node_path11.default.resolve(cwd, file2))) {
     try {
-      const raw = import_node_fs10.default.readFileSync(absolutePath, "utf8");
+      const raw = import_node_fs11.default.readFileSync(absolutePath, "utf8");
       if (collector) {
         collector.filesRead += 1;
         collector.bytesRead += Buffer.byteLength(raw, "utf8");
@@ -41454,8 +41570,8 @@ function localTarget(cwd, owner, value) {
   const documentRelative = trimmed.startsWith("./") || trimmed.startsWith("../") || trimmed === "." || trimmed === "..";
   const preferred = documentRelative ? ownerCandidate : rootCandidate;
   const fallback = documentRelative ? rootCandidate : ownerCandidate;
-  const chosen = isInside(cwd, preferred) && import_node_fs10.default.existsSync(preferred) ? preferred : fallback;
-  const exists = isInside(cwd, chosen) && import_node_fs10.default.existsSync(chosen) && import_node_fs10.default.statSync(chosen).isFile();
+  const chosen = isInside(cwd, preferred) && import_node_fs11.default.existsSync(preferred) ? preferred : fallback;
+  const exists = isInside(cwd, chosen) && import_node_fs11.default.existsSync(chosen) && import_node_fs11.default.statSync(chosen).isFile();
   return {
     path: isInside(cwd, chosen) ? normalizeArtifactPath(cwd, chosen) : normalizeArtifactPath(cwd, preferred),
     exists
@@ -41548,15 +41664,15 @@ function scanArtifactGraph(options2, collector) {
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_definition.ts
-var import_node_fs13 = __toESM(require("node:fs"));
+var import_node_fs14 = __toESM(require("node:fs"));
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_state.ts
-var import_node_fs12 = __toESM(require("node:fs"));
+var import_node_fs13 = __toESM(require("node:fs"));
 var import_node_path13 = __toESM(require("node:path"));
 
 // src/skills/lib/execution_store/store.ts
 var import_node_crypto3 = __toESM(require("node:crypto"));
-var import_node_fs11 = __toESM(require("node:fs"));
+var import_node_fs12 = __toESM(require("node:fs"));
 var import_node_path12 = __toESM(require("node:path"));
 var STATE_FILE = "manifest.json";
 var PLAN_FILE = "plan.md";
@@ -41568,8 +41684,8 @@ function insideResolvedRoot2(resolved, candidate) {
   let real;
   let realRoot;
   try {
-    real = import_node_fs11.default.realpathSync(candidate);
-    realRoot = import_node_fs11.default.realpathSync(resolved.root);
+    real = import_node_fs12.default.realpathSync(candidate);
+    realRoot = import_node_fs12.default.realpathSync(resolved.root);
   } catch {
     return false;
   }
@@ -41579,10 +41695,10 @@ function insideResolvedRoot2(resolved, candidate) {
 }
 function runDirContained(resolved, runId) {
   const runDir = runDirFor(resolved, runId);
-  if (!import_node_fs11.default.existsSync(runDir)) {
+  if (!import_node_fs12.default.existsSync(runDir)) {
     throw new StoreError("run-not-found", `run ${runId} does not exist under ${resolved.repoRelative ?? resolved.root}`);
   }
-  if (!import_node_fs11.default.statSync(runDir).isDirectory()) {
+  if (!import_node_fs12.default.statSync(runDir).isDirectory()) {
     throw new StoreError("corrupt-state", `${runDir} is not a directory`);
   }
   if (!insideResolvedRoot2(resolved, runDir)) {
@@ -41592,7 +41708,7 @@ function runDirContained(resolved, runId) {
 }
 function readManifest2(runDir, runId) {
   const file2 = import_node_path12.default.join(runDir, STATE_FILE);
-  if (!import_node_fs11.default.existsSync(file2)) {
+  if (!import_node_fs12.default.existsSync(file2)) {
     throw new StoreError(
       "corrupt-state",
       `run ${runId} has no manifest.json \u2014 the run is incomplete or foreign`,
@@ -41619,8 +41735,8 @@ function readManifest2(runDir, runId) {
 }
 function listRecordFiles2(runDir, kind) {
   const dir = import_node_path12.default.join(runDir, kind);
-  if (!import_node_fs11.default.existsSync(dir)) return [];
-  return import_node_fs11.default.readdirSync(dir, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith(".json")).map((entry) => import_node_path12.default.join(runDir, kind, entry.name)).sort();
+  if (!import_node_fs12.default.existsSync(dir)) return [];
+  return import_node_fs12.default.readdirSync(dir, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith(".json")).map((entry) => import_node_path12.default.join(runDir, kind, entry.name)).sort();
 }
 function readRecord(file2, validate2, kind) {
   const parsed = readJsonFile(file2);
@@ -41639,8 +41755,8 @@ function readRecord(file2, validate2, kind) {
 }
 function scanIncompleteWrites(dir, rel = "") {
   const found = [];
-  if (!import_node_fs11.default.existsSync(dir)) return found;
-  for (const entry of import_node_fs11.default.readdirSync(dir, { withFileTypes: true })) {
+  if (!import_node_fs12.default.existsSync(dir)) return found;
+  for (const entry of import_node_fs12.default.readdirSync(dir, { withFileTypes: true })) {
     const abs = import_node_path12.default.join(dir, entry.name);
     const relPath = rel === "" ? entry.name : `${rel}/${entry.name}`;
     if (entry.isDirectory()) {
@@ -41656,14 +41772,14 @@ function loadSnapshot(resolved, runId) {
   const manifest = readManifest2(runDir, runId);
   const planFile = import_node_path12.default.join(runDir, PLAN_FILE);
   let plan = null;
-  if (import_node_fs11.default.existsSync(planFile)) {
-    const content3 = import_node_fs11.default.readFileSync(planFile, "utf8");
+  if (import_node_fs12.default.existsSync(planFile)) {
+    const content3 = import_node_fs12.default.readFileSync(planFile, "utf8");
     plan = { content: content3, digest: sha2562(content3) };
   }
   const tasks = listRecordFiles2(runDir, "tasks").map((file2) => readRecord(file2, validateTask, "task")).map((task) => task.scope === void 0 ? { ...task, scope: [] } : task);
   const checkpoints = listRecordFiles2(runDir, "checkpoints").map((file2) => readRecord(file2, validateCheckpoint, "checkpoint"));
   const receipts = listRecordFiles2(runDir, "receipts").map((file2) => readRecord(file2, validateReceipt, "receipt"));
-  const lock = import_node_fs11.default.existsSync(import_node_path12.default.join(runDir, "writer.lock")) ? readLockRecord(import_node_path12.default.join(runDir, "writer.lock")) : null;
+  const lock = import_node_fs12.default.existsSync(import_node_path12.default.join(runDir, "writer.lock")) ? readLockRecord(import_node_path12.default.join(runDir, "writer.lock")) : null;
   return {
     runId,
     status: manifest.status,
@@ -41687,9 +41803,9 @@ function loadRun(cwd, runId, options2 = {}) {
 function listRuns(cwd, options2 = {}) {
   const resolved = resolveStateRoot(cwd, options2);
   const runsDir = import_node_path12.default.join(resolved.root, RUN_DIR);
-  if (!import_node_fs11.default.existsSync(runsDir)) return [];
+  if (!import_node_fs12.default.existsSync(runsDir)) return [];
   const runs = [];
-  for (const entry of import_node_fs11.default.readdirSync(runsDir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+  for (const entry of import_node_fs12.default.readdirSync(runsDir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
     if (!entry.isDirectory() || !isValidId(entry.name)) continue;
     try {
       const manifest = readManifest2(import_node_path12.default.join(runsDir, entry.name), entry.name);
@@ -42004,7 +42120,7 @@ function bootstrapReasons(cwd) {
   const reasons = [];
   for (const directory of DURABLE_DOC_DIRS) {
     const full = import_node_path13.default.join(cwd, directory);
-    if (!import_node_fs12.default.existsSync(full) || !import_node_fs12.default.statSync(full).isDirectory()) reasons.push(`missing-directory:${directory}`);
+    if (!import_node_fs13.default.existsSync(full) || !import_node_fs13.default.statSync(full).isDirectory()) reasons.push(`missing-directory:${directory}`);
   }
   return reasons;
 }
@@ -42337,7 +42453,7 @@ async function projectGraphState(options2, collector) {
       collector.filesRead += 1;
       collector.filePaths.add(document3.path);
       try {
-        collector.bytesRead += import_node_fs12.default.statSync(document3.absolutePath).size;
+        collector.bytesRead += import_node_fs13.default.statSync(document3.absolutePath).size;
       } catch {
       }
     }
@@ -42560,7 +42676,7 @@ function parseGraphDefinition(source) {
 }
 function loadGraphDefinition(file2) {
   try {
-    return parseGraphDefinition(import_node_fs13.default.readFileSync(file2, "utf8"));
+    return parseGraphDefinition(import_node_fs14.default.readFileSync(file2, "utf8"));
   } catch (error62) {
     if (error62 instanceof Error && error62.message.startsWith("Invalid graph definition:")) {
       throw error62;
@@ -42919,8 +43035,13 @@ async function collectDashboard(options2) {
     stateRoot: options2.stateRoot,
     allowExternalRoot: options2.allowExternalRoot
   };
-  const collected = await collectFindings(options2.cwd, { type: "all", externalLinks: false });
+  const collected = await collectFindings(options2.cwd, {
+    type: "all",
+    externalLinks: false,
+    ...storeOptions
+  });
   const artifacts = scanArtifactGraph({ cwd: options2.cwd });
+  const evidenceStore = inspectEvidenceStore(options2.cwd, storeOptions);
   const verificationSummary = await buildVerificationSummary(options2.cwd, {
     subject: { kind: "commit", commit: "HEAD" }
   }, storeOptions);
@@ -42989,6 +43110,7 @@ async function collectDashboard(options2) {
     definition: inspectGraphDefinition(definition2),
     state,
     decision,
+    evidenceStore,
     inventory,
     runs,
     findings: collected.findings,
@@ -43618,12 +43740,15 @@ function renderGraph(snapshot) {
   const signalPanel = `<div class="probe-panel"><h3>signals</h3><div class="signal-group"><span class="signal-label">supplied</span>${chips(snapshot.requested.signals)}</div><div class="signal-group"><span class="signal-label">state</span>${chips(snapshot.state.signals)}</div>${topologyChips.length === 0 ? "" : `<div class="signal-group"><span class="signal-label">topology issues</span>${chips(topologyChips, true)}</div>`}${hardBlockerNote}</div>`;
   const gatePanel = `<div class="probe-panel"><h3>gates <span class="gate-score">${passCount}/${gateEntries.length} pass</span></h3>${gateEntries.length === 0 ? `<p class="empty">gate \u8A55\u4FA1\u306A\u3057</p>` : `<div class="gate-pills">${gateEntries.map(([name, gate2]) => `<span class="gate-pill gate-${e(gate2.status)}"${gate2.reasons.length === 0 ? "" : ` title="${e(gate2.reasons.join("; "))}"`}><span class="gate-dot" aria-hidden="true"></span>${e(name)}</span>`).join("")}</div>`}</div>`;
   const verification = snapshot.state.verification;
+  const store = snapshot.evidenceStore;
   const verificationPanel = (() => {
     if (verification === null) {
-      return `<div class="probe-panel"><h3>verification\uFF08Evidence\uFF09</h3><p class="empty">Evidence Store \u306A\u3057 \u2014 \u691C\u8A3C\u30B5\u30DE\u30EA\u672A\u63D0\u4F9B</p></div>`;
+      const note2 = store.integrity === "absent" ? "Evidence Store \u306A\u3057 \u2014 \u691C\u8A3C\u30B5\u30DE\u30EA\u672A\u63D0\u4F9B" : "\u691C\u8A3C\u30B5\u30DE\u30EA\u672A\u63D0\u4F9B";
+      return `<div class="probe-panel"><h3>verification\uFF08Evidence\uFF09</h3><p class="empty">${note2}</p></div>`;
     }
     const summary = verification.summary;
     const binding = verification.boundToHead === null ? `<span class="badge">HEAD \u89E3\u6C7A\u4E0D\u80FD</span>` : verification.boundToHead ? `<span class="badge badge-runnable">HEAD \u4E00\u81F4</span>` : `<span class="badge badge-blocked">HEAD \u3068\u4E0D\u4E00\u81F4</span>`;
+    const storeBadge = store.integrity === "ok" ? "" : store.integrity === "absent" ? ` <span class="badge">Evidence Store \u306A\u3057</span>` : ` <span class="badge badge-blocked">store ${e(store.integrity)}</span>`;
     const counts = summary.counts;
     const facts = [
       ["verdict", summary.verdict],
@@ -43632,7 +43757,8 @@ function renderGraph(snapshot) {
       ["evidence", `${counts.evidence.total} assessed\uFF08sufficient ${counts.evidence.sufficient} / insufficient ${counts.evidence.insufficient}\uFF09`],
       ["VD \u6587\u66F8", verification.documents.length]
     ];
-    return `<div class="probe-panel"><h3>verification\uFF08Evidence\uFF09</h3><p><span class="status-pill status-${summary.verdict === "verified" ? "done" : summary.verdict === "failed" ? "blocked" : "in-progress"}">${e(summary.verdict)}</span> ${binding}</p><dl class="facts">${facts.map(([label, value]) => `<div><dt>${e(label)}</dt><dd>${e(value)}</dd></div>`).join("")}</dl><p class="probe-note">Evidence Store \u306E\u4E0D\u5909\u8A18\u9332\u304B\u3089\u5C0E\u51FA \u2014 run \u306E Effect Receipt \u3068\u306F\u5225\u6A29\u5A01\u3067\u3059</p></div>`;
+    const note = store.integrity === "absent" ? "Evidence Store \u306A\u3057 \u2014 \u30B5\u30DE\u30EA\u306F 0 \u30EC\u30B3\u30FC\u30C9\u3067\u5C0E\u51FA\uFF08\u30B9\u30C8\u30A2\u672A\u521D\u671F\u5316\uFF09" : store.integrity === "ok" ? "Evidence Store \u306E\u4E0D\u5909\u8A18\u9332\u304B\u3089\u5C0E\u51FA \u2014 run \u306E Effect Receipt \u3068\u306F\u5225\u6A29\u5A01\u3067\u3059" : `Evidence Store \u306E\u6574\u5408\u6027\u306F\u672A\u691C\u8A3C\uFF08${e(store.integrity)}\uFF09\u2014 \u8A18\u9332\u3092\u4FE1\u983C\u3067\u304D\u308B\u30B9\u30C8\u30A2\u72B6\u614B\u3068\u3057\u3066\u8A3C\u660E\u3067\u304D\u307E\u305B\u3093`;
+    return `<div class="probe-panel"><h3>verification\uFF08Evidence\uFF09</h3><p><span class="status-pill status-${summary.verdict === "verified" ? "done" : summary.verdict === "failed" ? "blocked" : "in-progress"}">${e(summary.verdict)}</span> ${binding}${storeBadge}</p><dl class="facts">${facts.map(([label, value]) => `<div><dt>${e(label)}</dt><dd>${e(value)}</dd></div>`).join("")}</dl><p class="probe-note">${note}</p></div>`;
   })();
   const canvas = `<div class="graph-canvas"><div class="canvas-head"><span class="canvas-eyebrow">Execution Graph</span><span class="graph-meta">${e(snapshot.definition.graphId)} \xB7 ${snapshot.definition.nodes.length} nodes \xB7 ${snapshot.definition.edges.length} edges</span></div><div class="graph-stage">${renderExecutionSvg(snapshot.definition, { current: snapshot.requested.current, edgeId: route?.edgeId ?? null })}</div><ul class="graph-legend"><li><span class="legend-swatch sw-action"></span>action</li><li><span class="legend-swatch sw-delegate"></span>delegate</li><li><span class="legend-swatch sw-audit"></span>audit</li><li><span class="legend-swatch sw-terminal"></span>terminal</li><li><span class="legend-line sw-fwd"></span>\u524D\u9032\u9077\u79FB</li><li><span class="legend-line sw-back"></span>\u623B\u308A\u30FB\u4FEE\u5FA9</li><li><span class="legend-line sw-retry"></span>\u30EA\u30C8\u30E9\u30A4</li><li><span class="legend-swatch swatch-current"></span>\u6307\u5B9A\u30CE\u30FC\u30C9\uFF08\u73FE\u5728\uFF09</li><li><span class="legend-swatch swatch-edge"></span>\u9078\u629E edge</li><li>\u30CE\u30FC\u30C9\u306B\u30AB\u30FC\u30BD\u30EB\u3092\u5408\u308F\u305B\u308B\u3068\u63A5\u7D9A edge \u304C\u5F37\u8ABF\u3055\u308C\u307E\u3059</li></ul></div>`;
   return `<section id="graph" aria-labelledby="graph-heading"><h2 id="graph-heading">Graph</h2><div class="probe-grid">${routeSummary}<div class="probe-side">${signalPanel}${gatePanel}${verificationPanel}</div></div>${canvas}</section>`;
@@ -44066,7 +44192,7 @@ function renderDashboard(snapshot) {
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_cli.ts
-var import_node_fs14 = __toESM(require("node:fs"));
+var import_node_fs15 = __toESM(require("node:fs"));
 var import_node_path15 = __toESM(require("node:path"));
 function resolveGraphPath(explicitGraph, cwd = process.cwd()) {
   if (explicitGraph) return import_node_path15.default.resolve(explicitGraph);
@@ -44084,7 +44210,7 @@ function resolveGraphPath(explicitGraph, cwd = process.cwd()) {
       "packages/doc-driven-dev/.apm/skills/doc-driven-dev-graph/graphs/doc-driven-dev.yaml"
     )
   ];
-  const found = candidates.find((candidate) => import_node_fs14.default.existsSync(candidate));
+  const found = candidates.find((candidate) => import_node_fs15.default.existsSync(candidate));
   if (!found) throw new Error(`Unable to locate the default Graph Definition (tried: ${candidates.join(", ")})`);
   return found;
 }
@@ -44093,12 +44219,12 @@ function resolveGraphPath(explicitGraph, cwd = process.cwd()) {
 var DEFAULT_OUTPUT = "reports/doc-driven-dev/index.html";
 var defaultWriteOperations = {
   randomUUID: import_node_crypto4.randomUUID,
-  openExclusive: (file2) => import_node_fs15.default.openSync(file2, "wx"),
-  write: (fd, html) => import_node_fs15.default.writeFileSync(fd, html, { encoding: "utf8" }),
-  close: (fd) => import_node_fs15.default.closeSync(fd),
-  link: (from, to) => import_node_fs15.default.linkSync(from, to),
-  rename: (from, to) => import_node_fs15.default.renameSync(from, to),
-  unlink: (file2) => import_node_fs15.default.unlinkSync(file2)
+  openExclusive: (file2) => import_node_fs16.default.openSync(file2, "wx"),
+  write: (fd, html) => import_node_fs16.default.writeFileSync(fd, html, { encoding: "utf8" }),
+  close: (fd) => import_node_fs16.default.closeSync(fd),
+  link: (from, to) => import_node_fs16.default.linkSync(from, to),
+  rename: (from, to) => import_node_fs16.default.renameSync(from, to),
+  unlink: (file2) => import_node_fs16.default.unlinkSync(file2)
 };
 var requiredValue = (argv, index2) => {
   const value = argv[index2 + 1];
@@ -44157,7 +44283,7 @@ function parseDashboardArgs(argv, processCwd) {
 function assertRegularOutput(output2) {
   let stat;
   try {
-    stat = import_node_fs15.default.lstatSync(output2);
+    stat = import_node_fs16.default.lstatSync(output2);
   } catch (error62) {
     if (error62.code === "ENOENT") return;
     throw error62;
@@ -44167,12 +44293,12 @@ function assertRegularOutput(output2) {
 }
 function assertExistingAncestorsInside(root, targetParent) {
   let cursor = targetParent;
-  while (!import_node_fs15.default.existsSync(cursor)) {
+  while (!import_node_fs16.default.existsSync(cursor)) {
     const parent = import_node_path16.default.dirname(cursor);
     if (parent === cursor) throw new Error(`Output is outside repository: ${targetParent}`);
     cursor = parent;
   }
-  const realAncestor = import_node_fs15.default.realpathSync(cursor);
+  const realAncestor = import_node_fs16.default.realpathSync(cursor);
   if (!isInside(root, realAncestor)) throw new Error(`Output ancestor resolves outside repository: ${cursor}`);
 }
 function writeDashboard(cwd, outputValue, html, force) {
@@ -44180,9 +44306,9 @@ function writeDashboard(cwd, outputValue, html, force) {
 }
 function writeDashboardWithOperations(cwd, outputValue, html, force, operations) {
   const rootPath = import_node_path16.default.resolve(cwd);
-  const rootStat = import_node_fs15.default.statSync(rootPath);
+  const rootStat = import_node_fs16.default.statSync(rootPath);
   if (!rootStat.isDirectory()) throw new Error(`Dashboard cwd is not a directory: ${rootPath}`);
-  const root = import_node_fs15.default.realpathSync(rootPath);
+  const root = import_node_fs16.default.realpathSync(rootPath);
   const requestedOutput = import_node_path16.default.resolve(rootPath, outputValue);
   if (!isInside(rootPath, requestedOutput)) throw new Error(`Output is outside repository: ${requestedOutput}`);
   if (import_node_path16.default.extname(requestedOutput).toLowerCase() !== ".html") throw new Error(`Output must use the .html extension: ${requestedOutput}`);
@@ -44191,12 +44317,12 @@ function writeDashboardWithOperations(cwd, outputValue, html, force, operations)
   const parent = import_node_path16.default.dirname(output2);
   assertExistingAncestorsInside(root, parent);
   assertRegularOutput(output2);
-  if (!force && import_node_fs15.default.existsSync(output2)) throw new Error(`Output already exists; pass --force to replace it: ${output2}`);
-  import_node_fs15.default.mkdirSync(parent, { recursive: true });
-  const realParent = import_node_fs15.default.realpathSync(parent);
+  if (!force && import_node_fs16.default.existsSync(output2)) throw new Error(`Output already exists; pass --force to replace it: ${output2}`);
+  import_node_fs16.default.mkdirSync(parent, { recursive: true });
+  const realParent = import_node_fs16.default.realpathSync(parent);
   if (!isInside(root, realParent)) throw new Error(`Output parent resolves outside repository: ${parent}`);
   assertRegularOutput(output2);
-  if (!force && import_node_fs15.default.existsSync(output2)) throw new Error(`Output already exists; pass --force to replace it: ${output2}`);
+  if (!force && import_node_fs16.default.existsSync(output2)) throw new Error(`Output already exists; pass --force to replace it: ${output2}`);
   const temp = import_node_path16.default.join(realParent, `.${import_node_path16.default.basename(output2)}.${operations.randomUUID()}.tmp`);
   let fd;
   let ownsTemp = false;
@@ -44207,7 +44333,7 @@ function writeDashboardWithOperations(cwd, outputValue, html, force, operations)
     operations.close(fd);
     fd = void 0;
     assertRegularOutput(output2);
-    if (force && import_node_fs15.default.existsSync(output2)) operations.rename(temp, output2);
+    if (force && import_node_fs16.default.existsSync(output2)) operations.rename(temp, output2);
     else operations.link(temp, output2);
   } finally {
     try {
@@ -44246,7 +44372,7 @@ async function runDashboard(argv) {
   }
   let cwdStat;
   try {
-    cwdStat = import_node_fs15.default.statSync(args.cwd);
+    cwdStat = import_node_fs16.default.statSync(args.cwd);
   } catch {
     throw new Error(`Dashboard cwd does not exist: ${args.cwd}`);
   }

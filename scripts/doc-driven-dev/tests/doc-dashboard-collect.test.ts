@@ -406,3 +406,163 @@ test("measured evidence flips the preview's verification gate to pass — the #2
   assert.equal(report.state.gates.verification.status, "pass");
   assert.ok(!report.state.blockers.some((blocker) => blocker.startsWith("verification")));
 });
+
+// --- Issue #246: one Evidence Store authority --------------------------------
+//
+// The snapshot carries the store's own marker state so the panel can tell
+// an absent store from an initialized-but-empty one and from a store whose
+// records can no longer be certified — and the repo-level `evidence` gate
+// reads the SAME selected root the summary and run views do, never a
+// silent fallback to the default (Issue #246).
+
+test("the snapshot reports an absent store distinctly from an initialized one", async (t) => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "dashboard-storeless-"));
+  t.after(() => fs.rmSync(cwd, { recursive: true, force: true }));
+  writeDocFile(cwd, "docs/designs/chain.md", { id: "DESIGN-0001", type: "design", status: "approved", title: "Design" });
+  git(cwd, ["init", "-q"]);
+  initStateRoot(cwd);
+  git(cwd, ["add", "-A"]);
+  git(cwd, ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "baseline"]);
+
+  // Nothing under `evidence/` at all: the store was never initialized. The
+  // summary still computes (zero records is honest coverage), but the
+  // marker state must not fabricate a store that does not exist.
+  const storeless = await collectDashboard({ cwd, graphPath: GRAPH_PATH, focus: ["docs/designs/chain.md"], signals: [] });
+  assert.equal(storeless.evidenceStore.integrity, "absent");
+  assert.ok(storeless.state.verification !== null, "the summary is still the authority routing sees");
+  assert.ok(!storeless.findings.some((finding) => finding.ruleId === "corrupt-evidence-store"
+    || finding.ruleId === "unmanifested-evidence-store"));
+
+  // First put lands the write-once manifest — an initialized store reads ok.
+  const graph = await scanKnowledgeGraph({ cwd });
+  const checkResolution = resolveCheckReference(graph, "VD-efgh::CHK-01");
+  putImmutable(cwd, {
+    evidenceId: "EVID-0001",
+    claim: { ref: "SPEC-abcd::R-01", documentRevision: sha256Of("doc") },
+    check: { ref: "VD-efgh::CHK-01", designRevision: checkResolution.status === "resolved" ? checkResolution.check.designRevision : sha256Of("design") },
+    subject: { kind: "commit", commit: gitOut(cwd, ["rev-parse", "HEAD"]) },
+    method: "unit",
+    provider: { kind: "repository", name: null },
+    runId: null,
+    environment: { runner: "local" },
+    outcome: "inconclusive",
+    retention: "release",
+    artifacts: [],
+  });
+  const initialized = await collectDashboard({ cwd, graphPath: GRAPH_PATH, focus: ["docs/designs/chain.md"], signals: [] });
+  assert.equal(initialized.evidenceStore.integrity, "ok");
+});
+
+test("a torn manifest degrades every surface the same way — marker, summary, and findings agree", async (t) => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "dashboard-corrupt-store-"));
+  t.after(() => fs.rmSync(cwd, { recursive: true, force: true }));
+  writeDocFile(cwd, "docs/specs/spec.md", {
+    id: "SPEC-abcd", type: "spec", status: "approved", title: "Spec",
+  }, "# Spec\n\n<!-- claim:R-01 --> Requirement R-01\n");
+  writeDocFile(cwd, "docs/verification/vd.md", {
+    id: "VD-efgh", type: "verification", status: "approved", title: "Design",
+    checks: [{
+      id: "CHK-01", target: "SPEC-abcd::R-01", method: "unit",
+      implementation: "pnpm test", preconditions: ["spec exists"],
+      passCriteria: { kind: "unit", expect: "criterion" }, limitations: [], required: true,
+    }],
+  }, "# Verification Design\n\n## Checks\n");
+  const designPath = "docs/designs/chain.md";
+  writeDocFile(cwd, designPath, { id: "DESIGN-0001", type: "design", status: "approved", title: "Design" });
+  git(cwd, ["init", "-q"]);
+  initStateRoot(cwd);
+  git(cwd, ["add", "-A"]);
+  git(cwd, ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "baseline"]);
+
+  const graph = await scanKnowledgeGraph({ cwd });
+  const checkResolution = resolveCheckReference(graph, "VD-efgh::CHK-01");
+  assert.equal(checkResolution.status, "resolved");
+  putImmutable(cwd, {
+    evidenceId: "EVID-0001",
+    claim: { ref: "SPEC-abcd::R-01", documentRevision: documentRevisionOf(fs.readFileSync(path.join(cwd, "docs/specs/spec.md"), "utf8")) },
+    check: { ref: "VD-efgh::CHK-01", designRevision: checkResolution.check.designRevision },
+    subject: { kind: "commit", commit: gitOut(cwd, ["rev-parse", "HEAD"]) },
+    method: "unit",
+    provider: { kind: "repository", name: null },
+    runId: "RUN-0001",
+    environment: { runner: "local" },
+    outcome: "passed",
+    retention: "release",
+    artifacts: [{ uri: "file:logs/unit.txt", sha256: sha256Of("unit-log"), availability: "available", retention: "release", expiresAt: null }],
+  });
+  // Tear the manifest AFTER the record lands — a marker that can no longer
+  // certify the store.
+  const manifest = path.join(cwd, STATE_ROOT, "evidence", "manifest.json");
+  fs.writeFileSync(manifest, "{ \"schemaVersion\":", "utf8");
+
+  const report = await collectDashboard({ cwd, graphPath: GRAPH_PATH, focus: [designPath], signals: [] });
+  assert.equal(report.evidenceStore.integrity, "corrupt");
+  // The findings sweep names the same boundary…
+  assert.ok(report.findings.some((finding) => finding.ruleId === "corrupt-evidence-store"));
+  // …the summary degrades instead of certifying unprovable coverage…
+  assert.ok(report.state.verification !== null);
+  assert.equal(report.state.verification.summary.verdict, "indeterminate");
+  assert.ok(report.state.verification.summary.reasons.includes("evidence-store-corrupt"));
+  // …and the verification gate carries that reason into routing state.
+  assert.equal(report.state.gates.verification.status, "blocked");
+  assert.ok(report.state.gates.verification.reasons.includes("evidence-store-corrupt"));
+});
+
+test("the findings sweep reads the same selected Evidence Store — never the default root", async (t) => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "dashboard-selected-store-"));
+  const shared = fs.mkdtempSync(path.join(os.tmpdir(), "dashboard-selected-ext-"));
+  t.after(() => {
+    fs.rmSync(cwd, { recursive: true, force: true });
+    fs.rmSync(shared, { recursive: true, force: true });
+  });
+  writeDocFile(cwd, "docs/specs/spec.md", {
+    id: "SPEC-abcd", type: "spec", status: "approved", title: "Spec",
+  }, "# Spec\n\n<!-- claim:R-01 --> Requirement R-01\n");
+  writeDocFile(cwd, "docs/verification/vd.md", {
+    id: "VD-efgh", type: "verification", status: "approved", title: "Design",
+    checks: [{
+      id: "CHK-01", target: "SPEC-abcd::R-01", method: "unit",
+      implementation: "pnpm test", preconditions: ["spec exists"],
+      passCriteria: { kind: "unit", expect: "criterion" }, limitations: [], required: true,
+    }],
+  }, "# Verification Design\n\n## Checks\n");
+  const designPath = "docs/designs/chain.md";
+  writeDocFile(cwd, designPath, { id: "DESIGN-0001", type: "design", status: "approved", title: "Design" });
+  git(cwd, ["init", "-q"]);
+  initStateRoot(cwd);
+  git(cwd, ["add", "-A"]);
+  git(cwd, ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "baseline"]);
+
+  const external = { stateRoot: shared, allowExternalRoot: true };
+  const graph = await scanKnowledgeGraph({ cwd });
+  const checkResolution = resolveCheckReference(graph, "VD-efgh::CHK-01");
+  assert.equal(checkResolution.status, "resolved");
+  // The ONLY record lives in the external store — an unresolved claim
+  // ref that can never resolve in this graph.
+  putImmutable(cwd, {
+    evidenceId: "EVID-0001",
+    claim: { ref: "SPEC-gone::R-01", documentRevision: sha256Of("ghost") },
+    check: { ref: "VD-efgh::CHK-01", designRevision: checkResolution.check.designRevision },
+    subject: { kind: "commit", commit: gitOut(cwd, ["rev-parse", "HEAD"]) },
+    method: "unit",
+    provider: { kind: "repository", name: null },
+    runId: "RUN-0001",
+    environment: { runner: "local" },
+    outcome: "passed",
+    retention: "release",
+    artifacts: [],
+  }, external);
+  // And the DEFAULT store is torn — a sweep that silently read it would
+  // surface its own marker instead of the selected store's finding.
+  fs.mkdirSync(path.join(cwd, STATE_ROOT, "evidence"), { recursive: true });
+  fs.writeFileSync(path.join(cwd, STATE_ROOT, "evidence", "manifest.json"), "{ \"schemaVersion\":", "utf8");
+
+  const report = await collectDashboard({
+    cwd, graphPath: GRAPH_PATH, focus: [designPath], signals: [], ...external,
+  });
+  assert.equal(report.evidenceStore.integrity, "ok");
+  assert.ok(report.findings.some((finding) => finding.ruleId === "unresolved-evidence-claim"),
+    "the selected store's records must reach the evidence gate");
+  assert.ok(!report.findings.some((finding) => finding.ruleId === "corrupt-evidence-store"),
+    "the default root's torn manifest must never leak into a selected-root sweep");
+});

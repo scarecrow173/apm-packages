@@ -8,6 +8,7 @@ export {
   buildIndex,
   documentRevisionOf,
   getById,
+  inspectEvidenceStore,
   loadManifest,
   promoteToCommit,
   putImmutable,
@@ -22,6 +23,8 @@ export {
 export type {
   EvidenceInput,
   EvidenceQuery,
+  EvidenceStoreInspection,
+  EvidenceStoreIntegrity,
   StoreOptions,
 } from "./store";
 export {
