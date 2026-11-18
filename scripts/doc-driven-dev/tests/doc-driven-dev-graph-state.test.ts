@@ -603,7 +603,7 @@ test("malformed relations block graph completion even with an otherwise valid ch
   const state = projectGraphState({
     cwd: repo,
     focus: ["PLAN-0001"],
-    signals: ["implementation-verified", "followup-terminal", "exit-audit-pass"],
+    signals: ["followup-terminal", "exit-audit-pass"],
   });
   assert.equal(state.gates["artifact-graph"].status, "blocked");
   assert.equal(state.signals.includes("graph-complete"), false);

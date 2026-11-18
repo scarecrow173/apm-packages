@@ -189,6 +189,19 @@ node .apm/skills/doc-driven-dev-graph/scripts/evidence_store.js <command> \
 - `resolve <id>` —— レコードの逆引き: 参照の状態 + claim/check ごとの
   `matchesPinned`、さらに `checkTargetsClaim` —— 解決された check
   の `target` がレコードの `claim.ref` と一致するか。
+- `assess <id> (--commit <sha> | --snapshot <digest>)` —— Evidence
+  Assessment（Issue `#241`）を導出します: 宣言した対象サブジェクトに
+  対するレコードごとの
+  applicability/availability/integrity/assessment の各軸。
+- `summary (--commit <sha> | --snapshot <digest>)
+  [--scope-claim <ref>]… [--scope-check <ref>]… [--run-id <id>]
+  [--waivers <file>] [--waiver-authority <name>]…
+  [--not-applicable <file>] [--out <file>]` —— Graph Gate が消費する
+  Verification Summary を構築します: live の store と Knowledge Graph
+  からスコープ内の全 check を分類し、検証済み免除ファイルを適用しま
+  す。`--out` は `route_graph --verification-summary` が消費する素の
+  サマリー JSON を書き込みます。コントラクトは
+  `verification-summary-contract.ja.md` で定義します。
 - `promote <id> --commit <sha> [--as <new-id>]` —— ストア自身が
   commit の tree を解決してダイジェストを計算します。コマンド
   ラインでダイジェストは受け取りません。
@@ -205,7 +218,10 @@ node .apm/skills/doc-driven-dev-graph/scripts/evidence_store.js <command> \
 
 `putImmutable / getById / query / buildIndex / rebuildIndex / promoteToCommit /
 loadManifest / recoverEvidence / documentRevisionOf /
-workspaceDigestOf / treeDigestOf` に加え、
+workspaceDigestOf / treeDigestOf / resolveCommitSubject` に加え、
 `resolveEvidence / resolveEvidenceIn`（逆引き —— Evidence Assessment
 `#241` が消費するインターフェース）を
 `src/skills/lib/evidence_store` から提供します。
+assessment/summary の builder と gate 側の validator は
+`src/skills/lib/verification_assessment` にあります ——
+`verification-summary-contract.ja.md` を参照してください。

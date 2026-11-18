@@ -122,6 +122,16 @@ function completeRepo(taskStatuses: Array<"todo" | "in-progress" | "blocked" | "
     })),
   });
   approvePlan(repo, RUN_ID, { actor: "cli-fixture" });
+  // Route computation auto-builds a Verification Summary against HEAD and
+  // the implementation gate binds it through the canonical subject digest
+  // (Issue #241) — the fixture needs a real commit for the gate to pass.
+  const git = (args: string[]) => {
+    const result = spawnSync("git", args, { cwd: repo, encoding: "utf8" });
+    if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
+  };
+  git(["init", "-q"]);
+  git(["add", "-A"]);
+  git(["-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-qm", "baseline"]);
   return repo;
 }
 
@@ -370,7 +380,7 @@ test("accepts runtime signals declared separately from edge conditions", () => {
     ["generated", (args: string[]) => runCli(generatedCli, repo, args)],
   ] as const;
   for (const [name, run] of runners) {
-    for (const signal of ["focus-required", "implementation-verified", "exit-audit-pass", "commit-waived"]) {
+    for (const signal of ["focus-required", "exit-audit-pass", "commit-waived"]) {
       const result = run(["--graph", canonicalGraphPath(), "--signal", signal, "--json"]);
       assert.equal(result.status, 0, `${name}/${signal}: ${result.stderr}`);
     }
@@ -580,7 +590,7 @@ test("table-driven CLI routes exercise every migration scenario with one edge", 
       name: "implementation retry",
       setup: () => ({
         repo: completeRepo(["todo"]),
-        args: ["--focus", "PLAN-0001", "--current", "implementation", "--signal", "implementation-verified"],
+        args: ["--focus", "PLAN-0001", "--current", "implementation"],
       }),
       edgeId: "implementation-retry",
       next: "implementation",
@@ -597,7 +607,7 @@ test("table-driven CLI routes exercise every migration scenario with one edge", 
       name: signal,
       setup: () => ({
         repo: completeRepo(),
-        args: ["--focus", "PLAN-0001", "--current", "followup-triage", "--signal", "implementation-verified", "--signal", signal],
+        args: ["--focus", "PLAN-0001", "--current", "followup-triage", "--signal", signal],
       }),
       edgeId,
       next,
@@ -606,7 +616,7 @@ test("table-driven CLI routes exercise every migration scenario with one edge", 
       name: "wont-do task remains non-runnable",
       setup: () => ({
         repo: completeRepo(["wont-do"]),
-        args: ["--focus", "PLAN-0001", "--current", "task-graph", "--signal", "implementation-verified"],
+        args: ["--focus", "PLAN-0001", "--current", "task-graph"],
       }),
       edgeId: null,
       next: "task-graph",
@@ -619,7 +629,7 @@ test("table-driven CLI routes exercise every migration scenario with one edge", 
       name: "upstream regression returns to briefing",
       setup: () => ({
         repo: completeRepo(),
-        args: ["--focus", "PLAN-0001", "--current", "implementation", "--signal", "implementation-verified", "--signal", "spec-gap"],
+        args: ["--focus", "PLAN-0001", "--current", "implementation", "--signal", "spec-gap"],
       }),
       edgeId: "implementation-to-briefing",
       next: "briefing",
@@ -629,7 +639,7 @@ test("table-driven CLI routes exercise every migration scenario with one edge", 
       name: "exit audit retry",
       setup: () => ({
         repo: completeRepo(),
-        args: ["--focus", "PLAN-0001", "--current", "exit-audit", "--signal", "implementation-verified", "--signal", "followup-terminal"],
+        args: ["--focus", "PLAN-0001", "--current", "exit-audit", "--signal", "followup-terminal"],
       }),
       edgeId: "exit-audit-retry",
       next: "exit-audit",

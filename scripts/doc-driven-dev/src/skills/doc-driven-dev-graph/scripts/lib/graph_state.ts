@@ -27,11 +27,28 @@ import {
   loadRun,
   type RunSnapshot,
 } from "../../../lib/execution_store";
+import { resolveCommitSubject } from "../../../lib/evidence_store";
+import type { VerificationSummary } from "../../../lib/verification_assessment";
+import { verificationCoverageGap } from "../../../lib/verification_assessment";
 import { sectionBody, subHeadingCount } from "../../../lib/markdown_sections";
 
 export type GraphGateResult = { status: "pass" | "fail" | "blocked"; reasons: string[] };
 export type GraphGateResults = Record<string, GraphGateResult>;
 export type GraphSignal = string;
+/**
+ * The Verification Summary (#241) bound into this projection — the
+ * implementation gate's evidence authority. `summary` is the
+ * caller-supplied (or route-computed) assessment; `boundToHead` records
+ * whether its target's canonical subject digest equals this checkout's
+ * HEAD content identity — `true` binds, `false` is a resolved HEAD and a
+ * different subject (a stale artifact), and `null` means HEAD itself
+ * could not be resolved (unborn branch, non-repo): binding is then
+ * unprovable, which fails closed but is never a target mismatch.
+ */
+export type GraphVerification = {
+  summary: VerificationSummary;
+  boundToHead: boolean | null;
+};
 export type GraphState = {
   schemaVersion: 2;
   graphId: string;
@@ -44,6 +61,14 @@ export type GraphState = {
   blockers: string[];
   hardBlockers: string[];
   taskGraph: TaskGraphResult | null;
+  /**
+   * The Verification Summary feeding the implementation gate (Issue
+   * #241), or null when the caller supplied none — the gate then fails
+   * closed on `verification-summary`, the same way a missing signal once
+   * blocked it. There is no `implementation-verified` signal: gate
+   * authority is the summary's assessed evidence, full stop.
+   */
+  verification: GraphVerification | null;
   /**
    * The Execution Store run backing `taskGraph` (Issue #237): identity,
    * lifecycle status, and the artifact paths the run declared as its focus.
@@ -72,6 +97,14 @@ export type ProjectGraphStateOptions = {
   runId?: string;
   stateRoot?: string;
   allowExternalRoot?: boolean;
+  /**
+   * The Verification Summary the implementation gate consumes (Issue
+   * #241). The projection binds it to this checkout's HEAD through the
+   * canonical subject digest — a summary for another commit or workspace
+   * can never pass this gate. Absent means no verification input: the
+   * gate fails closed.
+   */
+  verificationSummary?: VerificationSummary;
 };
 
 const FOLLOWUP_SIGNALS = new Set([
@@ -301,7 +334,33 @@ export function evaluateGraphGates(state: GraphState, collector?: ArtifactScanCo
     const implementationReasons: string[] = [];
     if (!taskGraph || taskGraph.nodes.length === 0) implementationReasons.push("no-selected-tasks");
     if (taskGraph && taskGraph.nodes.some((node) => !["done", "wont-do"].includes(node.status))) implementationReasons.push("tasks-incomplete");
-    if (!state.signals.includes("implementation-verified")) implementationReasons.push("implementation-verified");
+    // Issue #241: the implementation gate's verification authority is a
+    // Verification Summary of actual Evidence Assessments bound to this
+    // checkout's HEAD — never a caller-asserted signal. A missing summary,
+    // a summary targeting another subject, and a non-verified verdict all
+    // fail closed; the summary's own reasons propagate so the operator
+    // sees WHICH coverage failed, not just that it did.
+    const verification = state.verification;
+    // `== null` covers a hand-projected state that never set the field —
+    // missing verification input always fails closed, never crashes.
+    if (verification == null) {
+      implementationReasons.push("verification-summary");
+    } else if (verification.boundToHead === null) {
+      // HEAD itself could not be resolved — unprovable binding, not a
+      // stale artifact: report the unreadable HEAD, never a mismatch.
+      implementationReasons.push("verification-summary-head-unreadable");
+    } else if (!verification.boundToHead) {
+      implementationReasons.push("verification-summary-target-mismatch");
+    } else if (verification.summary.verdict !== "verified") {
+      implementationReasons.push(`verification-${verification.summary.verdict}`);
+      implementationReasons.push(...verification.summary.reasons);
+    } else if (verificationCoverageGap(verification.summary)) {
+      // A `verified` verdict over un-covered required checks or claims
+      // asserts coverage the summary does not contain — the file
+      // contract already refuses that inconsistency; the gate re-checks
+      // the cheap invariant because its input here is caller-trusted.
+      implementationReasons.push("verification-summary-inconsistent");
+    }
     gates.implementation = gate(implementationReasons.length === 0 ? "pass" : "blocked", implementationReasons);
   }
   const followups = state.signals.filter((signal) => FOLLOWUP_SIGNALS.has(signal));
@@ -341,6 +400,24 @@ export function projectGraphState(options: ProjectGraphStateOptions, collector?:
   const taskGraph = run ? projectRunTasks(run) : null;
   if (taskGraph?.issues.length) blockers.push("task-graph-invalid");
   if (runBlocker !== null) blockers.push(runBlocker);
+  // Bind the caller's Verification Summary to this checkout's HEAD through
+  // the canonical subject digest (#241): the digest IS the content
+  // identity, so a summary whose target digests to HEAD's tree speaks for
+  // this checkout — commit and workspace spellings bind the same way. A
+  // HEAD that cannot resolve (unborn branch, non-repo) proves nothing:
+  // `boundToHead: null` keeps that failure distinct from a resolved-but-
+  // different subject, which IS a target mismatch.
+  const verification = options.verificationSummary === undefined
+    ? null
+    : (() => {
+      const head = resolveCommitSubject(cwd, "HEAD");
+      return {
+        summary: options.verificationSummary,
+        boundToHead: head === null
+          ? null
+          : options.verificationSummary.target.subjectDigest === head.subjectDigest,
+      };
+    })();
   const state: GraphState = {
     schemaVersion: 2,
     graphId: options.graphId ?? "doc-driven-dev",
@@ -353,6 +430,7 @@ export function projectGraphState(options: ProjectGraphStateOptions, collector?:
     blockers: sortedUnique(blockers),
     hardBlockers: [],
     taskGraph,
+    verification,
     run: run === null ? null : {
       runId: run.runId,
       status: run.status,

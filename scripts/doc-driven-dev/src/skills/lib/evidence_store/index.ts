@@ -15,6 +15,7 @@ export {
   rebuildIndex,
   recoverEvidence,
   requireById,
+  resolveCommitSubject,
   treeDigestOf,
   workspaceDigestOf,
 } from "./store";

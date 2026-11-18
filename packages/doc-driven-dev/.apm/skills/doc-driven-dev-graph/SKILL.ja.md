@@ -31,6 +31,7 @@ node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
   [--graph <path>] [--current <node>] [--signal <condition-signal>] \
   [--focus <artifact>] [--task-dir <path>] \
   [--run <run-id> [--state-root <path>] [--allow-external-root]] \
+  [--verification-summary <path>] \
   [--cwd <path>] --json
 ```
 
@@ -127,8 +128,19 @@ caller は [`references/execution-contract.ja.md`](references/execution-contract
 yield し、table が automatic continuation を許す場合だけ繰り返します。`wont-do` task は
 dependency を満たさず、未解決 task は Dynamic Task Graph で blocked のままです。
 
-implementation 後の `フォローアップ分類` node は、
-`implementation-verified` と型付き signal 1 つを要求してから repair、planning、
+implementation gate の検証権威は `HEAD` に束縛された
+**Verification Summary**（Issue `#241`）です —— caller が主張する
+signal ではありません。gate が pass するのは、供給または自動計算された
+サマリーが `HEAD` に束縛され `verdict: "verified"` を報告するときだけ
+です。欠落・古い対象・失敗・不確定は block します。`route_graph.js`
+は `HEAD` に対して自動計算します。`--verification-summary <file>` は
+caller 評価のサマリー（waiver・条件付き out-of-scope のチャンネル）を
+供給します。セマンティクスと blocker 分類は
+[`references/verification-summary-contract.ja.md`](references/verification-summary-contract.ja.md)
+を参照してください。
+
+implementation 後の `フォローアップ分類` node は、implementation
+gate の pass と型付き signal 1 つを要求してから repair、planning、
 briefing、exit audit のいずれかへ進みます。
 
 ## Git commit boundary
@@ -175,6 +187,15 @@ claim ドキュメント revision・check designRevision・subject（commit
 レコードスキーマ、artifact/retention 規則、
 一貫性モデルは
 [`references/evidence-store-contract.ja.md`](references/evidence-store-contract.ja.md)
+で定義します。
+
+レコードは*測定された事実*であり、現在の verdict ではありません:
+**Evidence Assessment** が宣言された対象に対してレコードごとの
+applicability・availability・integrity・sufficiency を再導出し、
+**Verification Summary** が Claim と Check ごとの assessment を
+implementation gate が消費する verdict へ集約します。assessment の
+軸、免除（waiver/not-applicable）コントラクト、gate 束縛は
+[`references/verification-summary-contract.ja.md`](references/verification-summary-contract.ja.md)
 で定義します。
 
 ## Schema preflight gate
@@ -367,6 +388,9 @@ node .apm/skills/doc-driven-dev-graph/scripts/execution_store.js \
 - [`references/evidence-store-contract.ja.md`](references/evidence-store-contract.ja.md) —
   不変 Evidence Record スキーマ、subject/artifact/retention 規則、
   追記一度限りの書き込み、派生インデックス、workspace→commit 昇格。
+- [`references/verification-summary-contract.ja.md`](references/verification-summary-contract.ja.md) —
+  Evidence Assessment の軸、Verification Summary の形状、検証される
+  waiver/not-applicable 免除、HEAD 束縛の implementation gate。
 - [`references/task-graph-contract.ja.md`](references/task-graph-contract.ja.md) —
   Task Graph 合成と fail-closed dependency 規則。
 - [`references/graph-inspection.ja.md`](references/graph-inspection.ja.md) — inspection

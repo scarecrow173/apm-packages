@@ -744,6 +744,8 @@ function kindCounts(flows: { directives: { kind: string }[] }[]): Record<string,
 // fixture edits. #242 re-pinned again after the reviewed knowledge-doc
 // consolidation contract intentionally grew the always-on surface
 // (extraction decision workflow, consolidation script/reference directives).
+// #241 re-pinned again after the Verification Summary contract added its
+// reference links to the graph skill and contract docs.
 // The original Task-2 audit snapshots (pre/post-fix, older rules) live in
 // `.superpowers/sdd/2026-10-29-skill-discovery/`.
 const ALWAYS_ON_TOLERANCE = 100;

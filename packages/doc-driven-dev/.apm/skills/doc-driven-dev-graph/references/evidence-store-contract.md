@@ -181,6 +181,19 @@ node .apm/skills/doc-driven-dev-graph/scripts/evidence_store.js <command> \
 - `resolve <id>` — back-resolve the record: reference status +
   `matchesPinned` per claim/check, plus `checkTargetsClaim` — whether the
   resolved check's `target` equals the record's `claim.ref`.
+- `assess <id> (--commit <sha> | --snapshot <digest>)` — derive the
+  Evidence Assessment (Issue `#241`): the per-record
+  applicability/availability/integrity/assessment axes against the
+  declared target subject.
+- `summary (--commit <sha> | --snapshot <digest>)
+  [--scope-claim <ref>]… [--scope-check <ref>]… [--run-id <id>]
+  [--waivers <file>] [--waiver-authority <name>]…
+  [--not-applicable <file>] [--out <file>]` — build the Verification
+  Summary the Graph Gate consumes: every in-scope check classified from
+  the live store and Knowledge Graph, with validated exemption files.
+  `--out` writes the bare summary JSON `route_graph
+  --verification-summary` consumes; the contract is defined in
+  `verification-summary-contract.md`.
 - `promote <id> --commit <sha> [--as <new-id>]` — the store resolves and
   digests the commit's tree itself; no digest is taken on the command
   line.
@@ -197,6 +210,9 @@ Errors print `{ "error": <code>, "message": ..., "detail": ... }` with exit
 
 `putImmutable / getById / query / buildIndex / rebuildIndex / promoteToCommit /
 loadManifest / recoverEvidence / documentRevisionOf /
-workspaceDigestOf / treeDigestOf` plus
+workspaceDigestOf / treeDigestOf / resolveCommitSubject` plus
 `resolveEvidence / resolveEvidenceIn` (back-resolution, the interface
 Evidence Assessment `#241` consumes) from `src/skills/lib/evidence_store`.
+The assessment/summary builders and the gate-side validators live in
+`src/skills/lib/verification_assessment` — see
+`verification-summary-contract.md`.

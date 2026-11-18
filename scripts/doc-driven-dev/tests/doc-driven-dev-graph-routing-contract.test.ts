@@ -12,6 +12,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import test from "node:test";
 import matter from "gray-matter";
 import { loadGraphDefinition } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_definition";
@@ -22,6 +23,8 @@ import {
   createRun,
   initStateRoot,
 } from "../src/skills/lib/execution_store";
+import { resolveCommitSubject } from "../src/skills/lib/evidence_store";
+import type { VerificationSummary } from "../src/skills/lib/verification_assessment";
 
 const RUN_ID = "RUN-0001";
 
@@ -35,6 +38,11 @@ function writeArtifact(repo: string, relativePath: string, data: Record<string, 
     relations: {},
     ...data,
   }), "utf8");
+}
+
+function git(repo: string, args: string[]): void {
+  const result = spawnSync("git", args, { cwd: repo, encoding: "utf8" });
+  if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
 }
 
 function fixtureRepo(statuses: TaskStatus[] = ["todo"], dependsOn: string[][] = []): string {
@@ -89,6 +97,12 @@ function fixtureRepo(statuses: TaskStatus[] = ["todo"], dependsOn: string[][] = 
     })),
   });
   approvePlan(repo, RUN_ID, { actor: "routing-contract" });
+  // The implementation gate binds its Verification Summary to HEAD through
+  // the canonical subject digest (Issue #241) — the fixture needs a real
+  // commit for `verifiedSummary` to bind against.
+  git(repo, ["init", "-q"]);
+  git(repo, ["add", "-A"]);
+  git(repo, ["-c", "user.email=test@example.com", "-c", "user.name=test", "commit", "-qm", "baseline"]);
   return repo;
 }
 
@@ -99,12 +113,44 @@ function graphDefinition(): GraphDefinition {
   ));
 }
 
-function stateFor(repo: string, signals: string[] = []): GraphState {
+function stateFor(repo: string, signals: string[] = [], verification?: VerificationSummary): GraphState {
   return projectGraphState({
     cwd: repo,
     focus: ["PLAN-0001"],
     signals,
+    verificationSummary: verification,
   });
+}
+
+// The gate's verification authority (Issue #241): a HEAD-bound summary in
+// the pure VerificationSummary contract shape a Graph Gate consumes. The
+// fixture corpus declares no verification checks, so the honest verdict is
+// `verified` with zero required coverage — the same answer the router's
+// auto-computed summary produces.
+function verifiedSummary(repo: string): VerificationSummary {
+  const head = resolveCommitSubject(repo, "HEAD");
+  assert.ok(head !== null, "fixture repo needs a git HEAD to bind verification against");
+  const zero = { total: 0, sufficient: 0, insufficient: 0, indeterminate: 0 };
+  return {
+    schemaVersion: 1,
+    kind: "verification-summary",
+    target: { subject: { kind: "commit", commit: head.commitOid }, subjectDigest: head.subjectDigest },
+    assessedAt: "2026-08-13T00:00:00.000Z",
+    scope: { claims: [], checks: [] },
+    claims: [],
+    checks: [],
+    evidence: [],
+    rejectedWaivers: [],
+    rejectedNotApplicable: [],
+    shadowedExemptions: [],
+    counts: {
+      checks: { total: 0, required: 0, advisory: 0, satisfied: 0, failed: 0, waived: 0, outOfScope: 0, undetermined: 0, unresolved: 0 },
+      claims: { total: 0, covered: 0, partial: 0, uncovered: 0, failed: 0 },
+      evidence: zero,
+    },
+    verdict: "verified",
+    reasons: ["no-required-coverage"],
+  };
 }
 
 test("projects the selected run and its task graph", () => {
@@ -222,7 +268,7 @@ test("fails closed when no active task has resolved predecessors", () => {
 test("keeps dependents blocked by wont-do predecessors while resolving completion", () => {
   const definition = graphDefinition();
   const repo = fixtureRepo(["wont-do", "todo"], [[], ["TASK-0001"]]);
-  const state = stateFor(repo, ["implementation-verified"]);
+  const state = stateFor(repo, [], verifiedSummary(repo));
   assert.deepEqual(state.taskGraph?.runnable, []);
   assert.deepEqual(state.taskGraph?.blocked, [
     { id: "TASK-0001", reasons: ["status:wont-do"] },
@@ -230,7 +276,8 @@ test("keeps dependents blocked by wont-do predecessors while resolving completio
   ]);
   assert.equal(state.gates.implementation.status, "blocked");
 
-  const doneState = stateFor(fixtureRepo(["wont-do"]), ["implementation-verified"]);
+  const doneRepo = fixtureRepo(["wont-do"]);
+  const doneState = stateFor(doneRepo, [], verifiedSummary(doneRepo));
   assert.equal(doneState.gates.implementation.status, "pass");
   const route = routeGraph({ current: "task-graph", definition, state: doneState });
   assert.equal(route.status, "blocked");
@@ -306,7 +353,8 @@ test("an empty task graph is invalid rather than idle", () => {
 
 test("does not let implementation verification bypass an incomplete implementation gate", () => {
   const definition = graphDefinition();
-  const state = stateFor(fixtureRepo(["todo"]), ["implementation-verified"]);
+  const repo = fixtureRepo(["todo"]);
+  const state = stateFor(repo, [], verifiedSummary(repo));
   const route = routeGraph({ current: "implementation", definition, state });
   assert.equal(state.gates.implementation.status, "blocked");
   assert.equal(route.edgeId, "implementation-retry");
@@ -316,7 +364,8 @@ test("does not let implementation verification bypass an incomplete implementati
 
 test("exit-audit cannot complete when a required upstream gate regresses", () => {
   const definition = graphDefinition();
-  const state = stateFor(fixtureRepo(["done"]), ["implementation-verified", "followup-terminal", "exit-audit-pass"]);
+  const repo = fixtureRepo(["done"]);
+  const state = stateFor(repo, ["followup-terminal", "exit-audit-pass"], verifiedSummary(repo));
   state.gates.design = { status: "fail", reasons: ["design-status"] };
   const route = routeGraph({ current: "exit-audit", definition, state });
   assert.equal(route.status, "edge");
@@ -328,7 +377,8 @@ test("exit-audit cannot complete when a required upstream gate regresses", () =>
 test("fails closed at exit-audit when no declared prerequisite repair edge matches", () => {
   const definition = graphDefinition();
   definition.edges = definition.edges.filter((edge) => edge.id !== "exit-audit-to-design-repair");
-  const state = stateFor(fixtureRepo(["done"]), ["implementation-verified", "followup-terminal", "exit-audit-pass"]);
+  const repo = fixtureRepo(["done"]);
+  const state = stateFor(repo, ["followup-terminal", "exit-audit-pass"], verifiedSummary(repo));
   state.gates.design = { status: "fail", reasons: ["design-status"] };
   const route = routeGraph({ current: "exit-audit", definition, state });
   assert.equal(route.status, "blocked");
@@ -339,7 +389,7 @@ test("fails closed at exit-audit when no declared prerequisite repair edge match
 
 test("blocks conflicting typed follow-ups instead of choosing a priority edge", () => {
   const definition = graphDefinition();
-  const state = stateFor(fixtureRepo(["done"]), ["implementation-verified", "followup-bug-fix", "followup-terminal"]);
+  const state = stateFor(fixtureRepo(["done"]), ["followup-bug-fix", "followup-terminal"]);
   const route = routeGraph({ current: "followup-triage", definition, state });
   assert.equal(route.status, "blocked");
   assert.equal(route.next, "followup-triage");
@@ -353,7 +403,7 @@ test("does not let exit-audit pass bypass a fatal artifact graph blocker", () =>
   writeArtifact(repo, "docs/ideas/0001-broken.md", {
     id: "IDEA-0001", type: "idea", status: "draft", title: "Broken", relations: 42,
   }, "# Broken\n");
-  const state = stateFor(repo, ["implementation-verified", "followup-terminal", "exit-audit-pass"]);
+  const state = stateFor(repo, ["followup-terminal", "exit-audit-pass"]);
   const route = routeGraph({ current: "exit-audit", definition, state });
   assert.ok(state.hardBlockers.includes("artifact-graph"));
   assert.equal(route.status, "blocked");
@@ -363,7 +413,8 @@ test("does not let exit-audit pass bypass a fatal artifact graph blocker", () =>
 
 test("exit-audit reaches complete when all declared prerequisites pass", () => {
   const definition = graphDefinition();
-  const state = stateFor(fixtureRepo(["done"]), ["implementation-verified", "followup-terminal", "exit-audit-pass"]);
+  const repo = fixtureRepo(["done"]);
+  const state = stateFor(repo, ["followup-terminal", "exit-audit-pass"], verifiedSummary(repo));
   const route = routeGraph({ current: "exit-audit", definition, state });
   assert.equal(route.status, "edge");
   assert.equal(route.edgeId, "exit-audit-to-complete");

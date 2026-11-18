@@ -421,7 +421,7 @@ test("runCase baseline: 60-doc corpus scan dwarfs the dispatched delegate inputs
       files: largeCorpusFiles({}),
     },
     focus: ["PLAN-0001"],
-    signals: ["implementation-verified", "followup-terminal", "exit-audit-pass"],
+    signals: ["followup-terminal", "exit-audit-pass"],
     script: case01.script,
     expect: {
       yield: "terminal",
@@ -471,7 +471,7 @@ test("runCase fail-closed at scale: an unresolved reference blocks the run befor
       files: largeCorpusFiles({ brokenRelation: true }),
     },
     focus: ["PLAN-0001"],
-    signals: ["implementation-verified", "followup-terminal", "exit-audit-pass"],
+    signals: ["followup-terminal", "exit-audit-pass"],
     script: case01.script,
     expect: {
       yield: "unrecoverable-blocker",

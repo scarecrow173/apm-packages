@@ -475,9 +475,11 @@ test("runCaller drives the real CLI end-to-end and emits run-level trace events"
   const result = runCaller({
     repo: dir, router: { executable: process.execPath, prefixArgs: [tsx, cli] },
     focus: ["PLAN-0001"],
-    // Caller-declared verification signals — the oracle injects them through
-    // mutable signal callbacks; the runner contract declares them up front.
-    signals: ["implementation-verified", "followup-terminal", "exit-audit-pass"],
+    // Caller-declared signals — the oracle injects them through mutable
+    // signal callbacks; the runner contract declares them up front. The
+    // implementation gate's verification authority is the auto-computed
+    // Verification Summary bound to HEAD (Issue #241), never a signal.
+    signals: ["followup-terminal", "exit-audit-pass"],
     dispatcher,
     store: { runId: RUN_ID },
     resolveInputs: testResolveInputs, resolveOutputPath: testResolveEvidence,
@@ -553,7 +555,7 @@ test("runCaller stamps the policy's per-effect mode decision on effect-dispatche
   const result = runCaller({
     repo: dir, router: { executable: process.execPath, prefixArgs: [tsx, cli] },
     focus: ["PLAN-0001"],
-    signals: ["implementation-verified", "followup-terminal", "exit-audit-pass"],
+    signals: ["followup-terminal", "exit-audit-pass"],
     dispatcher,
     store: { runId: RUN_ID },
     resolveInputs: testResolveInputs, resolveOutputPath: testResolveEvidence,
@@ -603,7 +605,7 @@ function runnerArgs(dir: string, dispatcher: EffectDispatcher, trace: string) {
   return {
     repo: dir,
     router: { executable: process.execPath, prefixArgs: [tsx, cli] },
-    signals: ["implementation-verified", "followup-terminal", "exit-audit-pass"],
+    signals: ["followup-terminal", "exit-audit-pass"],
     dispatcher,
     store: { runId: RUN_ID },
     resolveInputs: testResolveInputs,

@@ -39,6 +39,8 @@ import {
   type RunSnapshot,
 } from "../src/skills/lib/execution_store";
 import { canonicalJson, isPlainObject } from "../src/skills/lib/execution_store/types";
+import { resolveCommitSubject } from "../src/skills/lib/evidence_store";
+import type { VerificationSummary } from "../src/skills/lib/verification_assessment";
 
 type YieldReason =
   | "approval-required"
@@ -239,6 +241,40 @@ const callerNormalizedAudits = new Set(["spec", "adr", "design", "plan", "task",
 
 function fingerprint(value: string): string {
   return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+/**
+ * A HEAD-bound verified Verification Summary in the pure contract shape a
+ * Graph Gate consumes (Issue #241). The scenario corpus declares no
+ * verification checks, so the honest verdict is `verified` with zero
+ * required coverage — the same answer route computation's auto-built
+ * summary produces. `boundToHead` is computed by the projection: the
+ * summary's target digest must equal HEAD's canonical subject digest at
+ * projection time, so commitAll() advances bind fresh each hop.
+ */
+function verifiedSummaryFor(repo: string): VerificationSummary {
+  const head = resolveCommitSubject(repo, "HEAD");
+  assert.ok(head !== null, "scenario repo needs a git HEAD to bind verification against");
+  return {
+    schemaVersion: 1,
+    kind: "verification-summary",
+    target: { subject: { kind: "commit", commit: head.commitOid }, subjectDigest: head.subjectDigest },
+    assessedAt: "2026-08-24T00:00:00.000Z",
+    scope: { claims: [], checks: [] },
+    claims: [],
+    checks: [],
+    evidence: [],
+    rejectedWaivers: [],
+    rejectedNotApplicable: [],
+    shadowedExemptions: [],
+    counts: {
+      checks: { total: 0, required: 0, advisory: 0, satisfied: 0, failed: 0, waived: 0, outOfScope: 0, undetermined: 0, unresolved: 0 },
+      claims: { total: 0, covered: 0, partial: 0, uncovered: 0, failed: 0 },
+      evidence: { total: 0, sufficient: 0, insufficient: 0, indeterminate: 0 },
+    },
+    verdict: "verified",
+    reasons: ["no-required-coverage"],
+  };
 }
 
 function filesystemEntryKind(target: string): string {
@@ -1070,6 +1106,13 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
       graphId: definition.id,
       focus,
       signals: [...signals],
+      // Scenario lever: `verified-summary` in the signal set means "the
+      // caller produced a HEAD-bound verified Verification Summary" — the
+      // implementation gate's only verification authority (Issue #241).
+      // The gate contract itself is exercised in verification-summary tests.
+      verificationSummary: signals.has("verified-summary")
+        ? verifiedSummaryFor(options.repo)
+        : undefined,
     });
   };
   const expectYield = (step: ScenarioStep, reason: YieldReason) => {
@@ -1485,7 +1528,7 @@ test("observes terminal after the migration path reaches the derived task budget
         expectEdge: "implementation-retry",
         applyCheckpointEvidence: committedEvidence("implementation-retry", (fixture, signals) => {
           setTaskStatus(fixture, 2, "done");
-          signals.add("implementation-verified");
+          signals.add("verified-summary");
         }),
       },
       {
@@ -1816,7 +1859,7 @@ test("continues implementation retry only after re-projection", () => {
         expectEdge: "implementation-retry",
         applyCheckpointEvidence: committedEvidence("implementation-retry", (fixture, signals) => {
           setTaskStatus(fixture, 1, "done");
-          signals.add("implementation-verified");
+          signals.add("verified-summary");
           signals.add("followup-terminal");
         }),
       },
@@ -1850,7 +1893,7 @@ test("continues implementation retry when the Task Graph advances to the next ru
         expectEdge: "implementation-retry",
         applyCheckpointEvidence: committedEvidence("implementation-retry", (fixture, signals) => {
           setTaskStatus(fixture, 2, "done");
-          signals.add("implementation-verified");
+          signals.add("verified-summary");
           signals.add("followup-terminal");
         }),
       },
@@ -1882,7 +1925,7 @@ test("continues implementation-to-design and then design-to-planning", () => {
     repo,
     current: "implementation",
     mode: "run-until-yield",
-    signals: ["implementation-verified", "design-gap"],
+    signals: ["verified-summary", "design-gap"],
     steps: [
       { expectEdge: "implementation-to-design", applyCheckpointEvidence: evidence("implementation-to-design", (_repo, signals) => signals.delete("design-gap")) },
       { expectEdge: "design-to-planning", applyCheckpointEvidence: evidence("design-to-planning") },
@@ -1969,7 +2012,7 @@ test("routes completed implementation work to follow-up triage", () => {
     repo,
     current: "implementation",
     mode: "run-until-yield",
-    signals: ["implementation-verified", "followup-terminal"],
+    signals: ["verified-summary", "followup-terminal"],
     steps: [{ expectEdge: "implementation-to-followup-triage", applyCheckpointEvidence: evidence("implementation-to-followup-triage") }],
   });
   assert.equal(result.routes[0].edgeId, "implementation-to-followup-triage");
@@ -2466,7 +2509,7 @@ test("continues a typed retry only after its canonical evidence changes", () => 
         expectEdge: "implementation-retry",
         delegate: (fixture, signals, route, store) => {
           setTaskStatus(fixture, 1, "done");
-          signals.add("implementation-verified");
+          signals.add("verified-summary");
           signals.add("followup-terminal");
           return retryOutcome(
             fixture,

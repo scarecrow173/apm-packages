@@ -18,7 +18,7 @@ export const case02: E2ECase = {
   id: "e2e-02",
   description: "focus-required blocks leg 1; fresh leg 2 with focus reaches terminal",
   fixture: { taskStatuses: ["todo"] },
-  signals: ["implementation-verified", "followup-terminal", "exit-audit-pass"],
+  signals: ["followup-terminal", "exit-audit-pass"],
   script: {
     "probe-to-briefing": { audits: { spec: "completed", adr: "completed" }, delegate: "completed" },
     "briefing-to-design": { audits: { design: "completed" }, delegate: "completed" },

@@ -26,7 +26,7 @@ export const case06: E2ECase = {
     dependsOn: [[], ["TASK-0001"], ["TASK-0001"]],
   },
   focus: ["PLAN-0001"],
-  signals: ["implementation-verified", "followup-terminal", "exit-audit-pass"],
+  signals: ["followup-terminal", "exit-audit-pass"],
   script: {
     "probe-to-briefing": { audits: { spec: "completed", adr: "completed" }, delegate: "completed" },
     "briefing-to-design": { audits: { design: "completed" }, delegate: "completed" },

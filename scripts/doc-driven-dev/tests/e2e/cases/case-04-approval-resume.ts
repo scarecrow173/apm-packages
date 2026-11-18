@@ -23,7 +23,7 @@ export const case04: E2ECase = {
   description: "approval-required yield → pending edge resume → terminal",
   fixture: { taskStatuses: ["todo"] },
   focus: ["PLAN-0001"],
-  signals: ["implementation-verified", "followup-terminal", "exit-audit-pass"],
+  signals: ["followup-terminal", "exit-audit-pass"],
   script: {
     "probe-to-briefing": { audits: { spec: "completed", adr: "completed" }, delegate: "completed" },
     "briefing-to-design": { audits: { design: "completed" }, delegate: "completed" },

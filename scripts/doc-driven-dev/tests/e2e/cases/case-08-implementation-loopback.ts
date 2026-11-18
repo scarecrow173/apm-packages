@@ -7,12 +7,14 @@ import type { E2ECase } from "../harness/case_types";
  * Leg 1 enters at `implementation` with `constraint-gap` set. Two corrections
  * to the brief's literal fixture, both forced by real graph semantics:
  *
- *  1. `signals` also carries `implementation-verified` and the fixture's task
- *     is `done`: the implementation gate must PASS or `implementation-retry`
+ *  1. The fixture's task is `done` and the corpus declares no required
+ *     checks: the implementation gate must PASS or `implementation-retry`
  *     (priority 10, `implementation-not-pass`) outranks
  *     `implementation-constraint-to-design` (priority 40) and the loop never
- *     forms. With the gate passing, constraint-gap selects the design repair
- *     edge — verified live.
+ *     forms. The gate's verification authority is the auto-computed,
+ *     HEAD-bound Verification Summary (Issue #241) — an empty required
+ *     scope verifies, so with the gate passing, constraint-gap selects the
+ *     design repair edge — verified live.
  *  2. No `maxHops` cap: the brief's `maxHops:4` would yield budget-exhausted
  *     on the same 5th route, but it also persists `maxHops:4, hops:4` into
  *     the handoff — a resumed leg 2 would then yield budget-exhausted on its
@@ -50,7 +52,7 @@ export const case08: E2ECase = {
   current: "implementation",
   fixture: { taskStatuses: ["done"] },
   focus: ["PLAN-0001"],
-  signals: ["implementation-verified", "constraint-gap", "commit-waived"],
+  signals: ["constraint-gap", "commit-waived"],
   script: {
     "implementation-constraint-to-design": { audits: { design: "completed" }, delegate: "completed" },
     "design-to-planning": { audits: { design: "completed" }, delegate: "completed" },
@@ -90,7 +92,7 @@ export const case08: E2ECase = {
     {
       // Leg 2: resumed handoff (current/hops/maxHops thread through); the
       // repair signal is cleared and the gate signals are supplied instead.
-      options: { signals: ["implementation-verified", "followup-terminal", "exit-audit-pass"] },
+      options: { signals: ["followup-terminal", "exit-audit-pass"] },
       expect: {
         yield: "terminal",
         edgeSequence: [

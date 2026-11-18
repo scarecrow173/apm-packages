@@ -3080,7 +3080,7 @@ var require_dumper = __commonJS({
         }
       }
     }
-    function dump(input2, options2) {
+    function dump2(input2, options2) {
       options2 = options2 || {};
       var state = new State(options2);
       if (!state.noRefs) getDuplicateReferences(input2, state);
@@ -3088,9 +3088,9 @@ var require_dumper = __commonJS({
       return "";
     }
     function safeDump(input2, options2) {
-      return dump(input2, common.extend({ schema: DEFAULT_SAFE_SCHEMA }, options2));
+      return dump2(input2, common.extend({ schema: DEFAULT_SAFE_SCHEMA }, options2));
     }
-    module2.exports.dump = dump;
+    module2.exports.dump = dump2;
     module2.exports.safeDump = safeDump;
   }
 });
@@ -3318,10 +3318,10 @@ var require_stringify = __commonJS({
       data = Object.assign({}, file2.data, data);
       const open2 = opts.delimiters[0];
       const close = opts.delimiters[1];
-      const matter3 = engine.stringify(data, options2).trim();
+      const matter4 = engine.stringify(data, options2).trim();
       let buf = "";
-      if (matter3 !== "{}") {
-        buf = newline(open2) + newline(matter3) + newline(close);
+      if (matter4 !== "{}") {
+        buf = newline(open2) + newline(matter4) + newline(close);
       }
       if (typeof file2.excerpt === "string" && file2.excerpt !== "") {
         if (str2.indexOf(file2.excerpt.trim()) === -1) {
@@ -3427,19 +3427,19 @@ var require_gray_matter = __commonJS({
     var toFile = require_to_file();
     var parse4 = require_parse();
     var utils = require_utils();
-    function matter3(input2, options2) {
+    function matter4(input2, options2) {
       if (input2 === "") {
         return { data: {}, content: input2, excerpt: "", orig: input2 };
       }
       let file2 = toFile(input2);
-      const cached2 = matter3.cache[file2.content];
+      const cached2 = matter4.cache[file2.content];
       if (!options2) {
         if (cached2) {
           file2 = Object.assign({}, cached2);
           file2.orig = cached2.orig;
           return file2;
         }
-        matter3.cache[file2.content] = file2;
+        matter4.cache[file2.content] = file2;
       }
       return parseMatter(file2, options2);
     }
@@ -3461,7 +3461,7 @@ var require_gray_matter = __commonJS({
       }
       str2 = str2.slice(openLen);
       const len = str2.length;
-      const language = matter3.language(str2, opts);
+      const language = matter4.language(str2, opts);
       if (language.name) {
         file2.language = language.name;
         str2 = str2.slice(language.raw.length);
@@ -3496,24 +3496,24 @@ var require_gray_matter = __commonJS({
       }
       return file2;
     }
-    matter3.engines = engines2;
-    matter3.stringify = function(file2, data, options2) {
-      if (typeof file2 === "string") file2 = matter3(file2, options2);
+    matter4.engines = engines2;
+    matter4.stringify = function(file2, data, options2) {
+      if (typeof file2 === "string") file2 = matter4(file2, options2);
       return stringify(file2, data, options2);
     };
-    matter3.read = function(filepath, options2) {
+    matter4.read = function(filepath, options2) {
       const str2 = fs9.readFileSync(filepath, "utf8");
-      const file2 = matter3(str2, options2);
+      const file2 = matter4(str2, options2);
       file2.path = filepath;
       return file2;
     };
-    matter3.test = function(str2, options2) {
+    matter4.test = function(str2, options2) {
       return utils.startsWith(str2, defaults(options2).delimiters[0]);
     };
-    matter3.language = function(str2, options2) {
+    matter4.language = function(str2, options2) {
       const opts = defaults(options2);
       const open2 = opts.delimiters[0];
-      if (matter3.test(str2)) {
+      if (matter4.test(str2)) {
         str2 = str2.slice(open2.length);
       }
       const language = str2.slice(0, str2.search(/\r?\n/));
@@ -3522,11 +3522,11 @@ var require_gray_matter = __commonJS({
         name: language ? language.trim() : ""
       };
     };
-    matter3.cache = {};
-    matter3.clearCache = function() {
-      matter3.cache = {};
+    matter4.cache = {};
+    matter4.clearCache = function() {
+      matter4.cache = {};
     };
-    module2.exports = matter3;
+    module2.exports = matter4;
   }
 });
 
@@ -27359,6 +27359,21 @@ var legacyAliases = /* @__PURE__ */ new Map();
 for (const entry of Object.values(legacyDocTypes)) {
   for (const alias of [entry.type, ...entry.aliases]) legacyAliases.set(alias, entry.type);
 }
+function configFor(type) {
+  const entry = registry2[type];
+  if (entry?.persistence === "durable") return entry;
+  if (entry?.persistence === "ephemeral") {
+    throw new Error(
+      `Document type "${type}" is execution-bound (persistence: ephemeral): it has no durable Git form under Document Registry 3 \u2014 plan/task state lives in the Execution Store`
+    );
+  }
+  if (legacyAliases.has(type)) {
+    throw new Error(
+      `Document type "${type}" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document`
+    );
+  }
+  throw new Error(`Unknown document type: ${type}`);
+}
 function executionBoundTypeNames() {
   return [
     ...executionTypes,
@@ -27396,6 +27411,19 @@ function knowledgeRelationFields() {
   }
   return [...fields].sort();
 }
+function knowledgeRelationInverses() {
+  const inverses = {};
+  for (const type of docTypes) {
+    for (const relation of configs[type].allowedRelations) {
+      const existing = inverses[relation.field];
+      if (existing && existing !== relation.inverse) {
+        throw new Error(`Registry inconsistency: relation ${relation.field} declares two inverse names (${existing}, ${relation.inverse})`);
+      }
+      inverses[relation.field] = relation.inverse;
+    }
+  }
+  return inverses;
+}
 var PROVENANCE_RELATION_KEYS = ["source"];
 
 // src/skills/lib/document_utils.ts
@@ -27403,6 +27431,9 @@ var nonReferenceRelationKeys = /* @__PURE__ */ new Set([
   "changes",
   "test-spec-skip"
 ]);
+function normalizeDir(input2) {
+  return input2.replace(/\\/g, "/").replace(/\/+$/g, "");
+}
 function stripExtendedLengthPrefix(value) {
   if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
   if (value.startsWith("\\\\?\\")) return value.slice(4);
@@ -28867,6 +28898,334 @@ function projectRunTasks(snapshot) {
   };
 }
 
+// src/skills/lib/evidence_store/store.ts
+var import_node_child_process = require("node:child_process");
+var import_node_crypto2 = __toESM(require("node:crypto"));
+function sha2562(content) {
+  return import_node_crypto2.default.createHash("sha256").update(content, "utf8").digest("hex");
+}
+var SUBJECT_DIGEST_NAMESPACE = "doc-driven-dev:subject-tree:v1";
+function subjectTreeDigest(treeOid) {
+  return `sha256:${sha2562(`${SUBJECT_DIGEST_NAMESPACE}:${treeOid.toLowerCase()}`)}`;
+}
+function git(args, cwd) {
+  const result = (0, import_node_child_process.spawnSync)("git", args, { cwd, encoding: "utf8" });
+  return {
+    status: result.status,
+    stdout: result.stdout ?? "",
+    stderr: (result.stderr ?? "").trim(),
+    error: result.error
+  };
+}
+function requireCommitTreeOid(cwd, commit) {
+  const asCommit = git(["rev-parse", "--verify", "--quiet", `${commit}^{commit}`], cwd);
+  if (asCommit.error !== void 0) {
+    throw new StoreError(
+      "boundary-git-unavailable",
+      `cannot run git rev-parse (${asCommit.error.message}) \u2014 the commit's content identity cannot be verified`
+    );
+  }
+  const commitOid = asCommit.stdout.trim();
+  if (asCommit.status !== 0 || !/^[0-9a-f]{40,64}$/i.test(commitOid)) {
+    throw new StoreError(
+      "invalid-argument",
+      `commit ${JSON.stringify(commit)} does not resolve to a commit object in this repository \u2014 content identity is unprovable`,
+      { commit }
+    );
+  }
+  const asTree = git(["rev-parse", "--verify", "--quiet", `${commitOid}^{tree}`], cwd);
+  const treeOid = asTree.stdout.trim();
+  if (asTree.error !== void 0 || asTree.status !== 0 || !/^[0-9a-f]{40,64}$/i.test(treeOid)) {
+    throw new StoreError(
+      "boundary-git-unavailable",
+      `git could not read the tree of commit ${commitOid} \u2014 the commit's content identity cannot be verified`
+    );
+  }
+  return { commitOid: commitOid.toLowerCase(), treeOid: treeOid.toLowerCase() };
+}
+function isResolvableRevision(commit) {
+  return /^[A-Za-z0-9][A-Za-z0-9._/~^@-]*$/.test(commit.trim());
+}
+function resolveCommitSubject(cwd, commit) {
+  if (typeof commit !== "string" || !isResolvableRevision(commit)) return null;
+  try {
+    const { commitOid, treeOid } = requireCommitTreeOid(cwd, commit.trim());
+    return { commitOid, subjectDigest: subjectTreeDigest(treeOid) };
+  } catch {
+    return null;
+  }
+}
+
+// src/skills/lib/doc_suite_utils.ts
+var import_gray_matter3 = __toESM(require_gray_matter());
+
+// src/skills/lib/doc_lifecycle.ts
+var SETTLED_STATUSES = {
+  ...Object.fromEntries(docTypes.map((type) => [type, new Set(configs[type].settledStatuses)])),
+  ...Object.fromEntries(Object.values(ephemeralConfigs).map((entry) => [entry.type, new Set(entry.settledStatuses)])),
+  ...Object.fromEntries(Object.values(legacyDocTypes).flatMap((entry) => [entry.type, ...entry.aliases].map((name) => [name, new Set(entry.settledStatuses)])))
+};
+var LIFECYCLE_TYPE_ALIASES = Object.fromEntries(
+  Object.values(legacyDocTypes).flatMap((entry) => entry.aliases.map((alias) => [alias, entry.type]))
+);
+
+// src/skills/lib/doc_ownership.ts
+var DOC_SUITE_MUTATORS = ["doc_maintenance", "scaffold_docs", "migrate_docs", "migrate_ids"];
+var DOC_SUITE_AUDITORS = ["doc_status", "audit_docs", "list_docs"];
+var PROMOTE_INDEX_MUTATOR = "promote_index";
+function buildContracts() {
+  const rows = /* @__PURE__ */ new Map();
+  const rowFor = (dir, owner, indexFormat, indexTitle) => {
+    const normalized = normalizeDir(dir);
+    let row = rows.get(normalized);
+    if (!row) {
+      row = {
+        dir: normalized,
+        canonical: false,
+        owner,
+        residents: [],
+        indexFormat,
+        indexTitle,
+        mutators: /* @__PURE__ */ new Set(),
+        auditors: /* @__PURE__ */ new Set()
+      };
+      rows.set(normalized, row);
+    }
+    return row;
+  };
+  for (const type of docTypes) {
+    const config2 = configFor(type);
+    for (const dir of config2.dirs) {
+      const canonical = normalizeDir(dir) === normalizeDir(config2.dir);
+      const row = rowFor(dir, config2.owner, config2.indexFormat, canonical ? config2.indexTitle : void 0);
+      row.canonical = row.canonical || canonical;
+      if (!row.residents.includes(type)) row.residents.push(type);
+      if (canonical && config2.indexTitle) row.mutators.add(PROMOTE_INDEX_MUTATOR);
+      if (config2.creator) row.mutators.add(config2.creator);
+      for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
+      for (const auditor of DOC_SUITE_AUDITORS) row.auditors.add(auditor);
+      for (const mutator of config2.mutators) row.mutators.add(mutator);
+      for (const auditor of config2.auditors) row.auditors.add(auditor);
+    }
+  }
+  for (const type of executionTypes) {
+    const entry = ephemeralConfigs[type];
+    for (const dir of entry.formerDirs) {
+      const row = rowFor(dir, entry.owner, entry.indexFormat);
+      row.canonical = row.canonical || dir === entry.formerDirs[0];
+      if (!row.residents.includes(type)) row.residents.push(type);
+      for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
+      for (const auditor of DOC_SUITE_AUDITORS) row.auditors.add(auditor);
+      for (const mutator of entry.mutators) row.mutators.add(mutator);
+      for (const auditor of entry.auditors) row.auditors.add(auditor);
+    }
+  }
+  for (const entry of Object.values(legacyDocTypes)) {
+    for (const dir of entry.scopeDirs) {
+      const row = rowFor(dir, entry.owner, "none");
+      row.canonical = true;
+    }
+    for (const dir of entry.formerDirs) {
+      const canonical = dir === entry.formerDirs[0];
+      const row = rowFor(dir, entry.owner, entry.indexFormat, canonical ? entry.indexTitle : void 0);
+      row.canonical = row.canonical || canonical;
+      if (!row.residents.includes(entry.type)) row.residents.push(entry.type);
+      if (canonical && entry.indexTitle) row.mutators.add(PROMOTE_INDEX_MUTATOR);
+      for (const mutator of entry.mutators) row.mutators.add(mutator);
+      for (const auditor of entry.auditors) row.auditors.add(auditor);
+    }
+  }
+  return [...rows.values()].map((row) => ({
+    dir: row.dir,
+    canonical: row.canonical,
+    owner: row.owner,
+    residentTypes: row.residents,
+    indexFormat: row.indexFormat,
+    indexTitle: row.indexTitle,
+    mutators: [...row.mutators].sort(),
+    auditors: [...row.auditors].sort()
+  })).sort((a, b) => a.dir.localeCompare(b.dir));
+}
+var DIRECTORY_CONTRACTS = Object.freeze(buildContracts());
+
+// src/skills/lib/doc_suite_utils.ts
+var relationFields = ["source", ...knowledgeRelationFields()];
+var changeFields = [
+  "added",
+  "modified",
+  "deleted",
+  "renamed",
+  "moved",
+  "generated"
+];
+var scaffoldTargets = (() => {
+  const byDir = /* @__PURE__ */ new Map();
+  for (const type of docTypes) {
+    const config2 = configFor(type);
+    const existing = byDir.get(config2.dir);
+    const target = {
+      dir: config2.dir,
+      title: config2.scaffoldIndexTitle ?? `${config2.idPrefix} Documents`,
+      type
+    };
+    if (!existing || config2.indexPrimary) byDir.set(config2.dir, target);
+  }
+  return [...byDir.values()];
+})();
+var changeEntrySchema = external_exports.object({
+  type: external_exports.string().min(1)
+}).passthrough();
+var changesSchema = external_exports.object(Object.fromEntries(
+  changeFields.map((field) => [field, external_exports.array(changeEntrySchema).default([])])
+)).prefault({});
+var relationSchema = external_exports.object({
+  ...Object.fromEntries(relationFields.map((field) => [field, external_exports.array(external_exports.string()).default([])])),
+  changes: changesSchema,
+  // A non-empty reason string, not a relation target (Issue #165).
+  "test-spec-skip": external_exports.string().min(1).optional()
+}).prefault({});
+var frontMatterSchema = external_exports.object({
+  id: external_exports.string().min(1),
+  type: external_exports.enum(docTypes),
+  status: external_exports.string().min(1),
+  // `lifecycle` stays optional at the schema boundary so pre-Registry-3
+  // documents still parse — lint flags the missing field as
+  // `missing-lifecycle`; a populated non-axis value is invalid here
+  // (unknown lifecycle is never coerced to `current`).
+  lifecycle: external_exports.enum(LIFECYCLE_VALUES).optional(),
+  title: external_exports.string().min(1),
+  created: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  updated: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  owners: external_exports.array(external_exports.string()),
+  relations: relationSchema
+}).passthrough();
+
+// src/skills/lib/doc_repository.ts
+var REQUIRED_FRONT_MATTER_FIELDS = [
+  "id",
+  "type",
+  "status",
+  "lifecycle",
+  "title",
+  "created",
+  "updated",
+  "owners",
+  "relations"
+];
+function contractForDocType(entry) {
+  return {
+    type: entry.type,
+    persistence: entry.persistence,
+    idPrefix: entry.idPrefix,
+    idPattern: new RegExp(`^${entry.idPrefix}-(?:\\d+|[0-9A-Za-z]{22})$`),
+    idExceptions: [...entry.idExceptions],
+    canonicalDir: entry.dir ?? "",
+    dirs: [...entry.dirs],
+    defaultStatus: entry.defaultStatus,
+    statusValues: [...entry.statusValues],
+    lifecycleValues: [...entry.lifecycleValues],
+    defaultLifecycle: entry.defaultLifecycle,
+    requiredFields: [...REQUIRED_FRONT_MATTER_FIELDS, ...entry.requiredFields],
+    fieldVocabularies: Object.fromEntries(
+      Object.entries(entry.fieldVocabularies).map(([field, values]) => [field, [...values]])
+    ),
+    requiredRelations: entry.requiredRelations.map((rule) => ({ ...rule, targetTypes: [...rule.targetTypes] })),
+    requiredDirectoryFiles: [...entry.requiredDirectoryFiles],
+    reservedFiles: [...entry.reservedFiles],
+    allowsRootArtifact: entry.allowsRootArtifact,
+    requiresSourceEvidence: entry.requiresSourceEvidence,
+    expectedUpstream: entry.expectedUpstream.map((expectation) => ({ ...expectation, fields: [...expectation.fields] })),
+    allowedRelations: Object.fromEntries(
+      entry.allowedRelations.map((relation) => [relation.field, [...relation.targetTypes]])
+    )
+  };
+}
+var contracts = Object.fromEntries(
+  docTypes.map((type) => [type, contractForDocType(configFor(type))])
+);
+
+// src/skills/lib/knowledge_graph.ts
+var V1_FIELDS = new Set(knowledgeRelationFields());
+var INVERSES = knowledgeRelationInverses();
+
+// src/skills/lib/verification_assessment/types.ts
+var ASSESSMENT_REASON_CODES = [
+  // The caller's target could not be named (unresolvable commit, no
+  // snapshot): nothing can be judged applicable.
+  "target-unverifiable",
+  // The record's own subject could not be digested (e.g. its commit no
+  // longer resolves) — applicability cannot be proven.
+  "subject-unverifiable",
+  // The record's subject digest differs from the target's — it measured a
+  // different commit or workspace.
+  "subject-mismatch",
+  // Claim/check reference failed to resolve in the live graph (detail
+  // carries the resolution status).
+  "claim-unresolved",
+  "check-unresolved",
+  // Resolved, but the pinned revision no longer matches the live document
+  // or check design — the evidence predates the current design.
+  "claim-revision-mismatch",
+  "check-revision-mismatch",
+  // The resolved check does not target the claim the record credits.
+  "check-target-mismatch",
+  // The recorded method differs from the check's designed method — the
+  // outcome is not a measurement of the designed check.
+  "method-mismatch",
+  // A declared artifact is known-inaccessible.
+  "artifact-unavailable",
+  // A declared artifact is past its expiresAt deadline.
+  "artifact-expired",
+  // A declared artifact was recorded but never fetched — its content was
+  // never digest-verified.
+  "artifact-unverified",
+  // The record declares no artifacts at all — the outcome is
+  // attestation-only, never digest-backed (integrity `unverified`).
+  "attestation-only",
+  // The recorded outcome is a measured failure of this target.
+  "outcome-failed",
+  // The recorded outcome is inconclusive/error/not-run — not a pass.
+  "outcome-not-passed"
+];
+var ASSESSMENT_REASON_SET = new Set(ASSESSMENT_REASON_CODES);
+var CHECK_STATUSES = [
+  // An applicable record assessed `sufficient` is the newest conclusive
+  // measurement for this target.
+  "satisfied",
+  // The newest conclusive applicable measurement is `insufficient` — a
+  // recorded failure for this target. Measured outcomes outrank any
+  // exemption: a failed check stays failed even under a valid waiver.
+  "failed",
+  // No conclusive evidence, but a validated waiver exempts the check.
+  "waived",
+  // No conclusive evidence, but a validated not-applicable verdict
+  // (impact-analysis basis) exempts the check.
+  "out-of-scope",
+  // In scope, no usable outcome and no valid exemption — unexecuted or
+  // indeterminate-only evidence. This is the bucket an unexecuted check
+  // lands in; it is never silently out-of-scope.
+  "undetermined",
+  // The check ref does not resolve in the live graph — coverage is
+  // unprovable, so the check gates as required.
+  "unresolved"
+];
+var CHECK_STATUS_SET = new Set(CHECK_STATUSES);
+var CLAIM_STATUSES = [
+  // Every in-scope required check is satisfied, waived, or out-of-scope.
+  "covered",
+  // At least one required check is covered, but not all.
+  "partial",
+  // No required check is covered — including the zero-required-checks
+  // coverage gap.
+  "uncovered",
+  // A required check measured a failure for this target.
+  "failed"
+];
+var CLAIM_STATUS_SET = new Set(CLAIM_STATUSES);
+function verificationCoverageGap(summary) {
+  return summary.checks.some((check2) => check2.required && (check2.status === "undetermined" || check2.status === "unresolved" || check2.status === "failed")) || summary.claims.some((claim2) => claim2.status !== "covered");
+}
+
 // src/skills/lib/markdown_sections.ts
 var SECTION_HEADING_ALIASES = {
   // task-doc
@@ -28997,11 +29356,11 @@ var FOLLOWUP_SIGNALS = /* @__PURE__ */ new Set([
   "followup-doc-only",
   "followup-terminal"
 ]);
-function compareStrings4(left, right) {
+function compareStrings5(left, right) {
   return left.localeCompare(right);
 }
 function sortedUnique3(values) {
-  return [...new Set(values)].sort(compareStrings4);
+  return [...new Set(values)].sort(compareStrings5);
 }
 function gate(status, reasons = []) {
   return { status, reasons: sortedUnique3(reasons) };
@@ -29140,7 +29499,19 @@ function evaluateGraphGates(state, collector) {
     const implementationReasons = [];
     if (!taskGraph || taskGraph.nodes.length === 0) implementationReasons.push("no-selected-tasks");
     if (taskGraph && taskGraph.nodes.some((node2) => !["done", "wont-do"].includes(node2.status))) implementationReasons.push("tasks-incomplete");
-    if (!state.signals.includes("implementation-verified")) implementationReasons.push("implementation-verified");
+    const verification = state.verification;
+    if (verification == null) {
+      implementationReasons.push("verification-summary");
+    } else if (verification.boundToHead === null) {
+      implementationReasons.push("verification-summary-head-unreadable");
+    } else if (!verification.boundToHead) {
+      implementationReasons.push("verification-summary-target-mismatch");
+    } else if (verification.summary.verdict !== "verified") {
+      implementationReasons.push(`verification-${verification.summary.verdict}`);
+      implementationReasons.push(...verification.summary.reasons);
+    } else if (verificationCoverageGap(verification.summary)) {
+      implementationReasons.push("verification-summary-inconsistent");
+    }
     gates.implementation = gate(implementationReasons.length === 0 ? "pass" : "blocked", implementationReasons);
   }
   const followups = state.signals.filter((signal) => FOLLOWUP_SIGNALS.has(signal));
@@ -29169,6 +29540,13 @@ function projectGraphState(options2, collector) {
   const taskGraph = run2 ? projectRunTasks(run2) : null;
   if (taskGraph?.issues.length) blockers.push("task-graph-invalid");
   if (runBlocker !== null) blockers.push(runBlocker);
+  const verification = options2.verificationSummary === void 0 ? null : (() => {
+    const head = resolveCommitSubject(cwd, "HEAD");
+    return {
+      summary: options2.verificationSummary,
+      boundToHead: head === null ? null : options2.verificationSummary.target.subjectDigest === head.subjectDigest
+    };
+  })();
   const state = {
     schemaVersion: 2,
     graphId: options2.graphId ?? "doc-driven-dev",
@@ -29181,6 +29559,7 @@ function projectGraphState(options2, collector) {
     blockers: sortedUnique3(blockers),
     hardBlockers: [],
     taskGraph,
+    verification,
     run: run2 === null ? null : {
       runId: run2.runId,
       status: run2.status,
