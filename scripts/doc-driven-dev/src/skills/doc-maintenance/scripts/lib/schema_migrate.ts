@@ -1,20 +1,19 @@
 "use strict";
 
 // ---------------------------------------------------------------------------
-// doc_maintenance migrate plan|apply|recovery (Issue #233)
+// doc_maintenance migrate plan|apply|recovery (Issues #233, #245)
 // ---------------------------------------------------------------------------
 //
 // The only authorized migration surface. `plan` is fully read-only: it emits
-// the shared preflight diagnostic plus a deterministic planHash pinning the
-// scanned state. `apply` performs exactly one bounded write — installing or
-// repairing the schema manifest — and only when the repository content is
-// already consistent with the declared versions; it re-runs the preflight
-// afterward and refuses to report success unless the result is `current`.
-// `recovery` reports journal state without mutating it; journal-driven
-// resume/rollback machinery is #247, the full legacy-content transformation
-// is #245.
+// the shared preflight diagnostic plus the complete migration inventory and
+// dry-run report (#245) pinned by a deterministic planHash. `apply`
+// performs exactly one bounded write — installing or repairing the schema
+// manifest — and only when the repository content is already consistent
+// with the declared versions; it re-runs the preflight afterward and
+// refuses to report success unless the result is `current`. `recovery`
+// reports journal state without mutating it; journal-driven resume/rollback
+// machinery is #247.
 
-import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -28,6 +27,8 @@ import {
   statusSummary,
 } from "../../../lib/schema_preflight";
 import { isInsideCheckout } from "../../../lib/document_utils";
+import { buildMigrationPlan } from "./migration_inventory";
+import type { MigrationPlanReport } from "./migration_inventory";
 import type {
   PreflightIssue,
   SchemaPreflightReport,
@@ -36,14 +37,7 @@ import type {
 type MigratePlan = {
   command: "migrate plan";
   readOnly: true;
-  preflight: SchemaPreflightReport;
-  plan: {
-    applyEligible: boolean;
-    blockers: PreflightIssue[];
-    planHash: string;
-    next: string;
-  };
-};
+} & MigrationPlanReport;
 
 type MigrateApplyResult = {
   command: "migrate apply";
@@ -66,51 +60,8 @@ type MigrateRecoveryResult = {
   ok: boolean;
 };
 
-function planHashOf(preflight: SchemaPreflightReport): string {
-  const payload = {
-    status: preflight.status,
-    issues: preflight.issues
-      .map((issue) => ({ reason: issue.reason, path: issue.path, detail: issue.detail }))
-      .sort((a, b) => `${a.path}:${a.reason}:${a.detail}`.localeCompare(`${b.path}:${b.reason}:${b.detail}`)),
-    detected: preflight.detected,
-  };
-  return crypto.createHash("sha256").update(JSON.stringify(payload)).digest("hex");
-}
-
-// Blockers for the bounded #233 apply: every artifact inconsistency requires
-// the full migration machinery (#245/#247). `component-version-behind` and a
-// malformed manifest are NOT blockers — rewriting the manifest is exactly the
-// fix. Scope escapes and unreadable/escaped manifests are blockers because
-// the content cannot be verified or safely written. Manifest-scoped markers
-// (canonical execution docs, populated legacy relation fields) count even on
-// manifest-less repos — installing a manifest over them would fail the
-// post-apply check immediately.
-function applyBlockers(preflight: SchemaPreflightReport): PreflightIssue[] {
-  const seen = new Set<string>();
-  return [...preflight.issues, ...preflight.detected.manifestMarkers].filter((issue) => {
-    const key = `${issue.reason}:${issue.path}:${issue.detail}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return issue.reason.startsWith("legacy-")
-      || issue.reason === "scope-escape"
-      || issue.reason === "manifest-escaped"
-      || issue.reason === "manifest-unreadable";
-  });
-}
-
 function migratePlan(cwd: string): MigratePlan {
-  const preflight = evaluateSchemaPreflight(cwd);
-  const blockers = applyBlockers(preflight);
-  const applyEligible = preflight.status !== "migration-incomplete"
-    && preflight.status !== "unsupported-version"
-    && blockers.length === 0;
-  const planHash = planHashOf(preflight);
-  const next = preflight.status === "current"
-    ? "already current — nothing to migrate"
-    : applyEligible
-      ? `run doc_maintenance.js migrate apply --expect ${planHash.slice(0, 12)}… to install the manifest`
-      : "legacy artifacts or unsafe state require the full migration (inventory/apply machinery lands in #245/#247) — the marker list above is the read-only inventory";
-  return { command: "migrate plan", readOnly: true, preflight, plan: { applyEligible, blockers, planHash, next } };
+  return { command: "migrate plan", readOnly: true, ...buildMigrationPlan(cwd) };
 }
 
 // Returns null once the manifest is in place, else the refusal reason. The
@@ -141,8 +92,9 @@ function writeManifest(cwd: string): string | null {
 }
 
 function migrateApply(cwd: string, expect?: string): MigrateApplyResult {
-  const before = evaluateSchemaPreflight(cwd);
-  const planHash = planHashOf(before);
+  const report = buildMigrationPlan(cwd);
+  const before = report.preflight;
+  const planHash = report.plan.planHash;
   const refuse = (reason: string, blockers: PreflightIssue[] = []): MigrateApplyResult => ({
     command: "migrate apply",
     applied: false,
@@ -157,18 +109,29 @@ function migrateApply(cwd: string, expect?: string): MigrateApplyResult {
   if (expect !== undefined && expect !== planHash) {
     return refuse(`plan hash mismatch: expected ${expect}, scanned ${planHash} — rerun migrate plan and re-pin`, []);
   }
+  // The plan's own verdict is the authority: this bounded apply exists only
+  // to install or repair the manifest on content the plan classified as
+  // already consistent. Anything else — a migration-classified repository,
+  // unresolved decisions, unverifiable state — refuses through this one
+  // gate and is never stamped `current` over legacy content.
+  if (!report.plan.applyEligible) {
+    const classification = report.plan.classification;
+    const reason =
+      report.inventory.foreignState.some((entry) => entry.kind === "escape")
+        ? "the repository cannot be fully inventoried — managed content outside the checkout is reachable through links; remove them and replan"
+        : before.status === "unsupported-version"
+          ? "manifest declares a newer schema generation — upgrade the toolchain instead of rewriting by hand"
+          : classification === "recovery"
+            ? "a migration journal or in-progress marker is present — run migrate recovery first"
+            : classification === "bootstrap"
+              ? "empty repository — this is a bootstrap target: scaffold_docs.js seeds the v3 tree, there is nothing to migrate"
+              : classification === "blocked"
+                ? "the repository state cannot be verified — resolve the preflight issues and scope escapes, then replan"
+                : "legacy artifacts or unsafe state require the full migration (#245 planned the inventory; the journaled apply/resume machinery is #247); this apply only installs the manifest on already-consistent content";
+    return refuse(reason, report.plan.blockers);
+  }
   if (before.status === "current") {
     return { ...refuse("already-current"), ok: true };
-  }
-  if (before.status === "unsupported-version") {
-    return refuse("manifest declares a newer schema generation — upgrade the toolchain instead of rewriting by hand");
-  }
-  if (before.status === "migration-incomplete") {
-    return refuse("a migration journal or in-progress marker is present — run migrate recovery first");
-  }
-  const blockers = applyBlockers(before);
-  if (blockers.length > 0) {
-    return refuse("legacy artifacts or unsafe state require the full migration (#245/#247); this apply only installs the manifest on already-consistent content", blockers);
   }
 
   const writeRefusal = writeManifest(cwd);

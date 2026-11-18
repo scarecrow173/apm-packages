@@ -183,7 +183,23 @@ node scripts/doc_maintenance.js migrate recovery [--cwd <repo>] [--json]
 ```
 
 - `migrate plan` — 完全 read-only。preflight 診断、apply 適格性、決定論的
-  `planHash` を報告する。
+  `planHash` を報告する。すべてのリポジトリで、さらに
+  完全な legacy インベントリと dry-run の migration plan を出力する:
+  すべての旧文書(Spec、ADR、Design、Discovery、Test Spec、Plan、
+  Task、IR、EXP)、旧リレーションと索引、呼び出し側の
+  checkpoint/receipt/`effectOutcome` 簿記、実験 JSONL イベント、
+  必要な handoff を伴う active run、foreign state、入力ハッシュ、
+  計画された書き込みと削除、決定論的代替を伴う衝突、機械的変換可能
+  項目、意味論的判断 blocker、解決入力、残余リスク。リポジトリ、
+  Git index、Execution Store、manifest のいずれにも一切書き込まない。
+  lifecycle、status、relation、evidence の真偽を推測せず、曖昧な
+  項目は明示的な decision または blocker として報告する。
+  Test Spec は意図を保持したまま Verification Design 文書へ plan
+  され、Plan/Task は Execution Store run snapshot へ plan され、
+  IR/EXP は durable または diagnostic の行き先へ保守的に分類される。
+  `derives-from` のような旧リレーションが Knowledge Relations v1 へ
+  機械的に書き換えられることはない — それぞれが意味論的 decision
+  である。
 - `migrate apply` — 走査した内容が manifest と既に整合する場合に限り
   manifest を install / repair し、再度 preflight を実行して事後状態を
   報告する。`--expect <planHash>` は apply を事前 preview の plan に
@@ -283,7 +299,9 @@ preview-first に従う:
   plan / apply エントリポイント。`index plan|apply` は全オーナー横断の
   managed index materialization エントリポイント。
   `migrate plan|apply|recovery` は共有 preflight gate の背後にある
-  schema-manifest migration 面。
+  schema-manifest migration 面であり、`migrate plan` は
+  すべてのリポジトリに対して read-only の legacy
+  migration インベントリと dry-run plan も出力する。
 - `scripts/migrate_docs.js`、`scripts/migrate_ids.js`、
   `scripts/scaffold_docs.js`、`scripts/promote_index.js`: この skill が
   所有する migration / bootstrap エントリポイント（先の 3 つは

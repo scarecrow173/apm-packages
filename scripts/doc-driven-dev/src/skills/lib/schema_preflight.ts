@@ -832,6 +832,9 @@ export {
   schemaEntrypointGuard,
   schemaManifestText,
   statusSummary,
+  // Contained read-only tree walk — shared with the migration lane (#245)
+  // so inventory scanning applies the same escape rules.
+  walkTree,
 };
 
 export type {

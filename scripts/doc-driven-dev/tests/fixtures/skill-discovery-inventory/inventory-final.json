@@ -731,7 +731,7 @@
         {
           "path": "doc-driven-dev-graph/scripts/build_dashboard.js",
           "exists": true,
-          "bytes": 1713925
+          "bytes": 1717660
         },
         {
           "path": "doc-status/SKILL.md",
@@ -741,7 +741,7 @@
       ],
       "totals": {
         "directives": 3,
-        "referencedBytes": 1736602,
+        "referencedBytes": 1740337,
         "missing": 0
       }
     },
@@ -1104,7 +1104,7 @@
         {
           "path": "doc-driven-dev-graph/references/graph-state.md",
           "exists": true,
-          "bytes": 3851
+          "bytes": 4205
         },
         {
           "path": "doc-driven-dev-graph/references/run-trace-contract.md",
@@ -1119,7 +1119,7 @@
         {
           "path": "doc-driven-dev-graph/references/verification-summary-contract.md",
           "exists": true,
-          "bytes": 10731
+          "bytes": 13056
         },
         {
           "path": "doc-driven-dev-graph/scripts/build_task_graph.js",
@@ -1134,7 +1134,7 @@
         {
           "path": "doc-driven-dev-graph/scripts/inspect_graph.js",
           "exists": true,
-          "bytes": 1143227
+          "bytes": 1146962
         },
         {
           "path": "doc-driven-dev-graph/scripts/migrate_ids.js",
@@ -1144,7 +1144,7 @@
         {
           "path": "doc-driven-dev-graph/scripts/route_graph.js",
           "exists": true,
-          "bytes": 1529078
+          "bytes": 1532445
         },
         {
           "path": "doc-maintenance/scripts/migrate_ids.js",
@@ -1154,7 +1154,7 @@
         {
           "path": "doc-maintenance/SKILL.md",
           "exists": true,
-          "bytes": 14092
+          "bytes": 15333
         },
         {
           "path": "implementation-flow/SKILL.md",
@@ -1169,14 +1169,14 @@
       ],
       "totals": {
         "directives": 49,
-        "referencedBytes": 7708518,
+        "referencedBytes": 7719540,
         "missing": 0
       }
     },
     {
       "flow": "doc-maintenance",
-      "skillBytes": 14092,
-      "alwaysOnChars": 13774,
+      "skillBytes": 15333,
+      "alwaysOnChars": 15009,
       "directives": [
         {
           "kind": "script",
@@ -1253,55 +1253,55 @@
         {
           "kind": "script",
           "target": "scripts/scaffold_docs.js",
-          "line": 203,
+          "line": 219,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/migrate_docs.js",
-          "line": 204,
+          "line": 220,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/migrate_ids.js",
-          "line": 205,
+          "line": 221,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/promote_index.js",
-          "line": 206,
+          "line": 222,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/doc_maintenance.js",
-          "line": 278,
+          "line": 294,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/migrate_docs.js",
-          "line": 282,
+          "line": 300,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/migrate_ids.js",
-          "line": 282,
+          "line": 300,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/promote_index.js",
-          "line": 283,
+          "line": 301,
           "optional": false
         },
         {
           "kind": "script",
           "target": "scripts/scaffold_docs.js",
-          "line": 283,
+          "line": 301,
           "optional": false
         }
       ],
@@ -1309,7 +1309,7 @@
         {
           "path": "doc-maintenance/scripts/doc_maintenance.js",
           "exists": true,
-          "bytes": 1502613
+          "bytes": 1582640
         },
         {
           "path": "doc-maintenance/scripts/migrate_docs.js",
@@ -1339,7 +1339,7 @@
       ],
       "totals": {
         "directives": 21,
-        "referencedBytes": 6334221,
+        "referencedBytes": 6414248,
         "missing": 0
       }
     },
@@ -2968,10 +2968,10 @@
   ],
   "totals": {
     "flows": 20,
-    "skillBytes": 197116,
-    "alwaysOnChars": 190219,
+    "skillBytes": 198357,
+    "alwaysOnChars": 191454,
     "directives": 335,
-    "referencedBytes": 55901399,
+    "referencedBytes": 55996183,
     "missing": 0
   }
 }
