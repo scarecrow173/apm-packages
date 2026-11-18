@@ -182,8 +182,8 @@ node scripts/doc_maintenance.js migrate recovery [--cwd <repo>] [--json]
 ```
 
 - `migrate plan` — fully read-only; reports the preflight diagnosis, apply
-  eligibility, and a deterministic `planHash`. On a `migration-required`
-  repository it additionally emits the complete legacy inventory and
+  eligibility, and a deterministic `planHash`. On every repository it
+  additionally emits the complete legacy inventory and
   dry-run migration plan: every legacy document (Spec, ADR, Design,
   Discovery, Test Spec, Plan, Task, IR, EXP), old relations and indexes,
   caller checkpoints/receipts/`effectOutcome` bookkeeping, experiment
@@ -296,7 +296,7 @@ preview-first:
   index materialization entrypoint across owners; `migrate plan|apply|recovery`
   is the schema-manifest migration surface behind the shared preflight gate,
   where `migrate plan` also emits the read-only legacy migration inventory
-  and dry-run plan on `migration-required` repositories.
+  and dry-run plan on every repository.
 - `scripts/migrate_docs.js`, `scripts/migrate_ids.js`,
   `scripts/scaffold_docs.js`, `scripts/promote_index.js`: migration and
   bootstrap entry points owned by this skill (the first three are also

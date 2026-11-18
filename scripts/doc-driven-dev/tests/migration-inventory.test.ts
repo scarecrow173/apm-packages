@@ -8,6 +8,7 @@ import matter from "gray-matter";
 import test from "node:test";
 
 import { buildMigrationPlan } from "../src/skills/doc-maintenance/scripts/lib/migration_inventory";
+import { migrateApply } from "../src/skills/doc-maintenance/scripts/lib/schema_migrate";
 
 // Migration inventory + read-only dry-run plan (Issue #245).
 //
@@ -561,4 +562,229 @@ test("migrate plan CLI prints the full deterministic report", () => {
   assert.ok(Array.isArray(viaCli.migration.destinations));
   assert.ok(viaCli.migration.resolutionsRequired.length > 0);
   assert.ok(viaCli.migration.residualRisks.length > 0);
+});
+
+// --- bounded apply is gated by the plan's own verdict ------------------------
+
+test("migrate apply refuses on a migration-classified repository and writes nothing", () => {
+  const repo = tempRepo();
+  // Typeless doc carrying a populated legacy relation: the plan classifies
+  // this migration-required, so apply must take the plan's verdict — never
+  // stamp a manifest over it.
+  writeFile(repo, "docs/specs/note.md", "---\nrelations:\n  derives-from: [SPEC-0001]\n---\n# note\n");
+  const plan = buildMigrationPlan(repo);
+  assert.equal(plan.plan.classification, "migration");
+  assert.equal(plan.plan.applyEligible, false);
+  const before = snapshotTree(repo);
+  const applied = migrateApply(repo);
+  assert.equal(applied.applied, false);
+  assert.equal(applied.ok, false);
+  assert.match(applied.reason, /full migration|legacy/i);
+  assert.equal(snapshotTree(repo), before, "no manifest may be stamped over legacy content");
+});
+
+test("migrate apply refuses when typeless docs carry bookkeeping or sit in migration-owned dirs", () => {
+  const withBookkeeping = tempRepo();
+  writeFile(withBookkeeping, "docs/specs/note.md", "---\neffectOutcomes:\n  - {status: completed}\n---\n# note\n");
+  const bookPlan = buildMigrationPlan(withBookkeeping);
+  assert.equal(bookPlan.plan.classification, "migration");
+  assert.equal(migrateApply(withBookkeeping).applied, false);
+
+  const inOwnedDir = tempRepo();
+  writeFile(inOwnedDir, "docs/tasks/note.md", "# note\n");
+  const ownedPlan = buildMigrationPlan(inOwnedDir);
+  assert.equal(ownedPlan.plan.classification, "migration");
+  assert.equal(migrateApply(inOwnedDir).applied, false);
+});
+
+// --- malformed payloads are decisions, never silent empties --------------------
+
+test("a malformed relation scalar is a decision listing the raw value", () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/specs/0001-spec.md", baseDoc({ id: "SPEC-0001", relations: { "derives-from": 5 } }));
+  const plan = buildMigrationPlan(repo);
+  const decision = plan.migration.semanticDecisions.find((item) => item.kind === "malformed-relation-value" && item.element === "relations.derives-from");
+  assert.ok(decision, "a non-string/list relation value must be a semantic decision");
+  assert.deepEqual(decision?.targets, ["5"]);
+  assert.ok(!plan.migration.convertibles.some((item) => item.kind === "drop-empty-relation" && item.element === "relations.derives-from"),
+    "a malformed payload is never a mechanical empty drop");
+});
+
+test("a partially malformed relation array is a decision listing the raw value", () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/specs/0001-spec.md", baseDoc({ id: "SPEC-0001", relations: { "derives-from": ["TASK-0001", 5] } }));
+  const plan = buildMigrationPlan(repo);
+  const decision = plan.migration.semanticDecisions.find((item) => item.kind === "malformed-relation-value" && item.element === "relations.derives-from");
+  assert.ok(decision, "a mixed-type relation array must be a semantic decision");
+  assert.deepEqual(decision?.targets, ['["TASK-0001",5]']);
+  assert.ok(!plan.migration.convertibles.some((item) => item.element === "relations.derives-from"));
+});
+
+// --- populated legacy content is visible on every disposition -----------------
+
+test("populated legacy relations on out-of-scope docs surface as decisions with destinations", () => {
+  const repo = tempRepo();
+  writeFile(repo, "docs/specs/note.md", "---\nrelations:\n  derives-from: [SPEC-0001]\n---\n# note\n");
+  const plan = buildMigrationPlan(repo);
+  const doc = plan.inventory.documents.find((item) => item.path === "docs/specs/note.md");
+  assert.equal(doc?.disposition, "out-of-scope");
+  assert.deepEqual(doc?.legacyRelationFields, ["derives-from"]);
+  assert.ok(plan.migration.semanticDecisions.some((item) => item.kind === "legacy-relation" && item.path === "docs/specs/note.md" && item.field === "derives-from"));
+  assert.ok(plan.migration.destinations.some((row) => row.source === "docs/specs/note.md" && row.element === "relations.derives-from" && row.action === "decision"));
+  assert.equal(plan.migration.status, "awaiting-resolution");
+  assert.doesNotMatch(plan.plan.next, /nothing to migrate/);
+});
+
+test("non-array bookkeeping payloads are decisions and inventoried as malformed", () => {
+  const repo = tempRepo();
+  writeFile(repo, "docs/specs/note.md", "---\neffectOutcomes: oops\n---\n# note\n");
+  const plan = buildMigrationPlan(repo);
+  const entry = plan.inventory.callerBookkeeping.find((item) => item.path === "docs/specs/note.md");
+  assert.ok(entry, "a present non-list bookkeeping payload is still inventoried");
+  assert.deepEqual(entry?.malformed, ["effectOutcomes"]);
+  assert.ok(plan.migration.semanticDecisions.some((item) => item.kind === "malformed-bookkeeping" && item.element === "frontmatter.effectOutcomes"));
+});
+
+test("populated bookkeeping on a decision-disposition doc demands a run assignment", () => {
+  const repo = tempRepo();
+  writeFile(repo, "docs/tasks/note.md", "---\ncheckpointEvidence:\n  - {edgeId: e-1}\n---\n# note\n");
+  const plan = buildMigrationPlan(repo);
+  assert.ok(plan.migration.semanticDecisions.some((item) => item.kind === "untyped-legacy-doc" && item.path === "docs/tasks/note.md"));
+  assert.ok(plan.migration.semanticDecisions.some((item) => item.kind === "bookkeeping-assignment" && item.element === "frontmatter.checkpointEvidence"),
+    "bookkeeping on a non-execution carrier must name the run it migrates into");
+});
+
+// --- every planned write target participates in collision detection ----------
+
+test("duplicate task ids collide on the planned task-record write target", () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/plans/0001-plan.md", baseDoc({ id: "PLAN-0001", type: "plan", status: "in-progress" }));
+  writeDoc(repo, "docs/tasks/0001-first.md", baseDoc({ id: "TASK-0001", type: "task", status: "done", relations: { implements: ["docs/plans/0001-plan.md"] } }));
+  writeDoc(repo, "docs/tasks/0002-second.md", baseDoc({ id: "TASK-0001", type: "task", status: "done", relations: { implements: ["docs/plans/0001-plan.md"] } }));
+  const plan = buildMigrationPlan(repo);
+  const collision = plan.migration.collisions.find((item) => item.kind === "duplicate-target" && item.target.endsWith("/tasks/TASK-0001.json"));
+  assert.ok(collision, "two task sources writing one task-record path is a collision");
+  assert.deepEqual(collision?.sources, ["docs/tasks/0001-first.md", "docs/tasks/0002-second.md"]);
+  assert.ok(plan.migration.semanticDecisions.some((item) => item.kind === "target-collision"));
+  assert.equal(plan.migration.status, "blocked");
+});
+
+// --- unreadable inputs degrade to findings, never crash the plan -------------
+
+test("an unreadable input is a structured decision, not a crash", (t) => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/specs/0001-spec.md", baseDoc({ id: "SPEC-0001" }));
+  fs.mkdirSync(path.join(repo, "docs", "tasks"), { recursive: true });
+  try {
+    fs.symlinkSync(path.join(repo, "docs", "tasks", "nonexistent-target.md"), path.join(repo, "docs", "tasks", "0001-link.md"));
+  } catch (error: unknown) {
+    t.skip(`symlink unavailable: ${error instanceof Error ? error.message : String(error)}`);
+    return;
+  }
+  const plan = buildMigrationPlan(repo);
+  assert.ok(plan.inventory.inputFiles.includes("docs/tasks/0001-link.md"));
+  assert.ok(plan.migration.semanticDecisions.some((item) => item.kind === "unreadable-input" && item.path === "docs/tasks/0001-link.md"));
+  assert.ok(plan.migration.residualRisks.some((item) => item.kind === "unreadable-input" && item.path === "docs/tasks/0001-link.md"));
+  assert.equal(buildMigrationPlan(repo).plan.planHash, plan.plan.planHash, "unreadable inputs hash deterministically");
+});
+
+// --- verdict coherence: classification, status, applyEligible, next -----------
+
+test("a malformed manifest blocks coherently across the whole report", () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/specs/0001-spec.md", v3Doc({ id: "SPEC-0001" }));
+  writeManifest(repo, "{ not json");
+  const plan = buildMigrationPlan(repo);
+  assert.equal(plan.plan.classification, "blocked");
+  assert.equal(plan.plan.applyEligible, false);
+  assert.equal(plan.migration.status, "blocked");
+  assert.ok(!plan.migration.plannedWrites.some((write) => write.kind === "schema-manifest"),
+    "no manifest write may be planned over unverifiable state");
+  assert.doesNotMatch(plan.plan.next, /nothing to migrate|already consistent/);
+  assert.equal(migrateApply(repo).applied, false);
+});
+
+test("a scope escape on an otherwise-current repo blocks coherently", (t) => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/specs/0001-spec.md", v3Doc({ id: "SPEC-0001" }));
+  writeManifest(repo);
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), "migration-outside-"));
+  writeFile(outside, "secret.md", "x\n");
+  fs.mkdirSync(path.join(repo, "docs", "tasks"), { recursive: true });
+  try {
+    fs.symlinkSync(path.join(outside, "secret.md"), path.join(repo, "docs", "tasks", "0001-link.md"));
+  } catch (error: unknown) {
+    t.skip(`symlink unavailable: ${error instanceof Error ? error.message : String(error)}`);
+    return;
+  }
+  const plan = buildMigrationPlan(repo);
+  assert.equal(plan.plan.classification, "blocked");
+  assert.equal(plan.migration.status, "blocked");
+  assert.equal(plan.plan.applyEligible, false);
+  assert.doesNotMatch(plan.plan.next, /already current|nothing to migrate/);
+});
+
+test("a generated index on a current repo is maintenance, not a migration write", () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/specs/0001-spec.md", v3Doc({ id: "SPEC-0001" }));
+  writeFile(repo, "docs/specs/README.md", "# SPEC Documents\n\n<!-- doc-suite:generated-index -->\n");
+  writeManifest(repo);
+  const plan = buildMigrationPlan(repo);
+  assert.equal(plan.plan.classification, "current");
+  assert.equal(plan.migration.status, "nothing");
+  assert.ok(!plan.migration.plannedWrites.some((write) => write.kind === "index-regen"),
+    "the bounded apply never rewrites a derived view — index apply owns that write");
+  assert.match(plan.plan.next, /already current/);
+});
+
+// --- execution-bound sources leave Git and feed link analysis -----------------
+
+test("run-bound sources get removals so stale-link analysis covers them", () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/plans/0001-plan.md", baseDoc({ id: "PLAN-0001", type: "plan", status: "in-progress" }));
+  writeDoc(repo, "docs/tasks/0001-task.md", baseDoc({ id: "TASK-0001", type: "task", status: "done", relations: { implements: ["docs/plans/0001-plan.md"] } }));
+  writeDoc(repo, "docs/specs/0001-spec.md", baseDoc({ id: "SPEC-0001" }), "# Spec\n\nSee [the plan](../plans/0001-plan.md).\n");
+  const plan = buildMigrationPlan(repo);
+  assert.ok(plan.migration.removals.some((item) => item.path === "docs/plans/0001-plan.md" && item.when === "at-finalize"),
+    "a plan source left behind would stay a legacy-execution marker forever");
+  assert.ok(plan.migration.removals.some((item) => item.path === "docs/tasks/0001-task.md" && item.when === "at-finalize"));
+  assert.ok(plan.migration.residualRisks.some((item) => item.kind === "stale-link" && item.path === "docs/specs/0001-spec.md"),
+    "links into run-bound sources resolve to no durable target");
+});
+
+// --- locale siblings get concrete destinations --------------------------------
+
+test("locale siblings land on concrete destinations and removals", () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/test-specs/0001-test.md", baseDoc({ id: "TSPEC-0001", type: "test-spec" }));
+  writeDoc(repo, "docs/test-specs/0001-test.ja.md", baseDoc({ id: "TSPEC-0001", type: "test-spec" }));
+  writeDoc(repo, "docs/plans/0001-plan.md", baseDoc({ id: "PLAN-0001", type: "plan", status: "in-progress" }));
+  writeDoc(repo, "docs/plans/0001-plan.ja.md", baseDoc({ id: "PLAN-0001", type: "plan", status: "in-progress" }));
+  const plan = buildMigrationPlan(repo);
+  // A converting primary's sibling converts to its own concrete path.
+  assert.ok(plan.migration.plannedWrites.some((write) => write.kind === "durable-document" && write.target === "docs/verification/0001-test.ja.md"));
+  assert.ok(plan.migration.destinations.some((row) => row.source === "docs/test-specs/0001-test.ja.md" && row.element === "file" && row.target === "docs/verification/0001-test.ja.md"));
+  assert.ok(plan.migration.removals.some((item) => item.path === "docs/test-specs/0001-test.ja.md"));
+  // A run-bound primary's sibling leaves Git at finalize with it.
+  assert.ok(plan.migration.removals.some((item) => item.path === "docs/plans/0001-plan.ja.md" && item.when === "at-finalize"));
+  assert.ok(!plan.migration.destinations.some((row) => row.target === "migrates with docs/plans/0001-plan.md"),
+    "no vague ride-along destinations remain");
+});
+
+// --- emitted collections are sorted for byte-stable output ---------------------
+
+test("emitted preflight issues and blockers are sorted like their hash inputs", () => {
+  const repo = tempRepo();
+  writeDoc(repo, "docs/plans/0001-plan.md", baseDoc({ id: "PLAN-0001", type: "plan", status: "in-progress" }));
+  writeDoc(repo, "docs/tasks/0001-task.md", baseDoc({ id: "TASK-0001", type: "task", status: "done", relations: { implements: ["docs/plans/0001-plan.md"] } }));
+  writeFile(repo, ".apm/state/doc-driven-dev/foreign.json", "{}\n");
+  writeFile(repo, "docs/.doc-driven-dev/state.json", "{}\n");
+  const plan = buildMigrationPlan(repo);
+  const issueKeys = plan.preflight.issues.map((issue) => `${issue.reason}:${issue.path}:${issue.detail}`);
+  assert.deepEqual(issueKeys, [...issueKeys].sort(), "emitted issues are sorted");
+  const markerKeys = plan.preflight.detected.manifestMarkers.map((issue) => `${issue.reason}:${issue.path}:${issue.detail}`);
+  assert.deepEqual(markerKeys, [...markerKeys].sort(), "emitted manifestMarkers are sorted");
+  const blockerKeys = plan.plan.blockers.map((issue) => `${issue.reason}:${issue.path}:${issue.detail}`);
+  assert.deepEqual(blockerKeys, [...blockerKeys].sort(), "blockers are sorted");
+  assert.ok(blockerKeys.length > 0);
 });

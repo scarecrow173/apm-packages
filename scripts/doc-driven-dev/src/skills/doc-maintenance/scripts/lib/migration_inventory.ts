@@ -144,6 +144,7 @@ type InventoryDocument = {
   dirKind: "durable" | "migration-owned" | "unmanaged";
   fields: string[];
   legacyRelationFields: string[];
+  malformedRelationFields: string[];
   bookkeepingFields: string[];
   localeSiblingOf: string | null;
   localeSiblings: string[];
@@ -173,6 +174,9 @@ type InventoryBookkeeping = {
   carrier: "plan" | "task" | "other";
   effectOutcomes: number;
   checkpointEvidence: number;
+  // Fields whose payload is present but not a list — the payload cannot be
+  // enumerated into records, so it is a decision item rather than a count.
+  malformed: string[];
 };
 
 type InventoryLegacyRelation = {
@@ -493,11 +497,17 @@ function collectFiles(cwd: string): { files: CollectedFile[]; escapes: ForeignSt
       },
     );
     if (!ok && fs.existsSync(abs)) {
+      // walkTree refused the root: either it resolves outside the checkout
+      // through a link, or it is not a directory at all — report which.
+      let directory = false;
+      try { directory = fs.statSync(abs).isDirectory(); } catch { /* stat failure reports the same boundary failure */ }
       escapes.push({
         path: root,
         kind: "escape",
         namespace: "dir",
-        detail: `${root} resolves outside the checkout — its content is never inventoried`,
+        detail: directory
+          ? `${root} resolves outside the checkout through a link — its content is never inventoried`
+          : `${root} exists but is not a directory — its content cannot be inventoried`,
       });
     }
   }
@@ -540,20 +550,32 @@ function stringField(data: Record<string, unknown>, field: string): string | nul
 }
 
 // `relations` → field/target-list pairs; `malformed` marks a non-map value
-// so the caller surfaces a decision instead of guessing.
-function relationEntries(data: Record<string, unknown>): { entries: { field: string; targets: string[] }[]; malformed: boolean } {
+// so the caller surfaces a decision instead of guessing. `malformedFields`
+// lists per-field values that are neither a string nor a list of strings —
+// a payload that cannot be enumerated is a semantic decision, never an
+// "empty" field silently dropped.
+function relationEntries(data: Record<string, unknown>): { entries: { field: string; targets: string[] }[]; malformed: boolean; malformedFields: { field: string; raw: unknown }[] } {
   const raw = data.relations;
-  if (raw === undefined || raw === null) return { entries: [], malformed: false };
-  if (!isPlainObject(raw)) return { entries: [], malformed: true };
+  if (raw === undefined || raw === null) return { entries: [], malformed: false, malformedFields: [] };
+  if (!isPlainObject(raw)) return { entries: [], malformed: true, malformedFields: [] };
   const entries: { field: string; targets: string[] }[] = [];
+  const malformedFields: { field: string; raw: unknown }[] = [];
   for (const [field, value] of Object.entries(raw)) {
-    const items = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
-    const targets = items
-      .filter((item): item is string => typeof item === "string" && item.trim() !== "")
-      .map((item) => item.trim());
-    entries.push({ field, targets });
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      entries.push({ field, targets: trimmed === "" ? [] : [trimmed] });
+      continue;
+    }
+    if (Array.isArray(value) && value.every((item) => typeof item === "string")) {
+      const targets = value
+        .map((item) => item.trim())
+        .filter((item) => item !== "");
+      entries.push({ field, targets });
+      continue;
+    }
+    malformedFields.push({ field, raw: value });
   }
-  return { entries, malformed: false };
+  return { entries, malformed: false, malformedFields };
 }
 
 function firstH1(body: string): string | null {
@@ -610,14 +632,19 @@ function buildDocuments(files: CollectedFile[], rawOf: (rel: string) => RawDoc):
     const data = raw.data;
     const type = stringField(data, "type");
     const resolved = type === null ? null : resolveDocType(type);
-    const { entries, malformed } = relationEntries(data);
+    const { entries, malformed, malformedFields } = relationEntries(data);
     const legacyFields = entries
       .filter((entry) => !nonReferenceRelationKeys.has(entry.field)
         && !(PROVENANCE_RELATION_KEYS as readonly string[]).includes(entry.field)
         && !V1_RELATION_FIELDS.has(entry.field))
       .map((entry) => entry.field);
+    // Populated bookkeeping is any present payload — a non-list value still
+    // carries content and surfaces as a decision, never an invisible read.
     const bookkeeping = ["effectOutcomes", "checkpointEvidence"]
-      .filter((field) => Array.isArray(data[field]) && (data[field] as unknown[]).length > 0);
+      .filter((field) => {
+        const value = data[field];
+        return Array.isArray(value) ? value.length > 0 : value !== undefined;
+      });
     const dirKind = dirKindForDoc(file.path);
     const primary = primaryOf.get(artifactStem(file.path)) ?? file.path;
     const parseError = raw.parseError ?? (malformed ? "relations: is not a map of relation keys to target lists" : null);
@@ -658,6 +685,7 @@ function buildDocuments(files: CollectedFile[], rawOf: (rel: string) => RawDoc):
       dirKind,
       fields: sortStrings(Object.keys(data)),
       legacyRelationFields: sortStrings(legacyFields),
+      malformedRelationFields: sortStrings(malformedFields.map((entry) => entry.field)),
       bookkeepingFields: bookkeeping,
       localeSiblingOf: primary === file.path ? null : primary,
       localeSiblings: primary === file.path ? sortStrings((byStem.get(artifactStem(file.path)) ?? []).filter((rel) => rel !== file.path)) : [],
@@ -837,9 +865,20 @@ function buildMigrationPlan(cwd: string): MigrationPlanReport {
     .sort((a, b) => compareCodeUnits(a.path, b.path) || compareCodeUnits(a.kind, b.kind));
 
   const inputFiles = sortStrings(files.map((file) => file.path));
+  // A read failure degrades to a marker, never a crash — an unreadable input
+  // leaves the inventory provably incomplete and surfaces as its own
+  // decision below instead of losing the whole report to one bad file.
+  const unreadableInputs = new Set<string>();
   const inputHash = inputFiles.length === 0
     ? sha256("[]")
-    : sha256(inputFiles.map((rel) => `${rel}:${sha256(fs.readFileSync(path.join(root, rel), "utf8"))}`).join("\n"));
+    : sha256(inputFiles.map((rel) => {
+        try {
+          return `${rel}:${sha256(fs.readFileSync(path.join(root, rel), "utf8"))}`;
+        } catch {
+          unreadableInputs.add(rel);
+          return `${rel}:unreadable`;
+        }
+      }).join("\n"));
 
   const byPath = new Map(documents.map((doc) => [doc.path, doc]));
   const byId = new Map<string, InventoryDocument[]>();
@@ -865,10 +904,88 @@ function buildMigrationPlan(cwd: string): MigrationPlanReport {
   };
   const dest = (row: Destination): void => { destinations.push(row); };
   const existingPaths = new Set(inputFiles);
-  const claimedTargets = new Map<string, string[]>();
+  // The path whose run claims a carrier's bookkeeping records — a locale
+  // sibling's bookkeeping rides with its primary's run.
+  const bookkeepingRunKey = new Map<string, string>();
+  // Where each primary artifact lands — locale siblings resolve their
+  // concrete destinations from the primary's outcome after the doc pass.
+  const primaryOutcome = new Map<string, { fileTarget: string; newId: string | null }>();
 
   const fmOf = (doc: InventoryDocument): Record<string, unknown> => rawOf(doc.path).data;
   const bodyOf = (doc: InventoryDocument): string => rawOf(doc.path).body;
+
+  // Caller bookkeeping — emitted for EVERY inventoried document, whatever
+  // its own disposition: a populated `effectOutcomes`/`checkpointEvidence`
+  // is live content that must reach a decision or a destination, never hide
+  // behind an out-of-scope or needs-classification verdict. A present
+  // non-list payload cannot be enumerated, so it is its own decision kind.
+  const emitBookkeeping = (doc: InventoryDocument, fm: Record<string, unknown>): void => {
+    if (doc.bookkeepingFields.length === 0) return;
+    const carrier = doc.disposition === "convert:run-plan" ? "plan"
+      : doc.disposition === "convert:run-task" ? "task" : "other";
+    bookkeeping.set(doc.path, {
+      path: doc.path,
+      carrier,
+      effectOutcomes: Array.isArray(fm.effectOutcomes) ? fm.effectOutcomes.length : 0,
+      checkpointEvidence: Array.isArray(fm.checkpointEvidence) ? fm.checkpointEvidence.length : 0,
+      malformed: doc.bookkeepingFields.filter((field) => !Array.isArray(fm[field])),
+    });
+    bookkeepingRunKey.set(doc.path, doc.localeSiblingOf ?? doc.path);
+    for (const field of doc.bookkeepingFields) {
+      const element = `frontmatter.${field}`;
+      if (!Array.isArray(fm[field])) {
+        decide({
+          kind: "malformed-bookkeeping",
+          path: doc.path,
+          element,
+          candidates: ["repair-then-replan", "preserve-as-diagnostic-trace", "drop-as-unmapped"],
+          default: null,
+          required: true,
+          summary: `${field} is not a list — the caller-bookkeeping payload cannot be enumerated into records; repair it, divert it to diagnostics, or drop it explicitly`,
+        });
+        dest({ source: doc.path, element, action: "decision", target: "decision:malformed-bookkeeping" });
+        continue;
+      }
+      if (carrier === "other") {
+        decide({
+          kind: "bookkeeping-assignment",
+          path: doc.path,
+          element,
+          candidates: ["assign-to-run:<runId>", "diagnostic-trace"],
+          default: "diagnostic-trace",
+          required: true,
+          summary: `${field} caller bookkeeping sits on a non-execution doc — the run it migrates into must be declared`,
+        });
+        dest({ source: doc.path, element, action: "decision", target: "decision:bookkeeping-assignment" });
+      } else {
+        dest({ source: doc.path, element, action: "map", target: field === "effectOutcomes" ? "run receipts / run_trace.jsonl" : "run checkpoints" });
+      }
+    }
+  };
+
+  // Populated legacy relations and bookkeeping on documents the main pass
+  // will not interpret (locale siblings, out-of-scope, needs-classification)
+  // still surface as semantic decisions with destinations — the document's
+  // disposition covers the document, never the live content inside it.
+  const emitScopedLegacyContent = (doc: InventoryDocument, fm: Record<string, unknown>, relations: { field: string; targets: string[] }[]): void => {
+    for (const entry of relations) {
+      if (nonReferenceRelationKeys.has(entry.field) || (PROVENANCE_RELATION_KEYS as readonly string[]).includes(entry.field)) continue;
+      if (V1_RELATION_FIELDS.has(entry.field) || entry.targets.length === 0) continue;
+      decide({
+        kind: "legacy-relation",
+        path: doc.path,
+        element: `relations.${entry.field}`,
+        field: entry.field,
+        targets: [...entry.targets].sort(compareCodeUnits),
+        candidates: ["declare-v1-mapping", "drop-as-unmapped", "preserve-as-body-note"],
+        default: null,
+        required: true,
+        summary: `relations.${entry.field} is pre-v3 vocabulary with ${entry.targets.length} target(s) — semantics are decided, never mechanically rewritten`,
+      });
+      dest({ source: doc.path, element: `relations.${entry.field}`, action: "decision", target: "decision:legacy-relation" });
+    }
+    emitBookkeeping(doc, fm);
+  };
 
   // --- classification --------------------------------------------------------
   // Computed before writes so the write plan can gate doc edits: a
@@ -878,17 +995,19 @@ function buildMigrationPlan(cwd: string): MigrationPlanReport {
     documents.filter((doc) =>
       (doc.disposition !== "preserve" && doc.disposition !== "out-of-scope")
       || doc.legacyRelationFields.length > 0
+      || doc.malformedRelationFields.length > 0
       || doc.bookkeepingFields.length > 0).length
     + experiments.length
     + foreignState.length
     + indexes.filter((index) => index.dirKind === "migration-owned").length;
   const classification: PlanClassification =
-    preflight.status === "current" ? "current"
-      : preflight.status === "migration-incomplete" ? "recovery"
-        : preflight.status === "invalid" || preflight.status === "unsupported-version" ? "blocked"
-          // Escaped paths mean the inventory is provably incomplete — the
-          // tree cannot be verified, so it is blocked rather than bootstrap.
-          : escapes.length > 0 ? "blocked"
+    // Escaped paths mean the inventory is provably incomplete — the tree
+    // cannot be verified, so it is blocked no matter what the preflight saw
+    // (doc-tree escapes are silent to it by design).
+    escapes.length > 0 ? "blocked"
+      : preflight.status === "current" ? "current"
+        : preflight.status === "migration-incomplete" ? "recovery"
+          : preflight.status === "invalid" || preflight.status === "unsupported-version" ? "blocked"
             : inputFiles.length === 0 ? "bootstrap"
               : legacyDomainCount === 0 ? "manifest-only" : "migration";
   // Mechanical field fixes on preserve docs become planned writes only when
@@ -1009,23 +1128,43 @@ function buildMigrationPlan(cwd: string): MigrationPlanReport {
 
   // --- per-document interpretation ---------------------------------------------
   const idClaims = new Map<string, string[]>();
+  const siblingDocs: InventoryDocument[] = [];
   for (const doc of documents) {
     const fm = fmOf(doc);
     const body = bodyOf(doc);
-    const { entries: relations } = relationEntries(fm);
+    const { entries: relations, malformedFields } = relationEntries(fm);
 
-    // Locale siblings ride with their primary artifact.
-    if (doc.localeSiblingOf !== null) {
-      dest({ source: doc.path, element: "file", action: "preserve", target: `migrates with ${doc.localeSiblingOf}`, note: "locale sibling of the primary artifact" });
-      continue;
-    }
-
-    // Legacy relation reporting (populated non-v1 fields on every doc kind).
+    // Legacy relation reporting (non-v1 fields on every doc kind) — recorded
+    // before any disposition branch so nothing is invisible.
     for (const entry of relations) {
       if (nonReferenceRelationKeys.has(entry.field) || (PROVENANCE_RELATION_KEYS as readonly string[]).includes(entry.field)) continue;
       if (!V1_RELATION_FIELDS.has(entry.field)) {
         legacyRelations.push({ path: doc.path, field: entry.field, targets: [...entry.targets].sort(compareCodeUnits) });
       }
+    }
+    // Malformed relation payloads are semantic decisions on every doc kind —
+    // never silently dropped as "empty" fields.
+    for (const malformedField of malformedFields) {
+      decide({
+        kind: "malformed-relation-value",
+        path: doc.path,
+        element: `relations.${malformedField.field}`,
+        field: malformedField.field,
+        targets: [JSON.stringify(malformedField.raw)],
+        candidates: ["repair-then-replan", "drop-as-unmapped"],
+        default: null,
+        required: true,
+        summary: `relations.${malformedField.field} is not a string or list of strings (raw: ${JSON.stringify(malformedField.raw)}) — malformed payloads are decided, never silently dropped`,
+      });
+      dest({ source: doc.path, element: `relations.${malformedField.field}`, action: "decision", target: "decision:malformed-relation-value" });
+    }
+
+    // Locale siblings ride with their primary artifact — the sibling pass
+    // below resolves concrete destinations once primaries are planned.
+    if (doc.localeSiblingOf !== null) {
+      emitScopedLegacyContent(doc, fm, relations);
+      siblingDocs.push(doc);
+      continue;
     }
 
     if (doc.disposition === "out-of-scope") {
@@ -1036,18 +1175,23 @@ function buildMigrationPlan(cwd: string): MigrationPlanReport {
         detail: "typeless or unmanaged Markdown outside the migration scope — the lint layer owns it",
       });
       dest({ source: doc.path, element: "file", action: "preserve", target: doc.path });
+      primaryOutcome.set(doc.path, { fileTarget: doc.path, newId: doc.id });
+      emitScopedLegacyContent(doc, fm, relations);
       continue;
     }
 
     if (doc.disposition === "decision") {
-      const kind = doc.parseError !== null
-        ? (fm.relations !== undefined && !isPlainObject(fm.relations) ? "malformed-frontmatter" : "unparseable-frontmatter")
-        : doc.kind === "unknown-type"
-          ? "unknown-type"
-          : doc.kind === "untyped"
-            ? "untyped-legacy-doc"
-            : "doc-placement";
+      const kind = unreadableInputs.has(doc.path)
+        ? "unreadable-input"
+        : doc.parseError !== null
+          ? (fm.relations !== undefined && !isPlainObject(fm.relations) ? "malformed-frontmatter" : "unparseable-frontmatter")
+          : doc.kind === "unknown-type"
+            ? "unknown-type"
+            : doc.kind === "untyped"
+              ? "untyped-legacy-doc"
+              : "doc-placement";
       const candidates: Record<string, string[]> = {
+        "unreadable-input": ["restore-readability-then-replan", "discard"],
         "unparseable-frontmatter": ["repair-front-matter-then-replan", "discard"],
         "malformed-frontmatter": ["repair-relations-then-replan", "discard"],
         "unknown-type": ["declare-target-type", "preserve-as-unmanaged", "discard"],
@@ -1061,16 +1205,20 @@ function buildMigrationPlan(cwd: string): MigrationPlanReport {
         candidates: candidates[kind] ?? ["review"],
         default: null,
         required: true,
-        summary: doc.parseError !== null
-          ? `front matter cannot be parsed (${doc.parseError}) — the artifact is unclassifiable until repaired`
-          : kind === "unknown-type"
-            ? `type ${JSON.stringify(doc.type)} is not a Registry-3 type — migration needs a declared classification`
-            : kind === "untyped-legacy-doc"
-              ? `typeless Markdown inside a migration-owned dir — declare its artifact class`
-              : `${doc.type} document sits inside migration-owned ${normalizeDir(path.posix.dirname(doc.path))} — choose the canonical home`,
+        summary: kind === "unreadable-input"
+          ? `file cannot be read (${doc.parseError}) — the artifact is unclassifiable until readable`
+          : doc.parseError !== null
+            ? `front matter cannot be parsed (${doc.parseError}) — the artifact is unclassifiable until repaired`
+            : kind === "unknown-type"
+              ? `type ${JSON.stringify(doc.type)} is not a Registry-3 type — migration needs a declared classification`
+              : kind === "untyped-legacy-doc"
+                ? `typeless Markdown inside a migration-owned dir — declare its artifact class`
+                : `${doc.type} document sits inside migration-owned ${normalizeDir(path.posix.dirname(doc.path))} — choose the canonical home`,
       });
       dest({ source: doc.path, element: "file", action: "decision", target: `decision:${kind}` });
+      primaryOutcome.set(doc.path, { fileTarget: `decision:${kind}`, newId: null });
       removals.push({ path: doc.path, when: "decision", note: "source disposition pending the classification decision" });
+      emitScopedLegacyContent(doc, fm, relations);
       continue;
     }
 
@@ -1108,8 +1256,6 @@ function buildMigrationPlan(cwd: string): MigrationPlanReport {
           required: true,
           summary: `conversion target ${targetPath} already exists — it is never overwritten`,
         });
-      } else {
-        claimedTargets.set(targetPath, [...(claimedTargets.get(targetPath) ?? []), doc.path]);
       }
       const idOwners = (byId.get(newId!) ?? []).filter((owner) => owner.path !== doc.path);
       if (idOwners.length > 0) {
@@ -1136,6 +1282,13 @@ function buildMigrationPlan(cwd: string): MigrationPlanReport {
           : `knowledge record at ${targetPath} — impl body preserved verbatim pending the classification decision`,
       });
       removals.push({ path: doc.path, when: "at-finalize", note: "converted source removed only after post-migration integrity checks" });
+    }
+
+    // Execution-bound sources leave Git at finalize — a plan/task file left
+    // behind would stay a `legacy-execution-doc` marker and hold the
+    // preflight at `migration-required` forever.
+    if (isRunBound) {
+      removals.push({ path: doc.path, when: "at-finalize", note: "execution-bound source leaves Git at finalize — the migrated run snapshot replaces it" });
     }
 
     // --- destination rows shared by every interpretation ---
@@ -1429,31 +1582,76 @@ function buildMigrationPlan(cwd: string): MigrationPlanReport {
             : doc.path,
     });
 
-    // Caller bookkeeping fields — aggregated once per carrier doc.
-    if (doc.bookkeepingFields.length > 0) {
-      const carrier = doc.disposition === "convert:run-plan" ? "plan" : doc.disposition === "convert:run-task" ? "task" : "other";
-      bookkeeping.set(doc.path, {
-        path: doc.path,
-        carrier,
-        effectOutcomes: Array.isArray(fm.effectOutcomes) ? fm.effectOutcomes.length : 0,
-        checkpointEvidence: Array.isArray(fm.checkpointEvidence) ? fm.checkpointEvidence.length : 0,
-      });
-      for (const field of doc.bookkeepingFields) {
-        if (carrier === "other") {
-          decide({
-            kind: "bookkeeping-assignment",
-            path: doc.path,
-            element: `frontmatter.${field}`,
-            candidates: ["assign-to-run:<runId>", "diagnostic-trace"],
-            default: "diagnostic-trace",
-            required: true,
-            summary: `${field} caller bookkeeping sits on a non-execution doc — the run it migrates into must be declared`,
-          });
-          fmRow(field, "decision", "decision:bookkeeping-assignment");
-        } else {
-          fmRow(field, "map", field === "effectOutcomes" ? "run receipts / run_trace.jsonl" : "run checkpoints");
-        }
+    // Caller bookkeeping fields — aggregated once per carrier doc; the
+    // shared emitter covers every disposition so populated bookkeeping is
+    // never invisible.
+    emitBookkeeping(doc, fm);
+
+    primaryOutcome.set(doc.path, {
+      fileTarget: convertsToDurable ? targetPath : isRunBound ? runTarget! : doc.path,
+      newId: convertsToDurable ? newId : doc.id,
+    });
+  }
+
+  // --- locale siblings ride with their primary --------------------------------------
+  // Primaries plan first; each sibling then lands on a concrete destination —
+  // never a vague "migrates with". A converting primary's sibling gets its own
+  // concrete target path and removal; a run-bound primary's sibling leaves Git
+  // with it at finalize.
+  for (const sib of siblingDocs) {
+    const primary = byPath.get(sib.localeSiblingOf!);
+    const outcome = primaryOutcome.get(sib.localeSiblingOf!);
+    const localeExt = (() => {
+      const match = /\.([a-z]{2})\.md$/i.exec(path.posix.basename(sib.path));
+      return match ? match[1].toLowerCase() : "locale";
+    })();
+    const { entries: sibRelations } = relationEntries(fmOf(sib));
+    if (primary !== undefined && outcome !== undefined
+      && (primary.disposition === "convert:verification" || primary.disposition === "classify")) {
+      const siblingTarget = outcome.fileTarget.replace(/\.md$/i, `.${localeExt}.md`);
+      if (existingPaths.has(siblingTarget)) {
+        collisions.push({ target: siblingTarget, kind: "target-exists", sources: [sib.path], suggestedTarget: null });
+        decide({
+          kind: "target-collision",
+          path: sib.path,
+          element: "file",
+          candidates: ["rename-manually", "skip-source"],
+          default: null,
+          required: true,
+          summary: `locale-sibling target ${siblingTarget} already exists — it is never overwritten`,
+        });
       }
+      plannedWrites.push({
+        target: siblingTarget,
+        kind: "durable-document",
+        source: sib.path,
+        destination: `locale sibling of ${primary.path} — localized artifact file preserved verbatim`,
+      });
+      removals.push({ path: sib.path, when: "at-finalize", note: `converted with primary ${primary.path} — removed after post-migration integrity checks` });
+      dest({ source: sib.path, element: "file", action: "convert", target: siblingTarget, note: `locale sibling of ${primary.path}` });
+      dest({ source: sib.path, element: "filename", action: "convert", target: path.posix.basename(siblingTarget) });
+      dest({ source: sib.path, element: "id", action: "map", target: `${outcome.newId ?? "decision:id-assignment"} — one artifact, localized files` });
+      dest({ source: sib.path, element: "body", action: "convert", target: `preserved verbatim into ${siblingTarget}` });
+      // Empty legacy fields on a converting sibling are mechanical drops at rewrite.
+      for (const entry of sibRelations) {
+        if (nonReferenceRelationKeys.has(entry.field) || (PROVENANCE_RELATION_KEYS as readonly string[]).includes(entry.field)) continue;
+        if (V1_RELATION_FIELDS.has(entry.field) || entry.targets.length > 0) continue;
+        convertibles.push({ kind: "drop-empty-relation", path: sib.path, element: `relations.${entry.field}`, action: "drop", detail: `relations.${entry.field} is empty legacy vocabulary — dropped at rewrite` });
+      }
+    } else if (primary !== undefined && outcome !== undefined
+      && (primary.disposition === "convert:run-plan" || primary.disposition === "convert:run-task")) {
+      dest({ source: sib.path, element: "file", action: "convert", target: `${outcome.fileTarget} — locale variant rides with ${primary.path}`, note: "locale sibling of the primary artifact" });
+      dest({ source: sib.path, element: "id", action: "preserve", target: `no separate record — rides with ${primary.path}` });
+      dest({ source: sib.path, element: "body", action: "convert", target: `carries with ${primary.path} into the run snapshot` });
+      removals.push({ path: sib.path, when: "at-finalize", note: `execution-bound locale sibling leaves Git with ${primary.path}` });
+    } else if (primary !== undefined && primary.disposition === "decision") {
+      dest({ source: sib.path, element: "file", action: "decision", target: outcome?.fileTarget ?? "decision:doc-placement", note: `rides with primary ${primary.path}` });
+      removals.push({ path: sib.path, when: "decision", note: `rides with primary ${primary.path} — pending the classification decision` });
+    } else if (primary !== undefined && primary.disposition === "out-of-scope") {
+      outOfScope.push({ path: sib.path, kind: "unmanaged-doc", action: "unchanged", detail: `locale sibling of ${primary.path} — outside the migration scope` });
+      dest({ source: sib.path, element: "file", action: "preserve", target: sib.path, note: `locale sibling of ${primary.path}` });
+    } else {
+      dest({ source: sib.path, element: "file", action: "preserve", target: sib.path, note: primary !== undefined ? `locale sibling of ${primary.path} — stays with its primary` : "locale sibling" });
     }
   }
 
@@ -1552,11 +1750,13 @@ function buildMigrationPlan(cwd: string): MigrationPlanReport {
     }
   }
 
-  // Caller bookkeeping → records/trace inside the carrier's run.
+  // Caller bookkeeping → records/trace inside the carrier's run. A locale
+  // sibling's records land in its primary's run.
   for (const entry of bookkeeping.values()) {
     if (entry.carrier === "other") continue; // decision already emitted
     const fm = fmOf(byPath.get(entry.path)!);
-    const runId = entry.carrier === "plan" ? planRuns.get(entry.path) : taskRun.get(entry.path);
+    const runKey = bookkeepingRunKey.get(entry.path) ?? entry.path;
+    const runId = entry.carrier === "plan" ? planRuns.get(runKey) : taskRun.get(runKey);
     if (runId === undefined) {
       residualRisks.push({ kind: "bookkeeping-pending", path: entry.path, detail: "caller bookkeeping waits on the run-membership decision before records can be planned" });
       continue;
@@ -1689,9 +1889,16 @@ function buildMigrationPlan(cwd: string): MigrationPlanReport {
   // --- indexes ---------------------------------------------------------------------
   for (const index of indexes) {
     if (index.disposition === "regenerate") {
-      convertibles.push({ kind: "index-regen", path: index.path, element: "file", action: "regenerate", detail: "managed index is a derived view — regenerated post-migration" });
-      plannedWrites.push({ target: index.path, kind: "index-regen", source: "derived", destination: "managed index regenerated in place post-migration" });
-      dest({ source: index.path, element: "file", action: "convert", target: `${index.path} (regenerated)` });
+      // A generated index in a durable dir is ordinary maintenance: the
+      // full migration regenerates it post-apply, but on any other plan the
+      // bounded apply never rewrites it — `index apply` owns that write.
+      if (emitDocEdits) {
+        convertibles.push({ kind: "index-regen", path: index.path, element: "file", action: "regenerate", detail: "managed index is a derived view — regenerated post-migration" });
+        plannedWrites.push({ target: index.path, kind: "index-regen", source: "derived", destination: "managed index regenerated in place post-migration" });
+        dest({ source: index.path, element: "file", action: "convert", target: `${index.path} (regenerated)` });
+      } else {
+        dest({ source: index.path, element: "file", action: "preserve", target: `${index.path} — managed derived view; regenerated via doc_maintenance index apply when stale` });
+      }
     } else if (index.disposition === "remove") {
       convertibles.push({ kind: "index-remove", path: index.path, element: "file", action: "drop", detail: "generated index of a migration-owned dir — a derived view removed with its corpus" });
       removals.push({ path: index.path, when: "at-finalize", note: "generated index removed with the migrated corpus" });
@@ -1733,22 +1940,6 @@ function buildMigrationPlan(cwd: string): MigrationPlanReport {
     }
   }
 
-  // --- duplicate conversion targets ---------------------------------------------------
-  for (const [target, sources] of claimedTargets) {
-    if (sources.length > 1) {
-      collisions.push({ target, kind: "duplicate-target", sources: sortStrings(sources), suggestedTarget: null });
-      decide({
-        kind: "target-collision",
-        path: sources[0],
-        element: "file",
-        targets: [...sources].sort(compareCodeUnits),
-        candidates: ["rename-sources", "skip-duplicates"],
-        default: null,
-        required: true,
-        summary: `${sources.length} sources map to ${target} — choose distinct targets`,
-      });
-    }
-  }
   for (const [id, sources] of idClaims) {
     if (sources.length > 1) {
       collisions.push({ target: id, kind: "id-exists", sources: sortStrings(sources), suggestedTarget: null });
@@ -1809,6 +2000,25 @@ function buildMigrationPlan(cwd: string): MigrationPlanReport {
     }
   }
 
+  // --- unreadable inputs -------------------------------------------------------------
+  // Every input the hash could not read is a structured finding — the report
+  // never dies on one bad file. Documents already carry their own
+  // unreadable-input decision through the per-document pass.
+  for (const rel of sortStrings(unreadableInputs)) {
+    residualRisks.push({ kind: "unreadable-input", path: rel, detail: "input could not be read — the plan is computed without its content" });
+    const file = files.find((entry) => entry.path === rel);
+    if (file?.cls === "doc") continue; // decided in the per-document pass
+    decide({
+      kind: "unreadable-input",
+      path: rel,
+      element: "file",
+      candidates: ["restore-readability-then-replan", "discard"],
+      default: null,
+      required: true,
+      summary: `${rel} cannot be read — the inventory is provably incomplete until the input is readable`,
+    });
+  }
+
   // --- schema manifest write ----------------------------------------------------------
   // Only planned when the classification actually runs an apply: bootstrap
   // gets scaffold_docs instead; current/recovery/blocked have their own path.
@@ -1820,6 +2030,35 @@ function buildMigrationPlan(cwd: string): MigrationPlanReport {
       source: "declared",
       destination: "schema manifest installed/repaired last — finalized `current` only after post-migration integrity checks",
     });
+  }
+
+  // --- duplicate write targets --------------------------------------------------------
+  // Collision detection covers ALL planned writes — durable converts, run
+  // records, receipts, checkpoints, run manifests, run traces, index regen,
+  // and the schema manifest itself — so this pass runs only after every
+  // write is emitted. Two writers on one path is never silently merged or
+  // overwritten at apply.
+  const writeClaims = new Map<string, string[]>();
+  for (const write of plannedWrites) {
+    writeClaims.set(write.target, [...(writeClaims.get(write.target) ?? []), write.source]);
+  }
+  for (const [target, sources] of writeClaims) {
+    const unique = sortStrings(new Set(sources));
+    // One source may plan several edits on its own target (annotate fields,
+    // retarget links) — a collision is distinct writers sharing one path.
+    if (unique.length > 1) {
+      collisions.push({ target, kind: "duplicate-target", sources: unique, suggestedTarget: null });
+      decide({
+        kind: "target-collision",
+        path: unique[0],
+        element: "file",
+        targets: unique,
+        candidates: ["resolve-shared-target", "drop-duplicate-writes"],
+        default: null,
+        required: true,
+        summary: `${unique.length} distinct writers target ${target} — concurrent writes on one path are never silently merged`,
+      });
+    }
   }
 
   // --- run handoffs ---------------------------------------------------------------------
@@ -1863,22 +2102,35 @@ function buildMigrationPlan(cwd: string): MigrationPlanReport {
       };
     });
 
-  const blockers = [...preflight.issues, ...preflight.detected.manifestMarkers].filter((issue, index, all) => {
-    const key = `${issue.reason}:${issue.path}:${issue.detail}`;
-    return (issue.reason.startsWith("legacy-") || issue.reason === "scope-escape" || issue.reason === "manifest-escaped" || issue.reason === "manifest-unreadable")
-      && all.findIndex((other) => `${other.reason}:${other.path}:${other.detail}` === key) === index;
-  });
+  const issueKey = (issue: PreflightIssue): string => `${issue.reason}:${issue.path}:${issue.detail}`;
+  const issueSort = (a: PreflightIssue, b: PreflightIssue): number => compareCodeUnits(issueKey(a), issueKey(b));
+  const blockers = [...preflight.issues, ...preflight.detected.manifestMarkers]
+    .filter((issue, index, all) => {
+      const key = issueKey(issue);
+      return (issue.reason.startsWith("legacy-") || issue.reason === "scope-escape" || issue.reason === "manifest-escaped" || issue.reason === "manifest-unreadable")
+        && all.findIndex((other) => issueKey(other) === key) === index;
+    })
+    .sort(issueSort);
+
+  // The emitted preflight is sorted like its hash inputs — byte-stable
+  // report, byte-stable hash.
+  const emittedPreflight: SchemaPreflightReport = {
+    ...preflight,
+    issues: [...preflight.issues].sort(issueSort),
+    detected: { ...preflight.detected, manifestMarkers: [...preflight.detected.manifestMarkers].sort(issueSort) },
+  };
 
   const migrationStatus: MigrationPlanReport["migration"]["status"] =
-    collisions.length > 0 || foreignState.some((entry) => entry.kind === "escape") ? "blocked"
+    classification === "blocked" || classification === "recovery"
+      || collisions.length > 0 || foreignState.some((entry) => entry.kind === "escape")
+      ? "blocked"
       : sortedDecisions.length > 0 ? "awaiting-resolution"
         : plannedWrites.length > 0 ? "planned" : "nothing";
 
-  const applyEligible = preflight.status !== "migration-incomplete"
-    && preflight.status !== "unsupported-version"
-    && classification !== "migration"
-    && classification !== "bootstrap"
-    && escapes.length === 0
+  // The bounded apply exists only to install or repair the manifest on
+  // content the plan itself classified as already consistent — it is never
+  // eligible over legacy content, unverifiable state, or blocking findings.
+  const applyEligible = (classification === "manifest-only" || classification === "current")
     && blockers.length === 0;
 
   const counts = {
@@ -1920,17 +2172,10 @@ function buildMigrationPlan(cwd: string): MigrationPlanReport {
 
   const hashPayload = {
     preflight: {
-      status: preflight.status,
-      issues: [...preflight.issues].sort((a, b) => compareCodeUnits(`${a.reason}${a.path}${a.detail}`, `${b.reason}${b.path}${b.detail}`)),
-      manifest: preflight.manifest,
-      detected: {
-        generation: preflight.detected.generation,
-        canonicalDocs: preflight.detected.canonicalDocs,
-        executionDocs: preflight.detected.executionDocs,
-        unmanagedDocs: preflight.detected.unmanagedDocs,
-        legacyMarkers: preflight.detected.legacyMarkers,
-        manifestMarkers: [...preflight.detected.manifestMarkers].sort((a, b) => compareCodeUnits(`${a.reason}${a.path}${a.detail}`, `${b.reason}${b.path}${b.detail}`)),
-      },
+      status: emittedPreflight.status,
+      issues: emittedPreflight.issues,
+      manifest: emittedPreflight.manifest,
+      detected: emittedPreflight.detected,
     },
     classification,
     inventory,
@@ -1938,20 +2183,30 @@ function buildMigrationPlan(cwd: string): MigrationPlanReport {
   };
   const planHash = sha256(canonicalJson(hashPayload));
 
+  // `next` mirrors the plan's own verdict: never "nothing to migrate" while
+  // writes or decisions are pending, never "run apply" while ineligible.
   const next = classification === "bootstrap"
     ? "empty repository — this is a bootstrap target: scaffold_docs.js seeds the v3 tree, no migration is needed"
-    : classification === "current"
-      ? "already current — nothing to migrate"
-      : applyEligible
-        ? `content is already consistent — run doc_maintenance.js migrate apply --expect ${planHash.slice(0, 12)}… to install the manifest`
-        : classification === "recovery"
-          ? "a migration journal or in-progress marker is present — run doc_maintenance.js migrate recovery"
-          : classification === "blocked"
-            ? "the repository state cannot be verified or is newer than this toolchain — resolve the preflight issues first"
-            : `migration plan assembled: ${plannedWrites.length} planned write(s), ${sortedDecisions.length} semantic decision(s) pending explicit input — the full apply machinery arrives with #247`;
+    : classification === "recovery"
+      ? "a migration journal or in-progress marker is present — run doc_maintenance.js migrate recovery before replanning"
+      : classification === "blocked"
+        ? "the repository state cannot be verified or is newer than this toolchain — resolve the preflight issues and scope escapes first"
+        : migrationStatus === "blocked"
+          ? "the plan is blocked by collisions or scope escapes — resolve them and replan; nothing is applyable as scanned"
+          : classification === "current"
+            ? sortedDecisions.length > 0
+              ? `already current — nothing migrates; ${sortedDecisions.length} advisory decision(s) remain over non-migration content`
+              : "already current — nothing to migrate"
+            : applyEligible
+              ? sortedDecisions.length > 0
+                ? `content is already consistent — run doc_maintenance.js migrate apply --expect ${planHash.slice(0, 12)}… to install the manifest; ${sortedDecisions.length} advisory decision(s) also remain`
+                : `content is already consistent — run doc_maintenance.js migrate apply --expect ${planHash.slice(0, 12)}… to install the manifest`
+              : blockers.length > 0
+                ? "legacy artifacts or unsafe state block the bounded apply — resolve them, or wait for the journaled migration machinery (#247)"
+                : `migration plan assembled: ${plannedWrites.length} planned write(s), ${sortedDecisions.length} semantic decision(s) pending explicit input — the full apply machinery arrives with #247`;
 
   return {
-    preflight,
+    preflight: emittedPreflight,
     plan: {
       classification,
       applyEligible,

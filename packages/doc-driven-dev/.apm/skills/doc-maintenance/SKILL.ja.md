@@ -183,7 +183,7 @@ node scripts/doc_maintenance.js migrate recovery [--cwd <repo>] [--json]
 ```
 
 - `migrate plan` — 完全 read-only。preflight 診断、apply 適格性、決定論的
-  `planHash` を報告する。`migration-required` のリポジトリでは、さらに
+  `planHash` を報告する。すべてのリポジトリで、さらに
   完全な legacy インベントリと dry-run の migration plan を出力する:
   すべての旧文書(Spec、ADR、Design、Discovery、Test Spec、Plan、
   Task、IR、EXP)、旧リレーションと索引、呼び出し側の
@@ -300,7 +300,7 @@ preview-first に従う:
   managed index materialization エントリポイント。
   `migrate plan|apply|recovery` は共有 preflight gate の背後にある
   schema-manifest migration 面であり、`migrate plan` は
-  `migration-required` のリポジトリに対して read-only の legacy
+  すべてのリポジトリに対して read-only の legacy
   migration インベントリと dry-run plan も出力する。
 - `scripts/migrate_docs.js`、`scripts/migrate_ids.js`、
   `scripts/scaffold_docs.js`、`scripts/promote_index.js`: この skill が

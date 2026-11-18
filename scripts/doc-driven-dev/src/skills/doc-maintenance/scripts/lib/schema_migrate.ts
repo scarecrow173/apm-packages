@@ -109,23 +109,29 @@ function migrateApply(cwd: string, expect?: string): MigrateApplyResult {
   if (expect !== undefined && expect !== planHash) {
     return refuse(`plan hash mismatch: expected ${expect}, scanned ${planHash} — rerun migrate plan and re-pin`, []);
   }
+  // The plan's own verdict is the authority: this bounded apply exists only
+  // to install or repair the manifest on content the plan classified as
+  // already consistent. Anything else — a migration-classified repository,
+  // unresolved decisions, unverifiable state — refuses through this one
+  // gate and is never stamped `current` over legacy content.
+  if (!report.plan.applyEligible) {
+    const classification = report.plan.classification;
+    const reason =
+      report.inventory.foreignState.some((entry) => entry.kind === "escape")
+        ? "the repository cannot be fully inventoried — managed content outside the checkout is reachable through links; remove them and replan"
+        : before.status === "unsupported-version"
+          ? "manifest declares a newer schema generation — upgrade the toolchain instead of rewriting by hand"
+          : classification === "recovery"
+            ? "a migration journal or in-progress marker is present — run migrate recovery first"
+            : classification === "bootstrap"
+              ? "empty repository — this is a bootstrap target: scaffold_docs.js seeds the v3 tree, there is nothing to migrate"
+              : classification === "blocked"
+                ? "the repository state cannot be verified — resolve the preflight issues and scope escapes, then replan"
+                : "legacy artifacts or unsafe state require the full migration (#245 planned the inventory; the journaled apply/resume machinery is #247); this apply only installs the manifest on already-consistent content";
+    return refuse(reason, report.plan.blockers);
+  }
   if (before.status === "current") {
     return { ...refuse("already-current"), ok: true };
-  }
-  if (before.status === "unsupported-version") {
-    return refuse("manifest declares a newer schema generation — upgrade the toolchain instead of rewriting by hand");
-  }
-  if (before.status === "migration-incomplete") {
-    return refuse("a migration journal or in-progress marker is present — run migrate recovery first");
-  }
-  if (report.plan.classification === "bootstrap") {
-    return refuse("empty repository — this is a bootstrap target: scaffold_docs.js seeds the v3 tree, there is nothing to migrate");
-  }
-  if (report.inventory.foreignState.some((entry) => entry.kind === "escape")) {
-    return refuse("the repository cannot be fully inventoried — managed content outside the checkout is reachable through links; remove them and replan");
-  }
-  if (report.plan.blockers.length > 0) {
-    return refuse("legacy artifacts or unsafe state require the full migration (#245 planned the inventory; the journaled apply/resume machinery is #247); this apply only installs the manifest on already-consistent content", report.plan.blockers);
   }
 
   const writeRefusal = writeManifest(cwd);
