@@ -188,8 +188,8 @@ non-current state — there is no general guard bypass:
 
 ```bash
 node scripts/doc_maintenance.js migrate plan [--cwd <repo>] [--json]
-node scripts/doc_maintenance.js migrate apply [--cwd <repo>] [--expect <planHash>] [--json]
-node scripts/doc_maintenance.js migrate recovery [--cwd <repo>] [--json]
+node scripts/doc_maintenance.js migrate apply [--cwd <repo>] [--expect <planHash>] [--resolutions <file>] [--allow-dirty] [--json]
+node scripts/doc_maintenance.js migrate recovery [--cwd <repo>] [--resume|--rollback] [--expect <planHash>] [--json]
 ```
 
 - `migrate plan` — fully read-only; reports the preflight diagnosis, apply
@@ -210,13 +210,34 @@ node scripts/doc_maintenance.js migrate recovery [--cwd <repo>] [--json]
   items classify conservatively into durable or diagnostic destinations.
   Legacy relations such as `derives-from` are never mechanically
   rewritten into Knowledge Relations v1 — each is a semantic decision.
-- `migrate apply` — installs or repairs the manifest only when the scanned
-  content is already consistent with it, then re-runs the preflight and
-  reports the post state. `--expect <planHash>` pins the apply to a
-  previously previewed plan and refuses all writes on drift. It never
-  migrates document content — moving legacy artifacts is the job of the
-  full migration flow, not this command.
-- `migrate recovery` — reports migration journal state without mutating it.
+- `migrate apply` — the journaled migration engine. It rebuilds the
+  deterministic plan and refuses every write until all gates pass: the
+  `--expect <planHash>` pin, a `migration` classification with no
+  collisions, every required semantic decision resolved via
+  `--resolutions <file>` (a JSON object `{schemaVersion: 1, planHash,
+  decisions: {"D-0001": <choice-or-object>}}`, with `runHandoffs` for
+  existing-run merges), a clean worktree unless `--allow-dirty` pins the
+  risk, and the Execution Store boundary. It then stages all artifacts
+  under `.apm/state/doc-driven-dev/migration/`, validates the staged
+  bytes (durable front matter, export digests, task DAG, VD check
+  bindings), and publishes step-by-step under
+  `docs/.doc-driven-dev/migration.journal.json`. Test Specs become
+  Verification Design docs with declared checks, Plans/Tasks import as
+  Execution Store runs carrying receipts, checkpoints, and plan
+  provenance, ambiguous or explicitly diagnostic content routes into a
+  deterministic diagnostics run, managed indexes regenerate (new type
+  dirs get one), sources are removed at finalize, a postflight
+  lint/graph gate plus the schema preflight runs, and the manifest is
+  stamped LAST. `applied` is true only when the post-apply preflight is
+  `current`; on a manifest-only repo it stays the old bounded path —
+  manifest stamp, nothing else.
+- `migrate recovery` — inspects an in-flight journal without mutating
+  it. `--resume` continues from the exact step the apply stopped at
+  (every step is idempotent; input/staging drift refuses with a replan
+  instruction), `--rollback` undoes done steps in reverse — published
+  artifacts removed, originals restored — leaving the tree byte-identical
+  to the pre-migration state. `--expect` pins recovery to a specific
+  planHash.
 
 ## Migration Commands
 
@@ -305,9 +326,10 @@ preview-first:
 - `scripts/doc_maintenance.js`: plan/apply entry point for safe repairs and
   managed index regeneration; `index plan|apply` is the explicit managed
   index materialization entrypoint across owners; `migrate plan|apply|recovery`
-  is the schema-manifest migration surface behind the shared preflight gate,
-  where `migrate plan` also emits the read-only legacy migration inventory
-  and dry-run plan on every repository.
+  is the journaled v2→v3 migration surface behind the shared preflight gate —
+  `migrate plan` emits the read-only legacy inventory and dry-run plan,
+  `migrate apply` runs the staged/journaled engine, and `migrate recovery`
+  inspects, resumes, or rolls back an in-flight journal.
 - `scripts/migrate_docs.js`, `scripts/migrate_ids.js`,
   `scripts/scaffold_docs.js`, `scripts/promote_index.js`: migration and
   bootstrap entry points owned by this skill (the first three are also

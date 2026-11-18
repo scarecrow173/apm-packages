@@ -365,7 +365,7 @@ test("impl and exp classify into durable/diagnostic destinations", () => {
   // The EXP log is never durable evidence: diagnostic trace or explicit classification.
   const expRow = plan.migration.destinations.find((row) => row.source === "docs/impl/exp/0001-pooling.jsonl" && row.element === "file");
   assert.match(expRow?.target ?? "", /run_trace\.jsonl|decision:/);
-  assert.ok(!plan.migration.plannedWrites.some((write) => write.target.includes("/evidence/") || write.kind === "evidence-record"), "no evidence records may be fabricated");
+  assert.ok(!plan.migration.plannedWrites.some((write) => write.target.includes("/evidence/") || (write.kind as string) === "evidence-record"), "no evidence records may be fabricated");
 });
 
 test("caller bookkeeping converts to run receipts, checkpoints, and trace", () => {
@@ -566,7 +566,7 @@ test("migrate plan CLI prints the full deterministic report", () => {
 
 // --- bounded apply is gated by the plan's own verdict ------------------------
 
-test("migrate apply refuses on a migration-classified repository and writes nothing", () => {
+test("migrate apply refuses on a migration-classified repository and writes nothing", async () => {
   const repo = tempRepo();
   // Typeless doc carrying a populated legacy relation: the plan classifies
   // this migration-required, so apply must take the plan's verdict — never
@@ -576,25 +576,25 @@ test("migrate apply refuses on a migration-classified repository and writes noth
   assert.equal(plan.plan.classification, "migration");
   assert.equal(plan.plan.applyEligible, false);
   const before = snapshotTree(repo);
-  const applied = migrateApply(repo);
+  const applied = await migrateApply(repo);
   assert.equal(applied.applied, false);
   assert.equal(applied.ok, false);
   assert.match(applied.reason, /full migration|legacy/i);
   assert.equal(snapshotTree(repo), before, "no manifest may be stamped over legacy content");
 });
 
-test("migrate apply refuses when typeless docs carry bookkeeping or sit in migration-owned dirs", () => {
+test("migrate apply refuses when typeless docs carry bookkeeping or sit in migration-owned dirs", async () => {
   const withBookkeeping = tempRepo();
   writeFile(withBookkeeping, "docs/specs/note.md", "---\neffectOutcomes:\n  - {status: completed}\n---\n# note\n");
   const bookPlan = buildMigrationPlan(withBookkeeping);
   assert.equal(bookPlan.plan.classification, "migration");
-  assert.equal(migrateApply(withBookkeeping).applied, false);
+  assert.equal((await migrateApply(withBookkeeping)).applied, false);
 
   const inOwnedDir = tempRepo();
   writeFile(inOwnedDir, "docs/tasks/note.md", "# note\n");
   const ownedPlan = buildMigrationPlan(inOwnedDir);
   assert.equal(ownedPlan.plan.classification, "migration");
-  assert.equal(migrateApply(inOwnedDir).applied, false);
+  assert.equal((await migrateApply(inOwnedDir)).applied, false);
 });
 
 // --- malformed payloads are decisions, never silent empties --------------------
@@ -690,7 +690,7 @@ test("an unreadable input is a structured decision, not a crash", (t) => {
 
 // --- verdict coherence: classification, status, applyEligible, next -----------
 
-test("a malformed manifest blocks coherently across the whole report", () => {
+test("a malformed manifest blocks coherently across the whole report", async () => {
   const repo = tempRepo();
   writeDoc(repo, "docs/specs/0001-spec.md", v3Doc({ id: "SPEC-0001" }));
   writeManifest(repo, "{ not json");
@@ -701,7 +701,7 @@ test("a malformed manifest blocks coherently across the whole report", () => {
   assert.ok(!plan.migration.plannedWrites.some((write) => write.kind === "schema-manifest"),
     "no manifest write may be planned over unverifiable state");
   assert.doesNotMatch(plan.plan.next, /nothing to migrate|already consistent/);
-  assert.equal(migrateApply(repo).applied, false);
+  assert.equal((await migrateApply(repo)).applied, false);
 });
 
 test("a scope escape on an otherwise-current repo blocks coherently", (t) => {

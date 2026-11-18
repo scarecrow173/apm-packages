@@ -746,6 +746,9 @@ function kindCounts(flows: { directives: { kind: string }[] }[]): Record<string,
 // (extraction decision workflow, consolidation script/reference directives).
 // #241 re-pinned again after the Verification Summary contract added its
 // reference links to the graph skill and contract docs.
+// #247 re-pinned again after the journaled v2→v3 migration engine
+// (apply/resume/rollback, resolutions, run handoffs, postflight gates,
+// manifest-last) grew the doc-maintenance always-on surface by ~1.5 KB.
 // The original Task-2 audit snapshots (pre/post-fix, older rules) live in
 // `.superpowers/sdd/2026-10-29-skill-discovery/`.
 const ALWAYS_ON_TOLERANCE = 100;
