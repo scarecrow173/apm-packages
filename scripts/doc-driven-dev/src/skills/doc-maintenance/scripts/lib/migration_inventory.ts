@@ -237,6 +237,7 @@ type Convertible = {
   kind: string;
   path: string;
   element: string;
+  field?: string;
   action: string;
   targets?: string[];
   detail: string;
@@ -1297,7 +1298,7 @@ function buildMigrationPlan(cwd: string): MigrationPlanReport {
     dest({ source: doc.path, element: "filename", action: convertsToDurable ? "convert" : "preserve", target: convertsToDurable ? path.posix.basename(targetPath) : path.posix.basename(doc.path) });
     dest({ source: doc.path, element: "id", action: convertsToDurable ? "map" : "preserve", target: convertsToDurable ? newId! : (doc.id ?? "decision:id-assignment") });
 
-    if (doc.id === null && doc.disposition !== "out-of-scope") {
+    if (doc.id === null) {
       const prefix = doc.disposition === "convert:verification" ? "VD"
         : doc.disposition === "classify" ? "KNOW"
           : doc.disposition === "convert:run-plan" ? "PLAN"
@@ -2220,7 +2221,7 @@ function buildMigrationPlan(cwd: string): MigrationPlanReport {
   };
 }
 
-export { buildMigrationPlan };
+export { buildMigrationPlan, convertedId, hashId, relationEntries };
 export type {
   Destination,
   InventoryDocument,

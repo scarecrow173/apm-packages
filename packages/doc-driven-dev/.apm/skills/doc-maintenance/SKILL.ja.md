@@ -187,8 +187,8 @@ manifest が宣言する schema contract:
 
 ```bash
 node scripts/doc_maintenance.js migrate plan [--cwd <repo>] [--json]
-node scripts/doc_maintenance.js migrate apply [--cwd <repo>] [--expect <planHash>] [--json]
-node scripts/doc_maintenance.js migrate recovery [--cwd <repo>] [--json]
+node scripts/doc_maintenance.js migrate apply [--cwd <repo>] [--expect <planHash>] [--resolutions <file>] [--allow-dirty] [--json]
+node scripts/doc_maintenance.js migrate recovery [--cwd <repo>] [--resume|--rollback] [--expect <planHash>] [--json]
 ```
 
 - `migrate plan` — 完全 read-only。preflight 診断、apply 適格性、決定論的
@@ -209,13 +209,37 @@ node scripts/doc_maintenance.js migrate recovery [--cwd <repo>] [--json]
   `derives-from` のような旧リレーションが Knowledge Relations v1 へ
   機械的に書き換えられることはない — それぞれが意味論的 decision
   である。
-- `migrate apply` — 走査した内容が manifest と既に整合する場合に限り
-  manifest を install / repair し、再度 preflight を実行して事後状態を
-  報告する。`--expect <planHash>` は apply を事前 preview の plan に
-  pin し、drift があれば全書き込みを拒否する。文書内容の migration は
-  行わない — 旧 artifact の移行はこのコマンドではなく full migration
-  flow の責務である。
-- `migrate recovery` — migration journal の状態を変更せずに報告する。
+- `migrate apply` — journal 付き migration エンジン。決定論的 plan を
+  再構築し、すべての gate が通るまで一切の書き込みを拒否する:
+  `--expect <planHash>` pin、衝突のない `migration` classification、
+  `--resolutions <file>` による必須 semantic decision の解決
+  (`{schemaVersion: 1, planHash, decisions: {"D-0001": <選択肢または
+  オブジェクト>}}` という JSON オブジェクト。既存 run の merge は
+  `runHandoffs` で指定)、`--allow-dirty` で明示しない限り clean な
+  worktree、Execution Store の境界。続いて全 artifact を
+  `.apm/state/doc-driven-dev/migration/` 配下に stage し、stage 済み
+  バイトを検証し(durable front matter、export digest、task DAG、VD
+  check binding)、`docs/.doc-driven-dev/migration.journal.json` の
+  もとで step ごとに publish する。Test Spec は宣言された check を持つ
+  Verification Design 文書になり、Plan/Task は receipt・checkpoint・
+  plan の provenance を伴う Execution Store run として import され、
+  曖昧または明示的に diagnostic とされた内容は決定論的な diagnostics
+  run へ送られ、managed index は再生成され(新規 type dir には新規
+  作成)、source は finalize で除去され、postflight の lint/graph gate
+  と schema preflight が走り、manifest は最後に刻印される。
+  `applied` が true になるのは apply 後 preflight が `current` の
+  場合のみ。manifest-only のリポジトリでは従来どおりの限定経路 —
+  manifest 刻印のみ。
+- `migrate recovery` — 進行中の journal を変更せずに検査する。
+  `--resume` は apply が停止したちょうどその step から継続する(すべて
+  の step は冪等。step 計画が commit される前の crash では staging
+  transform を再実行する。input/staging の drift は replan を促して
+  拒否)。`--rollback` は完了済み step を逆順に取り消す — publish
+  済み artifact を除去し original を復元し、ツリーを migration 前の
+  状態へバイト単位で戻す。唯一の不可逆 step は `finalize` handoff
+  であり、finalize 済みの run は finalize されたまま残り rollback
+  はその旨を報告する — 復元には export の import または再承認を行う。
+  `--expect` は recovery を特定の planHash に pin する。
 
 ## Migration コマンド
 
@@ -308,9 +332,11 @@ preview-first に従う:
   plan / apply エントリポイント。`index plan|apply` は全オーナー横断の
   managed index materialization エントリポイント。
   `migrate plan|apply|recovery` は共有 preflight gate の背後にある
-  schema-manifest migration 面であり、`migrate plan` は
-  すべてのリポジトリに対して read-only の legacy
-  migration インベントリと dry-run plan も出力する。
+  journal 付き v2→v3 migration 面 — `migrate plan` は read-only の
+  legacy migration インベントリと dry-run plan を出力し、
+  `migrate apply` は staged/journal エンジンを実行し、
+  `migrate recovery` は進行中の journal を検査・再開・ロールバック
+  する。
 - `scripts/migrate_docs.js`、`scripts/migrate_ids.js`、
   `scripts/scaffold_docs.js`、`scripts/promote_index.js`: この skill が
   所有する migration / bootstrap エントリポイント（先の 3 つは

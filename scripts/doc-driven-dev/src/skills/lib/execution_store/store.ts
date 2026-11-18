@@ -1041,7 +1041,13 @@ function exportRun(
     payloadDigest,
   };
   if (options.out !== undefined) {
-    atomicWriteFile(path.resolve(cwd, options.out), `${JSON.stringify(document, null, 2)}\n`);
+    // The store owns its write target's parent directory — the same
+    // convention importRun follows for imported files. An `out` naming a
+    // not-yet-existing directory must land, not fail the atomic write's
+    // tmp-create with ENOENT.
+    const target = path.resolve(cwd, options.out);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    atomicWriteFile(target, `${JSON.stringify(document, null, 2)}\n`);
   }
   return document;
 }

@@ -39926,7 +39926,9 @@ function exportRun(cwd, runId, options2 = {}) {
     payloadDigest
   };
   if (options2.out !== void 0) {
-    atomicWriteFile(import_node_path7.default.resolve(cwd, options2.out), `${JSON.stringify(document3, null, 2)}
+    const target = import_node_path7.default.resolve(cwd, options2.out);
+    import_node_fs6.default.mkdirSync(import_node_path7.default.dirname(target), { recursive: true });
+    atomicWriteFile(target, `${JSON.stringify(document3, null, 2)}
 `);
   }
   return document3;

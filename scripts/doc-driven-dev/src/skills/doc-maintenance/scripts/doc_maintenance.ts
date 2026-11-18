@@ -22,6 +22,10 @@ type CliArgs = {
   json: boolean;
   type?: string;
   verb?: string;
+  resolutions?: string;
+  allowDirty?: boolean;
+  resume?: boolean;
+  rollback?: boolean;
 };
 
 const COMMANDS = ["plan", "apply", "index", "migrate"];
@@ -40,6 +44,14 @@ function parseArgs(argv: string[]): CliArgs {
       if (value === undefined) throw new Error("Missing value for --expect");
       args.expect = value;
     }
+    else if (arg === "--resolutions") {
+      const value = argv[++i];
+      if (value === undefined) throw new Error("Missing value for --resolutions");
+      args.resolutions = value;
+    }
+    else if (arg === "--allow-dirty") args.allowDirty = true;
+    else if (arg === "--resume") args.resume = true;
+    else if (arg === "--rollback") args.rollback = true;
     else if (arg === "--force-index") args.forceIndex = true;
     else if (arg === "--json") args.json = true;
     else if (arg === "--help" || arg === "-h") args.help = true;
@@ -60,12 +72,14 @@ function usage(): string {
     "  index plan   Preview managed index materialization without writing",
     "  index apply  Materialize managed indexes, revalidating drift pins first",
     "  migrate plan      Read-only migration inventory + dry-run plan (#233/#245)",
-    "  migrate apply     Install/repair the schema manifest on consistent content",
-    "  migrate recovery  Report migration journal state without mutating it",
+    "  migrate apply     Journaled v2→v3 apply (gated, staged, resumable) (#247)",
+    "  migrate recovery  Inspect, --resume, or --rollback an in-flight journal",
     "",
     "Options:",
     "  [--type idea|brainstorm|discovery|spec|design|adr|knowledge|verification|all]",
     "  [--dir <path>] [--force-index] [--expect <planHash>] [--json]",
+    "  migrate apply:     [--expect <planHash>] [--resolutions <file>] [--allow-dirty]",
+    "  migrate recovery:  [--resume|--rollback] [--expect <planHash>]",
     "",
     "Only whitelisted repairs run: managed index regeneration and unambiguous",
     "link path-case normalization. Missing relations, statuses, sources,",
@@ -169,14 +183,14 @@ async function runIndexApply(args: CliArgs, cwd: string): Promise<void> {
   if (report.blocked.length > 0) process.exitCode = 1;
 }
 
-// `migrate` is the only authorized migration surface (Issues #233, #245):
-// plan is fully read-only — it emits the complete legacy inventory plus the
-// deterministic dry-run plan and never touches the repository, the Git
-// index, the Execution Store, or the manifest — apply installs/repairs the
-// manifest only on already-consistent content, recovery reports journal
-// state untouched. These verbs bypass the normal-execution guard by design
-// — they are the way through a non-current state — while every other
-// command here is guarded.
+// `migrate` is the only authorized migration surface (Issues #233, #245,
+// #247): plan is fully read-only — it emits the complete legacy inventory
+// plus the deterministic dry-run plan and never touches the repository, the
+// Git index, the Execution Store, or the manifest — apply runs the journaled
+// engine (staging → validation → publish → finalize → postflight → manifest
+// LAST), recovery inspects/resumes/rolls back an in-flight journal. These
+// verbs bypass the normal-execution guard by design — they are the way
+// through a non-current state — while every other command here is guarded.
 function validateMigrateArgs(args: CliArgs): void {
   if (args.verb === undefined) {
     throw new Error("migrate requires a verb: migrate plan|apply|recovery");
@@ -187,23 +201,40 @@ function validateMigrateArgs(args: CliArgs): void {
   if (args.type !== undefined) throw new Error("--type is not supported on the migrate op");
   if (args.dir !== undefined) throw new Error("--dir is not supported on the migrate op");
   if (args.forceIndex) throw new Error("--force-index is not supported on the migrate op");
-  if (args.expect !== undefined && args.verb !== "apply") {
-    throw new Error("--expect requires migrate apply");
+  if (args.resolutions !== undefined && args.verb !== "apply") {
+    throw new Error("--resolutions requires migrate apply");
+  }
+  if (args.allowDirty && args.verb !== "apply") {
+    throw new Error("--allow-dirty requires migrate apply");
+  }
+  if ((args.resume || args.rollback) && args.verb !== "recovery") {
+    throw new Error("--resume/--rollback require migrate recovery");
+  }
+  if (args.resume && args.rollback) {
+    throw new Error("--resume and --rollback are mutually exclusive");
+  }
+  if (args.expect !== undefined && args.verb === "plan") {
+    throw new Error("--expect requires migrate apply or migrate recovery");
   }
 }
 
-function runMigrate(args: CliArgs, cwd: string): void {
+async function runMigrate(args: CliArgs, cwd: string): Promise<void> {
   if (args.verb === "plan") {
     console.log(JSON.stringify(migratePlan(cwd), null, 2));
     return;
   }
   if (args.verb === "apply") {
-    const result = migrateApply(cwd, args.expect);
+    const result = await migrateApply(cwd, {
+      expect: args.expect,
+      resolutionsFile: args.resolutions,
+      allowDirty: args.allowDirty === true,
+    });
     console.log(JSON.stringify(result, null, 2));
     if (!result.ok) process.exitCode = 1;
     return;
   }
-  const result = migrateRecovery(cwd);
+  const action = args.resume ? "resume" : args.rollback ? "rollback" : "inspect";
+  const result = await migrateRecovery(cwd, { action, expect: args.expect });
   console.log(JSON.stringify(result, null, 2));
   if (!result.ok) process.exitCode = 1;
 }
@@ -244,7 +275,7 @@ async function main(): Promise<void> {
       if (!fs.existsSync(cwd) || !fs.statSync(cwd).isDirectory()) {
         throw new Error(`--cwd does not exist or is not a directory: ${args.cwd}`);
       }
-      runMigrate(args, cwd);
+      await runMigrate(args, cwd);
       return;
     }
     if (!schemaEntrypointGuard(cwd)) return;
