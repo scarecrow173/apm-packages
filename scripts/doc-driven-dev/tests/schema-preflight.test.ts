@@ -525,6 +525,77 @@ test("preflight: a run manifest at the wrong schemaVersion inside runs/<run-id>/
   ));
 });
 
+// --- evidence-state layout (#240 shape) ---------------------------------------
+//
+// Preflight recognizes exactly what the store's own scan can see: top-level
+// `manifest.json`/`index.json`, immutable `records/<id>.json`, and `*.tmp-*`
+// crash residue. Anything else — nested directories, non-JSON files,
+// uppercase extensions, loose files — is content the store is blind to and
+// must flag rather than pass over silently.
+
+test("preflight: the declared evidence store layout is not foreign", () => {
+  const repo = tempRepo();
+  writeFile(repo, ".apm/state/doc-driven-dev/evidence/manifest.json", `${JSON.stringify({ schemaVersion: 1 })}\n`);
+  writeFile(repo, ".apm/state/doc-driven-dev/evidence/index.json", "{}\n");
+  writeFile(repo, ".apm/state/doc-driven-dev/evidence/records/EVID-1.json", "{}\n");
+  writeFile(repo, ".apm/state/doc-driven-dev/evidence/records/EVID-2.json", "{}\n");
+  // Crash residue the store's recover path owns, at both depths it writes.
+  writeFile(repo, ".apm/state/doc-driven-dev/evidence/records/EVID-3.json.tmp-12-99", "{partial");
+  writeFile(repo, ".apm/state/doc-driven-dev/evidence/manifest.json.tmp-3-1", "{partial");
+  const plan = migratePlan(repo);
+  assert.equal(plan.preflight.status, "uninitialized");
+  assert.equal(
+    plan.preflight.issues.filter((i: any) => i.reason === "legacy-execution-state").length,
+    0,
+    "the exact files the store can see are current state, not legacy markers",
+  );
+});
+
+test("preflight: content under evidence/ the store cannot see is foreign", () => {
+  const repo = tempRepo();
+  // Declared files the store DOES see — these must not flag.
+  writeFile(repo, ".apm/state/doc-driven-dev/evidence/manifest.json", `${JSON.stringify({ schemaVersion: 1 })}\n`);
+  writeFile(repo, ".apm/state/doc-driven-dev/evidence/records/EVID-1.json", "{}\n");
+  // Everything below is invisible to the store's top-level records scan.
+  writeFile(repo, ".apm/state/doc-driven-dev/evidence/records/nested/EVID-2.json", "{}\n");
+  writeFile(repo, ".apm/state/doc-driven-dev/evidence/records/EVID-3.txt", "x\n");
+  writeFile(repo, ".apm/state/doc-driven-dev/evidence/records/EVID-4.JSON", "{}\n");
+  writeFile(repo, ".apm/state/doc-driven-dev/evidence/records/EVID-5.json.bak", "{}\n");
+  writeFile(repo, ".apm/state/doc-driven-dev/evidence/loose.json", "{}\n");
+  writeFile(repo, ".apm/state/doc-driven-dev/evidence/extra/file.json", "{}\n");
+  const plan = migratePlan(repo);
+  assert.equal(plan.preflight.status, "migration-required");
+  const flagged = plan.preflight.issues
+    .filter((i: any) => i.reason === "legacy-execution-state")
+    .map((i: any) => i.path);
+  for (const expected of [
+    ".apm/state/doc-driven-dev/evidence/records/nested",
+    ".apm/state/doc-driven-dev/evidence/records/nested/EVID-2.json",
+    ".apm/state/doc-driven-dev/evidence/records/EVID-3.txt",
+    ".apm/state/doc-driven-dev/evidence/records/EVID-4.JSON",
+    ".apm/state/doc-driven-dev/evidence/records/EVID-5.json.bak",
+    ".apm/state/doc-driven-dev/evidence/loose.json",
+    ".apm/state/doc-driven-dev/evidence/extra",
+    ".apm/state/doc-driven-dev/evidence/extra/file.json",
+  ]) {
+    assert.ok(flagged.includes(expected), `expected ${expected} to be flagged; got ${JSON.stringify(flagged)}`);
+  }
+  assert.ok(
+    !flagged.includes(".apm/state/doc-driven-dev/evidence/records/EVID-1.json"),
+    "a visible record file must not flag",
+  );
+});
+
+test("preflight: an evidence manifest at the wrong schemaVersion is flagged", () => {
+  const repo = tempRepo();
+  writeFile(repo, ".apm/state/doc-driven-dev/evidence/manifest.json", `${JSON.stringify({ schemaVersion: 99 })}\n`);
+  const plan = migratePlan(repo);
+  assert.equal(plan.preflight.status, "migration-required");
+  assert.ok(plan.preflight.issues.some(
+    (i: any) => i.reason === "legacy-execution-state" && i.path === ".apm/state/doc-driven-dev/evidence/manifest.json",
+  ));
+});
+
 // --- write boundary ----------------------------------------------------------
 
 test("migrate apply refuses before writing when docs resolves outside the checkout", (t) => {

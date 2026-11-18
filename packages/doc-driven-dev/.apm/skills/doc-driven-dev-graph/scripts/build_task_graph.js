@@ -7483,6 +7483,7 @@ var SCHEMA_MANIFEST_PATH = `${DOC_DRIVEN_DEV_DIR}/schema.json`;
 var MIGRATION_JOURNAL_PATH = `${DOC_DRIVEN_DEV_DIR}/migration.journal.json`;
 var EXECUTION_STATE_ROOT = ".apm/state/doc-driven-dev";
 var MANIFEST_SCHEMA_VERSION = 1;
+var EVIDENCE_TMP_PATTERN = /\.tmp-\d+-\d+$/;
 var EXPECTED_COMPONENT_VERSIONS = {
   documentRegistry: 3,
   knowledgeRelations: 1,
@@ -7722,8 +7723,32 @@ function scanExecutionState(cwd, issues) {
     const segments = relUnderRoot.split("/").filter(Boolean);
     if (isDir) {
       if (segments.length === 0) return;
-      if (segments[0] !== "runs") {
-        marker(rel, `unaccounted-for directory inside ${EXECUTION_STATE_ROOT}`);
+      if (segments[0] === "runs") return;
+      if (segments[0] === "evidence" && (segments.length === 1 || segments.length === 2 && segments[1] === "records")) {
+        return;
+      }
+      marker(rel, `unaccounted-for directory inside ${EXECUTION_STATE_ROOT}`);
+      return;
+    }
+    if (segments[0] === "evidence") {
+      const name2 = segments[segments.length - 1];
+      if (!EVIDENCE_TMP_PATTERN.test(name2)) {
+        const declared = segments.length === 2 && (segments[1] === "manifest.json" || segments[1] === "index.json") || segments.length === 3 && segments[1] === "records" && name2.endsWith(".json");
+        if (!declared) {
+          marker(rel, `content outside the evidence layout inside ${EXECUTION_STATE_ROOT}`);
+          return;
+        }
+      }
+      if (segments.length === 2 && segments[1] === "manifest.json") {
+        let version;
+        try {
+          version = JSON.parse(import_node_fs3.default.readFileSync(import_node_path2.default.resolve(cwd, rel), "utf8")).schemaVersion;
+        } catch {
+          version = null;
+        }
+        if (version !== 1) {
+          marker(rel, `evidence manifest schemaVersion is ${JSON.stringify(version)}, expected 1`);
+        }
       }
       return;
     }

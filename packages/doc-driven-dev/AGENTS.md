@@ -90,7 +90,10 @@ receipts, run traces) belongs to the Git-untracked Execution Store under
 `.apm/state/doc-driven-dev/runs/<run-id>/` — see
 `.apm/skills/doc-driven-dev-graph/references/execution-store-contract.md`.
 The store is per-worktree by default, refuses writes unless `.apm/state/` is
-Git-ignored, and never carries durable knowledge.
+Git-ignored, and never carries durable knowledge. Verification results are a
+separate contract: immutable Evidence Records under
+`.apm/state/doc-driven-dev/evidence/` — see
+`.apm/skills/doc-driven-dev-graph/references/evidence-store-contract.md`.
 
 ## Skills and ownership
 
