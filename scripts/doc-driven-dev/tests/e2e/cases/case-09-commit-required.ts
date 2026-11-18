@@ -19,7 +19,7 @@ import type { E2ECase } from "../harness/case_types";
  * TASK-0002 stays `todo` — deliberately: a resumed leg re-SELECTS the pending
  * edge from a fresh projection, and `task-graph-to-implementation` only
  * matches while some task is runnable (if leg 1 had closed every task, the
- * re-route would select the completed-only `task-graph-to-followup-triage`
+ * re-route would select the completed-only `task-graph-idle-to-implementation`
  * edge instead of the pending one — verified live). The pending match
  * is on edgeId+current only, so the smaller runnable set is fine.
  *
@@ -37,7 +37,7 @@ import type { E2ECase } from "../harness/case_types";
  * TASK-0002 still `todo` → `implementation-not-pass` → `implementation-retry`
  * (the graph's own repair edge — same commitGate destination) → its delegate
  * completes TASK-0002's slice and `commitEvidence` commits it → the gate
- * passes → `implementation-to-followup-triage` → … → `terminal`.
+ * passes → `implementation-to-verification` → … → `terminal`.
  *
  * Leg-1/case `signals` carry the three gate signals up front (same rationale
  * as e2e-01): leg 2's resumed handoff inherits them.
@@ -47,8 +47,8 @@ export const case09: E2ECase = {
   description: "commit-required on commitGate edge → mutateBefore commit → resume reuses pending → terminal",
   current: "task-graph",
   fixture: { taskStatuses: ["todo", "todo"] },
-  focus: ["PLAN-0001"],
-  signals: ["followup-terminal", "exit-audit-pass"],
+  focus: ["DESIGN-0001"],
+  signals: ["knowledge-consolidated", "exit-audit-pass"],
   script: {
     "task-graph-to-implementation": {
       delegate: "completed",
@@ -66,8 +66,9 @@ export const case09: E2ECase = {
       mutate: [{ task: { taskId: "TASK-0002", status: "done" } }],
       commitEvidence: true,
     },
-    "implementation-to-followup-triage": { audits: { task: "completed", "impl-record": "completed" } },
-    "followup-triage-terminal": { audits: { all: "completed", "experiment-log": "completed", "impl-record": "completed" }, delegate: "completed" },
+    "implementation-to-verification": { audits: { verification: "completed" } },
+    "verification-to-knowledge-consolidation": { audits: { knowledge: "completed" }, delegate: "completed" },
+    "knowledge-consolidation-to-exit-audit": { audits: { all: "completed" }, delegate: "completed" },
     "exit-audit-to-complete": {},
   },
   steps: [
@@ -91,7 +92,7 @@ export const case09: E2ECase = {
         yield: "terminal",
         edgeSequence: [
           "task-graph-to-implementation", "implementation-retry",
-          "implementation-to-followup-triage", "followup-triage-terminal",
+          "implementation-to-verification", "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit",
           "exit-audit-to-complete", null,
         ],
         events: [
@@ -100,7 +101,7 @@ export const case09: E2ECase = {
           // …and NO effect is re-dispatched on it — the pending delegate
           // outcome and the recorded evidence are reused, not re-run.
           { kind: "effect-dispatched", edgeId: "task-graph-to-implementation", count: 0 },
-          { kind: "route-selected", count: 6 },
+          { kind: "route-selected", count: 7 },
         ],
       },
     },
@@ -109,16 +110,16 @@ export const case09: E2ECase = {
     yield: "terminal",
     edgeSequence: [
       "task-graph-to-implementation", "implementation-retry",
-      "implementation-to-followup-triage", "followup-triage-terminal",
+      "implementation-to-verification", "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit",
       "exit-audit-to-complete", null,
     ],
     completedEdges: [
       "task-graph-to-implementation", "implementation-retry",
-      "implementation-to-followup-triage", "followup-triage-terminal",
+      "implementation-to-verification", "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit",
       "exit-audit-to-complete",
     ],
     events: [
-      { kind: "route-selected", count: 7 }, // 1 (leg 1) + 5 edges + 1 terminal (leg 2)
+      { kind: "route-selected", count: 8 }, // 1 (leg 1) + 6 edges + 1 terminal (leg 2)
       { kind: "run-yield", count: 2 },
     ],
     finalFiles: {

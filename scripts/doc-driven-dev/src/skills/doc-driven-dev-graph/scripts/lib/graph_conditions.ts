@@ -9,16 +9,16 @@ export function evaluateCondition(condition: GraphCondition, state: GraphState):
       ? state.gates[condition.gate]?.status === "pass"
       : state.gates[condition.gate]?.status !== "pass";
   }
-  if (condition.state === "runnable") return (state.taskGraph?.runnable.length ?? 0) > 0;
+  if (condition.state === "runnable") return (state.execution.taskGraph?.runnable.length ?? 0) > 0;
   if (condition.state === "active") {
-    return (state.taskGraph?.issues.length ?? 0) === 0
-      && (state.taskGraph?.resumableActive.length ?? 0) > 0;
+    return (state.execution.taskGraph?.issues.length ?? 0) === 0
+      && (state.execution.taskGraph?.resumableActive.length ?? 0) > 0;
   }
-  if (condition.state === "invalid") return (state.taskGraph?.issues.length ?? 0) > 0;
-  return state.taskGraph !== null
-    && state.taskGraph.completed.length > 0
-    && state.taskGraph.runnable.length === 0
-    && state.taskGraph.active.length === 0
-    && state.taskGraph.blocked.length === 0
-    && state.taskGraph.issues.length === 0;
+  if (condition.state === "invalid") return (state.execution.taskGraph?.issues.length ?? 0) > 0;
+  return state.execution.taskGraph !== null
+    && state.execution.taskGraph.completed.length > 0
+    && state.execution.taskGraph.runnable.length === 0
+    && state.execution.taskGraph.active.length === 0
+    && state.execution.taskGraph.blocked.length === 0
+    && state.execution.taskGraph.issues.length === 0;
 }

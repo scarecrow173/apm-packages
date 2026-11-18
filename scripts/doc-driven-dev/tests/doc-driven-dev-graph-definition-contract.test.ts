@@ -18,7 +18,7 @@ function distributedGraph(): GraphDefinition {
 }
 
 const validFixture = `
-schemaVersion: 2
+schemaVersion: 3
 id: example
 entry: start
 conditions:
@@ -31,24 +31,59 @@ edges:
   - { id: start-to-done, from: start, to: done, when: ready, priority: 10 }
 `;
 
+// The distributed graph is the normative routing authority: probe →
+// briefing → design → planning → task-graph → implementation →
+// verification → knowledge-consolidation → exit-audit → complete, with no
+// migration, follow-up-triage, or durable plan/task audit surface (v3,
+// Issue #243).
 test("loads the distributed graph definition with declared delegates", () => {
   const graph = distributedGraph();
-  assert.equal(graph.schemaVersion, 2);
+  assert.equal(graph.schemaVersion, 3);
   assert.equal(graph.id, "doc-driven-dev");
+  assert.equal(graph.entry, "probe");
+  assert.equal(graph.nodes.bootstrap.delegate, "scaffold_docs");
   assert.equal(graph.nodes.briefing.delegate, "briefing-flow");
   assert.deepEqual(graph.nodes.briefing.audits, ["spec", "adr"]);
+  assert.equal(graph.nodes.design.delegate, "design-doc");
+  assert.deepEqual(graph.nodes.design.audits, ["design"]);
   assert.equal(graph.nodes.planning.kind, "delegate");
   assert.equal(graph.nodes.planning.delegate, "planning-flow");
   assert.deepEqual(graph.nodes.planning.audits, ["design"]);
+  // The task graph projects the Execution Store run — its audits read only
+  // the durable design surface; plan/task/test-spec audits are gone.
   assert.equal(graph.nodes["task-graph"].delegate, "build_task_graph");
-  assert.deepEqual(graph.nodes["task-graph"].audits, ["plan", "task", "test-spec"]);
+  assert.deepEqual(graph.nodes["task-graph"].audits, ["design"]);
   assert.equal(graph.nodes.implementation.delegate, "implementation-flow");
   assert.equal(graph.nodes.implementation.audits, undefined);
   assert.equal(graph.nodes.implementation.commitGate, true);
   assert.equal(graph.nodes.briefing.commitGate, undefined);
   assert.ok(graph.runtimeSignals?.includes("commit-waived"));
-  assert.deepEqual(graph.nodes["followup-triage"].audits, ["task", "impl-record"]);
-  assert.deepEqual(graph.nodes["exit-audit"].audits, ["all", "impl-record", "experiment-log"]);
+  assert.ok(graph.runtimeSignals?.includes("knowledge-consolidated"));
+  // Verification reads durable Verification Design docs on arrival; the
+  // gate itself consumes the HEAD-bound Verification Summary.
+  assert.deepEqual(graph.nodes.verification.audits, ["verification"]);
+  assert.equal(graph.nodes["knowledge-consolidation"].delegate, "knowledge-doc");
+  assert.deepEqual(graph.nodes["knowledge-consolidation"].audits, ["knowledge"]);
+  assert.equal(graph.nodes["exit-audit"].delegate, "doc-status");
+  assert.deepEqual(graph.nodes["exit-audit"].audits, ["all"]);
+  assert.deepEqual(graph.nodes["exit-audit"].requiresGates, [
+    "bootstrap",
+    "briefing",
+    "design",
+    "planning",
+    "implementation",
+    "verification",
+    "knowledge-consolidation",
+  ]);
+  assert.equal(graph.nodes["followup-triage"], undefined);
+  assert.equal(graph.nodes["migrate"], undefined);
+  assert.equal(graph.nodes.complete.kind, "terminal");
+});
+
+test("declares the normal route plus every repair and retry edge", () => {
+  const graph = distributedGraph();
+  assert.ok(findEdge(graph, "probe", "bootstrap"));
+  assert.ok(findEdge(graph, "probe", "bootstrap-not-pass"));
   assert.ok(findEdge(graph, "design", "spec-gap"));
   assert.ok(findEdge(graph, "planning", "planning-not-pass"));
   assert.ok(findEdge(graph, "planning", "planning"));
@@ -56,13 +91,27 @@ test("loads the distributed graph definition with declared delegates", () => {
   assert.ok(findEdge(graph, "task-graph", "task-graph-invalid"));
   const activeEdge = findEdge(graph, "task-graph", "tasks-active");
   const runnableEdge = findEdge(graph, "task-graph", "tasks-runnable");
+  const idleEdge = findEdge(graph, "task-graph", "tasks-idle");
   assert.deepEqual(graph.conditions["tasks-active"], { kind: "task-graph", state: "active" });
+  assert.deepEqual(graph.conditions["tasks-idle"], { kind: "task-graph", state: "idle" });
   assert.equal(activeEdge?.id, "task-graph-to-active-implementation");
   assert.equal(activeEdge?.to, "implementation");
   assert.ok(activeEdge && runnableEdge && activeEdge.priority < runnableEdge.priority);
+  // Idle outranks nothing: it is the last task-graph selector so runnable
+  // and active work always win over the all-terminal fallback.
+  assert.ok(runnableEdge && idleEdge && runnableEdge.priority < idleEdge.priority);
+  assert.equal(idleEdge?.to, "implementation");
+  const verifyFail = findEdge(graph, "verification", "verification-not-pass");
+  const verifyPass = findEdge(graph, "verification", "verification");
+  assert.equal(verifyFail?.to, "implementation");
+  assert.equal(verifyPass?.to, "knowledge-consolidation");
+  const consolidate = findEdge(graph, "knowledge-consolidation", "knowledge-consolidation");
+  assert.equal(consolidate?.to, "exit-audit");
+  const complete = findEdge(graph, "exit-audit", "exit-audit");
+  assert.equal(complete?.to, "complete");
 });
 
-test("parses a schema-v2 definition and preserves edge priority", () => {
+test("parses a schema-v3 definition and preserves edge priority", () => {
   const definition = parseGraphDefinition(validFixture);
   assert.equal(definition.entry, "start");
   assert.equal(definition.conditions.ready.kind, "signal");

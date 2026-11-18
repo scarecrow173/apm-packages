@@ -77,9 +77,13 @@ for (const scenario of [
     const planPath = "docs/plans/example.md";
     // Durable plan/task Markdown stays in the corpus as history; the run's
     // store records — never these documents — drive the task graph (#237).
+    const designPath = "docs/designs/chain.md";
     if (scenario !== "empty") {
-      // `in-progress` keeps the durable plan a valid chain member so the
-      // run's manifest focus can match this chain implicitly.
+      // Implicit run selection needs a real artifact chain: the approved
+      // durable design is the chain member the run's manifest focus binds —
+      // corpus plan/task records are migration inventory, never chain
+      // members (Issue #243).
+      write(designPath, { id: "DESIGN-0001", type: "design", status: "approved" });
       write(planPath, { id: "PLAN-0001", type: "plan", status: "in-progress" });
       write("docs/tasks/a.md", {
         id: "TASK-0001",
@@ -153,7 +157,7 @@ for (const scenario of [
       createRun(cwd, {
         runId: RUN_ID,
         graphId: definition.id,
-        focus: [planPath],
+        focus: [designPath],
         plan: "# Plan\n\nStore-managed plan for the run.\n",
         tasks,
       });
@@ -179,17 +183,17 @@ for (const scenario of [
       }
     }
 
-    const focus = scenario === "empty" ? [] : [planPath];
+    const focus = scenario === "empty" ? [] : [designPath];
     const report = await collectDashboard({ cwd, graphPath, focus, signals: [], current: "task-graph" });
 
-    assert.deepEqual(report.state, projectGraphState({ cwd, graphId: definition.id, focus, signals: [] }));
+    assert.deepEqual(report.state, await projectGraphState({ cwd, graphId: definition.id, focus, signals: [] }));
     assert.deepEqual(report.decision, evaluateRouteDecision({ current: "task-graph", definition, state: report.state }));
     if (scenario !== "empty" && scenario !== "duplicate") {
       // Exactly one active run bound to this graph's chain → implicit
       // selection projects it without a --run selector. The duplicate
       // scenario's corpus duplicate-id blocks chain selection instead.
-      assert.ok(report.state.taskGraph, `${scenario} run should be implicitly selected`);
-      assert.equal(report.state.run?.runId, RUN_ID);
+      assert.ok(report.state.execution.taskGraph, `${scenario} run should be implicitly selected`);
+      assert.equal(report.state.execution.run?.runId, RUN_ID);
     }
     if (scenario !== "empty") {
       const graph = report.runs.find((run) => run.runId === RUN_ID)?.graph;

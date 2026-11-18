@@ -3,6 +3,8 @@ import fs from "node:fs";
 import * as yaml from "js-yaml";
 import { z } from "zod";
 
+import { GRAPH_GATE_NAMES } from "./graph_state";
+
 export type GraphCondition =
   | { kind: "signal"; signal: string }
   | { kind: "gate"; gate: string; status: "pass" | "not-pass" }
@@ -26,7 +28,7 @@ export type GraphEdge = {
 };
 
 export type GraphDefinition = {
-  schemaVersion: 2;
+  schemaVersion: 3;
   id: string;
   entry: GraphNodeId;
   runtimeSignals?: string[];
@@ -67,7 +69,7 @@ const graphEdgeSchema = z.object({
 }).strict();
 
 const graphDefinitionSchema = z.object({
-  schemaVersion: z.literal(2),
+  schemaVersion: z.literal(3),
   id: z.string().min(1),
   entry: graphNodeId,
   runtimeSignals: z.array(z.string().min(1)).default([]),
@@ -101,6 +103,19 @@ function validateGraphDefinition(value: z.infer<typeof graphDefinitionSchema>): 
     throw invalidGraph(`duplicate runtime signal: ${duplicateRuntimeSignal}`);
   }
 
+  // Gate conditions may only name gates the runtime actually emits
+  // (GRAPH_GATE_NAMES in graph_state.ts). An unrecognized name would make
+  // a `pass` edge unreachable and a `not-pass` edge always taken — a
+  // typo'd gate must refuse at load, never silently route (Issue #243).
+  const knownGates = new Set<string>(GRAPH_GATE_NAMES);
+  for (const [conditionKey, condition] of Object.entries(value.conditions)) {
+    if (condition.kind === "gate" && !knownGates.has(condition.gate)) {
+      throw invalidGraph(
+        `unknown gate "${condition.gate}" in condition "${conditionKey}" `
+        + `(known gates: ${GRAPH_GATE_NAMES.join(", ")})`,
+      );
+    }
+  }
   const declaredGates = new Set(
     Object.values(value.conditions)
       .filter((condition) => condition.kind === "gate")
@@ -170,10 +185,30 @@ function validateGraphDefinition(value: z.infer<typeof graphDefinitionSchema>): 
   return value as GraphDefinition;
 }
 
-/** Parse and validate Graph Definition v2 YAML content. */
+// Graph Definition v3 is the only schema normal runtime accepts — a v2
+// definition is migration-domain data, never silently parsed (Issue #243).
+// The refusal names the migration lane (`#245`/`#247` own the tooling); there
+// is no dual-schema parse path and no compatibility shim.
+export const GRAPH_MIGRATION_GUIDANCE =
+  "Graph Definition schemaVersion 2 is not supported by normal runtime. " +
+  "Run `node .apm/skills/doc-maintenance/scripts/doc_maintenance.js migrate plan --json` " +
+  "to evaluate the repository's legacy artifacts, then `migrate apply --expect <planHash>`";
+
+function detectLegacySchema(parsed: unknown): void {
+  if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
+    const version = (parsed as Record<string, unknown>).schemaVersion;
+    // Any declared non-3 schemaVersion — `2`, the YAML string `"2"`, or a
+    // future value — is not parseable by this runtime: the same migration
+    // guidance applies. A missing key stays an ordinary schema error.
+    if (version !== undefined && version !== 3) throw invalidGraph(GRAPH_MIGRATION_GUIDANCE);
+  }
+}
+
+/** Parse and validate Graph Definition v3 YAML content. */
 export function parseGraphDefinition(source: string): GraphDefinition {
   try {
     const parsed = yaml.load(source);
+    detectLegacySchema(parsed);
     const result = graphDefinitionSchema.safeParse(parsed);
     if (!result.success) throw invalidGraph(formatIssue(result.error));
     return validateGraphDefinition(result.data);
@@ -185,7 +220,7 @@ export function parseGraphDefinition(source: string): GraphDefinition {
   }
 }
 
-/** Load and validate a Graph Definition v2 YAML file. */
+/** Load and validate a Graph Definition v3 YAML file. */
 export function loadGraphDefinition(file: string): GraphDefinition {
   try {
     return parseGraphDefinition(fs.readFileSync(file, "utf8"));

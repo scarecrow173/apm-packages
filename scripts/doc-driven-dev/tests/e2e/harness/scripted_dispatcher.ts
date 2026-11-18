@@ -40,35 +40,35 @@ import {
   updateRun,
   updateTask,
 } from "../../../src/skills/lib/execution_store";
-import { commitAll, E2E_RUN_ID, updateArtifact, VERIFICATION_DOC, writeArtifact } from "./fixture_manager";
+import { commitAll, E2E_RUN_ID, KNOWLEDGE_DOC, updateArtifact, VERIFICATION_DOC, writeArtifact } from "./fixture_manager";
 
-// The primary task doc is the task-graph fallback input — canonical content,
-// not per-run bookkeeping (receipts/checkpoints live in the Execution Store).
+// The primary task doc remains the checkpoint-evidence declaration — corpus
+// content the run's checkpoint binds, never routing authority (receipts,
+// checkpoints, and task records live in the Execution Store).
 export const DEFAULT_TASK_DOC = "docs/tasks/0001-task.md";
 export const DEFAULT_TASK_ID = "TASK-0001";
-// The `test-spec` audit's Document Registry 3 successor scope — `test-spec`
-// itself is legacy migration-only; verification intent is durable.
-export { VERIFICATION_DOC };
+// Durable successors the Registry 3 audit/delegate names bind: `test-spec`
+// is legacy migration-only (verification intent is durable), and knowledge
+// consolidation reads/writes the durable knowledge record.
+export { VERIFICATION_DOC, KNOWLEDGE_DOC };
 
-const canonicalDocumentPaths = (taskDoc: string): string[] => [
+// The `all` audit's durable scope (Document Registry 3): corpus
+// plan/task/test-spec/impl Markdown is migration inventory, never durable
+// knowledge.
+const canonicalDocumentPaths = [
   "docs/specs/0001-graph.md",
   "docs/adr/0001-graph.md",
   "docs/designs/0001-graph.md",
-  "docs/test-specs/0001-graph.md",
-  taskDoc,
-  "docs/impl/ir/0001-task.md",
   VERIFICATION_DOC,
+  KNOWLEDGE_DOC,
 ];
 
 /**
  * Execution-bound task scope: the run's task records keyed by the projected
- * Task Graph node ids. `plan` and `task` audit names refuse at the Registry 3
- * gate (`audit_docs.js --type <name>`), but the declared graph still lists
- * them — the scripted adapter audits the state directly and binds the task
- * records as `execution-task` refs, never `docs/tasks` durable documents.
- * The projected plan likewise has no durable form; its realized scope is the
- * same task record set. Falls back to the primary task id when the route
- * carries no Task Graph projection.
+ * Task Graph node ids. The pre-v3 `plan`/`task` audit names are gone — the
+ * declared graph reads task state through `execution-task` refs, never
+ * `docs/tasks` durable documents. Falls back to the primary task id when
+ * the route carries no Task Graph projection.
  */
 function taskRefSpecs(route: GraphRoute): ReferenceSpec[] {
   const nodes = route.taskGraph?.nodes;
@@ -80,23 +80,18 @@ function taskRefSpecs(route: GraphRoute): ReferenceSpec[] {
 export function standardResolveInputs(
   route: GraphRoute,
   effect: CallerEffect,
-  taskDoc: string = DEFAULT_TASK_DOC,
 ): ReferenceSpec[] {
   if (effect.kind === "audit") {
     switch (effect.id) {
       case "spec": return ["docs/specs/0001-graph.md"];
       case "adr": return ["docs/adr/0001-graph.md"];
       case "design": return ["docs/designs/0001-graph.md"];
-      case "plan": return taskRefSpecs(route);
-      case "task": return taskRefSpecs(route);
-      case "test-spec": return [VERIFICATION_DOC];
-      case "impl-record": return ["docs/impl/ir/0001-task.md"];
-      case "experiment-log": return ["docs/impl/exp/README.md"];
-      case "all": return canonicalDocumentPaths(taskDoc);
+      case "verification": return [VERIFICATION_DOC];
+      case "knowledge": return [KNOWLEDGE_DOC];
+      case "all": return canonicalDocumentPaths;
     }
   }
   switch (effect.id) {
-    case "migrate_docs": return canonicalDocumentPaths(taskDoc);
     case "scaffold_docs": return ["."];
     case "build_task_graph": {
       // The delegate projects the selected Task Graph — its inputs are the
@@ -112,7 +107,8 @@ export function standardResolveInputs(
     case "design-doc": return ["docs/specs/0001-graph.md", "docs/adr/0001-graph.md"];
     case "planning-flow": return ["docs/designs/0001-graph.md"];
     case "implementation-flow": return [...taskRefSpecs(route), "docs/designs/0001-graph.md"];
-    case "doc-status": return canonicalDocumentPaths(taskDoc);
+    case "knowledge-doc": return [KNOWLEDGE_DOC, VERIFICATION_DOC];
+    case "doc-status": return canonicalDocumentPaths;
     default: throw new Error(`No authoritative-input mapping for ${effect.kind}:${effect.id}`);
   }
 }
@@ -122,20 +118,20 @@ export function standardResolveInputs(
  * document output is a path spec; `planning-flow`'s durable work product
  * under Registry 3 is the verification-intent document (its plan/test-spec
  * records are execution-bound and surface as `execution-task` outputs, not
- * the primary proof).
+ * the primary proof), and `knowledge-doc`'s is the knowledge record itself.
  */
 export function standardResolveOutputPath(
   route: GraphRoute,
   effect: CallerEffect,
-  taskDoc: string = DEFAULT_TASK_DOC,
 ): ReferenceSpec {
-  if (effect.kind === "audit") return standardResolveInputs(route, effect, taskDoc)[0];
+  if (effect.kind === "audit") return standardResolveInputs(route, effect)[0];
   switch (effect.id) {
     case "design-doc": return "docs/designs/0001-graph.md";
     case "planning-flow": return VERIFICATION_DOC;
     case "implementation-flow": return "docs/impl/ir/0001-task.md";
-    case "doc-status": return "docs/impl/ir/0001-task.md";
-    default: return standardResolveInputs(route, effect, taskDoc)[0];
+    case "knowledge-doc": return KNOWLEDGE_DOC;
+    case "doc-status": return VERIFICATION_DOC;
+    default: return standardResolveInputs(route, effect)[0];
   }
 }
 
@@ -267,11 +263,10 @@ function inputReferences(
   runId: string,
   route: GraphRoute,
   effect: CallerEffect,
-  taskDoc: string,
 ): EffectReference[] {
   // The same resolution the runner applies to resolveInputs specs — the
   // outcome's `inputs` attestation must deep-equal the runner's binding.
-  return resolveReferenceSpecs(repo, storeView(repo, runId), standardResolveInputs(route, effect, taskDoc));
+  return resolveReferenceSpecs(repo, storeView(repo, runId), standardResolveInputs(route, effect));
 }
 
 function outputReference(
@@ -279,9 +274,8 @@ function outputReference(
   runId: string,
   route: GraphRoute,
   effect: CallerEffect,
-  taskDoc: string,
 ): EffectReference {
-  const reference = resolveReference(repo, storeView(repo, runId), standardResolveOutputPath(route, effect, taskDoc));
+  const reference = resolveReference(repo, storeView(repo, runId), standardResolveOutputPath(route, effect));
   if (reference === null) {
     throw new Error(`output spec does not resolve current state: ${effect.kind}:${effect.id}`);
   }
@@ -296,7 +290,6 @@ function completedOutcome(
   effect: CallerEffect,
   inputs: EffectReference[],
   output: EffectReference,
-  taskDoc: string,
 ): CompletedEffectOutcome {
   const outputs = effect.id === "planning-flow"
     // Registry 3 work product: the durable verification-intent document plus
@@ -323,12 +316,12 @@ function buildOutcome(
   spec: OutcomeSpec,
   ctx: {
     repo: string; runId: string; route: GraphRoute; stage: "audit" | "delegate"; effect: CallerEffect;
-    inputs: EffectReference[]; output: EffectReference; taskDoc: string;
+    inputs: EffectReference[]; output: EffectReference;
   },
 ): EffectOutcome {
-  const { repo, runId, route, stage, effect, inputs, output, taskDoc } = ctx;
+  const { repo, runId, route, stage, effect, inputs, output } = ctx;
   if (spec === "completed") {
-    return completedOutcome(repo, runId, route, stage, effect, inputs, output, taskDoc);
+    return completedOutcome(repo, runId, route, stage, effect, inputs, output);
   }
   if (spec === "retry") {
     const outcome: RetryEffectOutcome = {
@@ -355,7 +348,7 @@ function buildOutcome(
     return outcome;
   }
   if (typeof spec === "object" && "malformed" in spec) {
-    const completed = completedOutcome(repo, runId, route, stage, effect, inputs, output, taskDoc);
+    const completed = completedOutcome(repo, runId, route, stage, effect, inputs, output);
     switch (spec.malformed) {
       case "missing-proof":
         return { ...completed, proof: {} } as EffectOutcome;
@@ -419,13 +412,11 @@ export function pathInScope(relativePath: string, scopes: readonly string[]): bo
  */
 export function scriptedDispatcher(options: {
   repo: string;
-  taskDoc?: string;
   script: Record<string, EdgeScript>;
   onUnhandled?: "throw" | "completed";
   /** Modes the simulated host cannot execute — dispatching one is refused. */
   unsupportedModes?: readonly ExecutionMode[];
 }): EffectDispatcher {
-  const taskDoc = options.taskDoc ?? DEFAULT_TASK_DOC;
   const onUnhandled = options.onUnhandled ?? "throw";
   const unsupported = new Set<ExecutionMode>(options.unsupportedModes ?? []);
   const queues = new Map<string, OutcomeSpec[]>();
@@ -536,11 +527,11 @@ export function scriptedDispatcher(options: {
       { target: effect.id, requested: requestedMode, actual, method }
     );
     const refused = (): DispatchResult => {
-      const inputs = inputReferences(repo, ctx.runId, route, effect, taskDoc);
-      const output = outputReference(repo, ctx.runId, route, effect, taskDoc);
+      const inputs = inputReferences(repo, ctx.runId, route, effect);
+      const output = outputReference(repo, ctx.runId, route, effect);
       const outcome = buildOutcome(
         { yield: "authority-required" },
-        { repo, runId: ctx.runId, route, stage, effect, inputs, output, taskDoc },
+        { repo, runId: ctx.runId, route, stage, effect, inputs, output },
       );
       return { outcome, observations: [self("unknown", "not-executed")] };
     };
@@ -557,7 +548,7 @@ export function scriptedDispatcher(options: {
     // Authoritative inputs are what the effect READ — resolved before any
     // mutator runs so they match the runner's pre-dispatch expectedInputs
     // binding (a mutator that touches an input doc must not break it).
-    const inputs = inputReferences(repo, ctx.runId, route, effect, taskDoc);
+    const inputs = inputReferences(repo, ctx.runId, route, effect);
     // Mutators are the completed delegate's work product: they run before
     // the output ref is bound so it reflects post-mutation content. A
     // delegated top-level dispatch confines them to the handoff write scope
@@ -584,13 +575,13 @@ export function scriptedDispatcher(options: {
       subObservations.push(...subs.observations);
       subFailed = subs.failed;
     }
-    const output = outputReference(repo, ctx.runId, route, effect, taskDoc);
+    const output = outputReference(repo, ctx.runId, route, effect);
     const outcome = subFailed
       ? buildOutcome(
           { yield: "authority-required" },
-          { repo, runId: ctx.runId, route, stage, effect, inputs, output, taskDoc },
+          { repo, runId: ctx.runId, route, stage, effect, inputs, output },
         )
-      : buildOutcome(spec, { repo, runId: ctx.runId, route, stage, effect, inputs, output, taskDoc });
+      : buildOutcome(spec, { repo, runId: ctx.runId, route, stage, effect, inputs, output });
     return {
       outcome,
       observations: [

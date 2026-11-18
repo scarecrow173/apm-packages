@@ -695,9 +695,10 @@ export type CallerRunnerOptions = {
   repo: string;
   /**
    * Spawn: executable [...prefixArgs, ...routeArgs]. The runner appends its
-   * own routing flags after prefixArgs, including a pinned
-   * `--task-dir docs/tasks` — the caller owns the task-doc scan root, so an
-   * adapter-supplied --task-dir in prefixArgs is overridden, never honored.
+   * own routing flags after prefixArgs. Under Graph Route v3 there is no
+   * task-doc scan root to pin (Issue #243): an adapter-supplied --task-dir
+   * in prefixArgs reaches route_graph untouched, which rejects it — the
+   * Execution Store is the only execution-state authority.
    */
   router: { executable: string; prefixArgs: string[] };
   /** Default: resolveGraphPath(undefined, repo). */
@@ -934,6 +935,15 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
   let totalDispatches = options.resume?.totalDispatches
     ?? (options.resume?.outcomes ?? []).length;
   const events: string[] = [];
+  // A handoff written by a v2 runner carries a v2 pending route — refuse to
+  // resume it into v3 routing (Issue #243): the run starts a fresh handoff
+  // at the definition's entry rather than mixing schemas mid-edge.
+  if (options.resume?.pending !== undefined && options.resume.pending !== null
+      && (options.resume.pending.route as { schemaVersion?: unknown })?.schemaVersion !== 3) {
+    throw new Error(
+      "resume handoff carries a pre-v3 pending route — start a fresh run instead of resuming " +
+      "(the recorded outcomes stay in the Execution Store; nothing is lost)");
+  }
   let pending: PendingEdge | null = options.resume?.pending ? {
     route: options.resume.pending.route,
     outcomes: [...options.resume.pending.outcomes],
@@ -1016,13 +1026,9 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       ...focus.flatMap((entry) => ["--focus", entry]),
       ...[...signals].flatMap((signal) => ["--signal", signal]),
       ...(verificationSummary ? ["--verification-summary", verificationSummary] : []),
-      // The caller owns the corpus-scan root: pinning --task-dir docs/tasks
-      // keeps every re-projection scanning one deterministic directory for
-      // artifact-graph and focus bookkeeping, no matter what the adapter
-      // asked for. Appended after prefixArgs, it deliberately wins over any
-      // adapter-supplied --task-dir (Issue #156; see execution-contract
-      // "Selected-edge protocol").
-      "--task-dir", "docs/tasks",
+      // Graph Route v3 (Issue #243): no corpus-scan flags — execution state
+      // comes from the Execution Store run the projection resolves itself.
+      // An adapter that still emits v2 routes is refused below.
       "--json",
       ...(trace ? ["--trace-file", trace.file, "--run-id", trace.runId] : []),
     ];
@@ -1030,11 +1036,23 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
     if (result.status !== 0) {
       throw new Error(`route_graph invocation failed: ${result.stderr || result.error?.message || result.stdout}`);
     }
+    let route: GraphRoute;
     try {
-      return JSON.parse(result.stdout) as GraphRoute;
+      route = JSON.parse(result.stdout) as GraphRoute;
     } catch {
       throw new Error(`route_graph invocation failed: ${result.stderr || result.stdout}`);
     }
+    // Fail closed on any non-v3 route payload (Issue #243): a stale
+    // route_graph binary or a v2 adapter is migration-domain — never
+    // silently routed. A `proofPath` field is a pre-v3 handoff marker and
+    // is refused the same way.
+    if (route?.schemaVersion !== 3 || "proofPath" in (route as object)) {
+      throw new Error(
+        `route_graph returned a non-v3 route (schemaVersion ${(route as { schemaVersion?: unknown })?.schemaVersion ?? "missing"}) — ` +
+        "the deployed graph scripts are out of date; rebuild the package or migrate the workspace " +
+        "(doc_maintenance.js migrate plan --json)");
+    }
+    return route;
   };
 
   const resolveEffectInputs = (route: GraphRoute, effect: CallerEffect): EffectReference[] => {

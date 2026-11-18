@@ -18,9 +18,9 @@ the execution authority.
 
 - **Execution Graph**: the declared nodes, one-edge routes, conditions,
   priorities, delegates, and audits in `graphs/doc-driven-dev.yaml`.
-- **Artifact Graph**: canonical Markdown documents and their IDs, types,
+- **Knowledge Graph**: canonical Markdown documents and their IDs, types,
   statuses, and relations.
-- **Graph State**: a fresh projection of the Artifact Graph with focus, gates,
+- **Graph State**: a fresh projection of the Knowledge Graph with focus, gates,
   signals, blockers, and evidence for the selected route.
 - **Dynamic Task Graph**: a deterministic, read-only projection of one
   Execution Store run's `plan.md` and task records, keyed by
@@ -31,7 +31,7 @@ the execution authority.
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
   [--graph <path>] [--current <node>] [--signal <condition-signal>] \
-  [--focus <artifact>] [--task-dir <path>] \
+  [--focus <artifact>] \
   [--run <run-id> [--state-root <path>] [--allow-external-root]] \
   [--verification-summary <path>] \
   [--cwd <path>] --json
@@ -74,31 +74,35 @@ tasks and parallelize only independent work.
 
 Graph Definition bindings are explicit:
 
-- migration uses `migrate_docs`; bootstrap uses `scaffold_docs`; both are
-  dispatched by name to the `doc-maintenance` scripts that own migration;
+- bootstrap uses `scaffold_docs`, dispatched by name to the `doc-maintenance`
+  script that owns it — v3 declares no migration node, so `migrate_docs` is
+  reachable only through `doc-maintenance`, never through the graph;
 - briefing delegates to `briefing-flow`; design delegates to `design-doc`;
 - the planning node audits the approved design and dispatches `planning-flow`,
-  which sequences `plan-doc` -> approval yield -> `test-spec-doc` -> `task-doc`;
-- the task-graph node audits `plan`, `task`, and `test-spec` and dispatches
+  which owns the Execution Store run's `plan.md` and task records
+  (`plan-doc`/`task-doc` conventions govern the record contract and pre-v3
+  migration — no durable plan/task/test-spec Markdown is written);
+- the task-graph node audits the durable `design` and dispatches
   `build_task_graph`, executed by `build_task_graph.js`;
-- implementation delegates to `implementation-flow`; exit verification audits
-  with `doc-status`.
+- implementation delegates to `implementation-flow`; the verification node
+  audits `verification` (the durable Verification Design documents) while its
+  gate reads the HEAD-bound Verification Summary;
+- knowledge consolidation audits `knowledge` and dispatches `knowledge-doc`;
+  exit audit audits `all` and dispatches `doc-status`.
 
 Delegates own their briefing, planning, and implementation subgraphs. The
 caller runs returned audits before dispatching exactly the returned delegate.
 `focus-required` is a hard stop until explicit focus is supplied.
 
-Under Document Registry 3 the `plan`, `task`, and `test-spec` audit names
-above are *refused* scopes, not readers: `audit_docs.js --type <name>`
-fails at the registry gate because `plan`/`task` are execution-bound
-(their state lives in the Execution Store, their creators refuse durable
-Git writes) and `test-spec` is a legacy migration-only format. The
-`audits:` lists those names appear in (`task-graph`, `followup-triage`)
-still carry them from the Registry 2 definition — they are superseded
-pending the Graph Definition v3 rewire (#243), so a dispatched
-`plan`/`task`/`test-spec` audit resolves to a refusal today. Durable
-graph artifacts are `idea`, `brainstorm`, `discovery`, `spec`, `design`,
-`adr`, `knowledge`, and `verification`.
+Every `audits:` name in the v3 definition is a durable scope — `spec`,
+`adr`, `design`, `verification`, `knowledge`, or `all`. Under Document
+Registry 3 the legacy `plan`, `task`, and `test-spec` audit names are
+*refused* scopes, not readers: `audit_docs.js --type <name>` fails at the
+registry gate because `plan`/`task` are execution-bound (their state lives
+in the Execution Store, their creators refuse durable Git writes) and
+`test-spec` is a legacy migration-only format. Durable graph artifacts are
+`idea`, `brainstorm`, `discovery`, `spec`, `design`, `adr`, `knowledge`,
+and `verification`.
 
 ## Runtime loop
 
@@ -111,7 +115,7 @@ budgets, trace summary, and resume rules are in
 
 1. Select the Graph Definition, current node, and caller mode.
 2. Inspect canonical Markdown artifacts and their semantic relations.
-3. Project the Artifact Graph into fresh Graph State.
+3. Project the Knowledge Graph into fresh Graph State.
 4. Resolve an explicit focus when multiple chains are present.
 5. Evaluate gate results, caller signals, and deterministic blockers.
 6. Evaluate each outgoing edge with the generic condition DSL.
@@ -135,7 +139,7 @@ continuation. A task marked
 `wont-do` never satisfies a dependency; unresolved tasks remain blocked in the
 Dynamic Task Graph.
 
-The implementation gate's authority is a **Verification Summary** (Issue
+The verification gate's authority is a **Verification Summary** (Issue
 `#241`) bound to `HEAD` — not a caller-asserted signal. The gate passes
 only when a supplied or auto-computed summary binds to `HEAD` and reports
 `verdict: "verified"`; missing, stale, failed, or indeterminate
@@ -145,9 +149,14 @@ waiver / conditional out-of-scope channel). Semantics and blocker
 taxonomy:
 [`references/verification-summary-contract.md`](references/verification-summary-contract.md).
 
-After implementation, the `follow-up triage` node requires a passing
-implementation gate and one typed follow-up signal before routing to
-repair, planning, a new briefing, or exit audit.
+After implementation, the `verification` node audits the durable
+Verification Design documents; a passing verification gate routes to
+`knowledge-consolidation`, where the caller signals `knowledge-consolidated`
+once the consolidation decision is honestly taken (integrating findings or
+deliberately persisting nothing — the gate never infers it). The
+`exit-audit` node requires every upstream gate to pass plus the
+`exit-audit-pass` signal before routing to `complete`; unmet upstream gates
+route to the matching repair edge instead.
 
 ## Git commit boundary
 
@@ -226,7 +235,7 @@ explicit terminal/blocked result:
 
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
-  --current followup-triage --signal followup-terminal --json
+  --current exit-audit --signal exit-audit-pass --json
 ```
 
 The command evaluates the selected node and returns one `GraphRoute`. It does
@@ -239,7 +248,7 @@ the evidence used to choose it:
 
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
-  --current followup-triage --signal followup-terminal --explain --json
+  --current exit-audit --signal exit-audit-pass --explain --json
 ```
 
 The result is `{ "route": GraphRoute, "explanation": ... }`. The explanation
@@ -260,9 +269,11 @@ node .apm/skills/doc-driven-dev-graph/scripts/inspect_graph.js \
 ```
 
 The JSON always contains `definition`, including counts, topology reachability,
-delegates, audits, and deterministic issues. `state`, `artifactGraph`, and
-`taskGraph` are included only when an explicit `--cwd`, `--focus`,
-`--task-dir`, or `--run` selector requests runtime projection. Inspection
+delegates, audits, and deterministic issues. `state`, `knowledge`, and
+`taskGraph` are included only when an explicit `--cwd`, `--focus`, `--run`,
+`--state-root`, or `--allow-external-root` selector requests runtime projection
+(`--task-dir` is retired under Graph State v3 — plan/task state lives in the
+Execution Store and the flag is refused). Inspection
 never routes, dispatches delegates, or writes Markdown/persistence state.
 `referencedConditions` contains the unique edge `when` keys; `unusedConditions`
 contains declared condition keys absent from those edge `when` keys. JSON accepts
@@ -283,7 +294,8 @@ in the escaped label. Node labels include node ID and kind, with delegate,
 commitGate, terminal, and audit labels when declared; edge labels include the
 condition key and priority. Mermaid rendering is text-only and has no routing
 or persistence side effect. Mermaid is definition-only and rejects `--cwd`,
-`--focus`, `--task-dir`, `--run`, and `--state-root`. Original node, delegate,
+`--focus`, `--run`, `--state-root`, and `--allow-external-root`
+(`--task-dir` is refused outright for every format). Original node, delegate,
 audit, and condition text is escaped;
 `|` cannot terminate an edge label.
 

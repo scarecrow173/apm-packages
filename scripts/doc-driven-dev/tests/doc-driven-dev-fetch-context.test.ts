@@ -405,8 +405,8 @@ test("large corpus re-projection after mutation is deterministic — stale refus
 const HAPPY_SEQUENCE = [
   "probe-to-briefing", "briefing-to-design", "design-to-planning",
   "planning-to-task-graph", "task-graph-to-implementation",
-  "implementation-to-followup-triage", "followup-triage-terminal",
-  "exit-audit-to-complete",
+  "implementation-to-verification", "verification-to-knowledge-consolidation",
+  "knowledge-consolidation-to-exit-audit", "exit-audit-to-complete",
 ];
 
 test("runCase baseline: 60-doc corpus scan dwarfs the dispatched delegate inputs", { timeout: 120_000 }, () => {
@@ -416,12 +416,18 @@ test("runCase baseline: 60-doc corpus scan dwarfs the dispatched delegate inputs
     fixture: {
       taskStatuses: ["todo"],
       secondPlan: true,
-      // Clean variant: dup-id/broken-relation are router hard blockers, so the
-      // dispatched-delegate baseline requires the pathology-free corpus.
-      files: largeCorpusFiles({}),
+      // Clean variant: dup-id/broken-relation/relation-cycle are knowledge-
+      // integrity hard blockers, so the dispatched-delegate baseline needs
+      // the pathology-free corpus — the benchmark's a↔b `supersedes` pair is
+      // a stored-relation cycle under v3 and must sit this run out.
+      files: {
+        ...largeCorpusFiles({}),
+        "docs/specs/0300-cyc-a.md": null,
+        "docs/specs/0301-cyc-b.md": null,
+      },
     },
-    focus: ["PLAN-0001"],
-    signals: ["followup-terminal", "exit-audit-pass"],
+    focus: ["DESIGN-0001"],
+    signals: ["knowledge-consolidated", "exit-audit-pass"],
     script: case01.script,
     expect: {
       yield: "terminal",
@@ -451,9 +457,10 @@ test("runCase baseline: 60-doc corpus scan dwarfs the dispatched delegate inputs
   assert.ok(baseline.ratio < 0.5, `expected ratio < 0.5, got ${baseline.ratio}`);
 
   // Whole-repo audits keep their scope (issue acceptance #5): the exit
-  // audit's `all` audit still receives every canonical doc path. Issue #237:
-  // plan/task are Execution Store records, not canonical Markdown, so the
-  // declared durable set is 5 (spec, adr, design, test-spec, impl-record).
+  // audit's `all` audit still receives the declared durable scope — under
+  // Registry 3 that is the five durable docs (spec, adr, design,
+  // verification, knowledge); plan/task/test-spec/impl corpus Markdown is
+  // migration inventory, never audit input.
   const allAudit = run.traceEvents.find((event) =>
     event.kind === "effect-dispatched" && event.effectId === "all");
   assert.ok(allAudit && allAudit.kind === "effect-dispatched", "the `all` audit must still dispatch");
@@ -470,14 +477,16 @@ test("runCase fail-closed at scale: an unresolved reference blocks the run befor
       secondPlan: true,
       files: largeCorpusFiles({ brokenRelation: true }),
     },
-    focus: ["PLAN-0001"],
-    signals: ["followup-terminal", "exit-audit-pass"],
+    focus: ["DESIGN-0001"],
+    signals: ["knowledge-consolidated", "exit-audit-pass"],
     script: case01.script,
     expect: {
       yield: "unrecoverable-blocker",
       edgeSequence: [null],
       completedEdges: [],
-      blockersContain: [/^broken-relation:sha256:[0-9a-f]{12}$/],
+      // The raw `knowledge:unresolved-relation-target` blocker reaches the
+      // trace only as a redacted `knowledge:sha256:<12hex>` token (e2e-05).
+      blockersContain: [/^knowledge:sha256:[0-9a-f]{12}$/],
       events: [{ kind: "effect-dispatched", count: 0 }],
     },
   };

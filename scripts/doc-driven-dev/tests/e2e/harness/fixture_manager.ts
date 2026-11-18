@@ -207,9 +207,11 @@ function defaultDocs(options: {
 
 /**
  * Seed the run's Execution Store task records from the fixture's task docs.
- * Under Registry 3 the transitional Task Graph still projects `docs/tasks`
- * Markdown, while `execution-task` input bindings resolve against task
- * records inside the bound run — a fresh leg seeds one v1 record per doc id.
+ * Under Registry 3 the Dynamic Task Graph projects only the selected run's
+ * store records — `docs/tasks` Markdown is corpus history the projection
+ * never reads (Issue #243). The fixture merely reuses each doc's id/status
+ * as the seed for one v1 record, so `execution-task` input bindings resolve
+ * against task records inside the bound run.
  */
 export function fixtureTaskSeeds(repo: string): Array<{ taskId: string; status: TaskStatus }> {
   const dir = path.join(repo, "docs/tasks");
@@ -226,12 +228,30 @@ export function fixtureTaskSeeds(repo: string): Array<{ taskId: string; status: 
 export const VERIFICATION_DOC = "docs/verification/0001-graph.md";
 export const VERIFICATION_DOC_SPEC: DocSpec = {
   // Registry 3 durable successor to legacy test-spec verification intent —
-  // the `test-spec` audit's refused scope binds this document instead.
+  // the `verification` audit's durable scope. It declares NO checks, so the
+  // auto-computed Verification Summary verifies vacuously once every
+  // selected task is done, and it declares NO stored relation — `verifies`
+  // is a pre-v1 spelling whose projection surfaces as a
+  // `legacy-relation-field` knowledge issue (a hard blocker).
   frontmatter: {
     id: "VD-0001", type: "verification", status: "approved", title: "Graph",
-    relations: { verifies: ["SPEC-0001"] },
   },
   body: "# Graph\n",
+};
+
+/**
+ * The durable knowledge record the `knowledge` audit and `knowledge-doc`
+ * delegate bind. `knowledge_kind` is a required field (Registry 3); the
+ * stored `informs` edge is Knowledge Relations v1.
+ */
+export const KNOWLEDGE_DOC = "docs/knowledge/0001-graph.md";
+export const KNOWLEDGE_DOC_SPEC: DocSpec = {
+  frontmatter: {
+    id: "KNOW-0001", type: "knowledge", status: "confirmed", title: "Graph Knowledge",
+    knowledge_kind: "lesson",
+    relations: { informs: ["DESIGN-0001"] },
+  },
+  body: "# Graph Knowledge\n",
 };
 
 export function createFixtureRepo(options: {
@@ -247,11 +267,16 @@ export function createFixtureRepo(options: {
   taskScopes?: string[][];
   secondPlan?: boolean;
   /**
-   * Write the Registry 3 verification document the `test-spec` audit's
-   * refused scope binds. Off by default: corpus consumers (lifecycle stats)
+   * Write the Registry 3 verification document the `verification` audit's
+   * durable scope binds. Off by default: corpus consumers (lifecycle stats)
    * pin fixtures that predate the verification type.
    */
   verificationDoc?: boolean;
+  /**
+   * Write the Registry 3 durable knowledge record the `knowledge` audit and
+   * `knowledge-doc` delegate bind. Off by default for the same reason.
+   */
+  knowledgeDoc?: boolean;
   /** Default true: canonical dirs + README indexes. */
   scaffoldDirs?: boolean;
   /**
@@ -281,14 +306,10 @@ export function createFixtureRepo(options: {
       fs.mkdirSync(path.join(repo, directory), { recursive: true });
       fs.writeFileSync(path.join(repo, directory, "README.md"), `# ${directory}\n`, "utf8");
     }
-    // The experiment-log audit's canonical input anchor is the managed exp
-    // index; it needs a front-matter id to resolve as a DurableDocumentReference.
-    writeArtifact(repo, "docs/impl/exp/README.md", {
-      id: "EXP-INDEX", title: "Experiment Logs",
-    }, "# Experiment Logs\n");
   }
   const docs: Record<string, DocSpec | string> = defaultDocs(options);
   if (options.verificationDoc) docs[VERIFICATION_DOC] = VERIFICATION_DOC_SPEC;
+  if (options.knowledgeDoc) docs[KNOWLEDGE_DOC] = KNOWLEDGE_DOC_SPEC;
   for (const [rel, spec] of Object.entries(options.files ?? {})) {
     if (spec === null) delete docs[rel];
     else docs[rel] = spec;

@@ -30,9 +30,11 @@ Examples of blocking issues:
 - Missing required front matter fields (id, type, status, relations)
 - Broken internal relations (referenced file does not exist)
 - Documents not registered in the index
-- Unclassified follow-up items remaining at the `followup-triage` node before
-  the `exit-audit` node
-- Follow-up tasks missing required upstream relations or dependency links
+- Typed Knowledge Relation issues remaining before the `exit-audit` node —
+  unresolved or ambiguous targets, relation cycles, or legacy relation fields
+  only migration may carry
+- Documents whose stored type, lifecycle, or status is inconsistent with
+  Document Registry 3
 
 ## Output Contract
 
@@ -43,9 +45,9 @@ Return audit results using this structure:
 - `Warnings`: non-blocking issues worth fixing
 - `Relation errors`: broken internal links or inconsistent relations
 - `Index gaps`: missing registry or index coverage
-- `Next actions`: the minimum follow-up needed to pass the gate; when
-  unclassified follow-up remains, name the smallest return point that can
-  classify or repair it
+- `Next actions`: the minimum repair needed to pass the gate; name the
+  smallest graph repair point (the node the router will return to) that can
+  resolve each blocking finding
 
 ## Workflow
 
@@ -112,10 +114,11 @@ The unified `doc_status.js` entry point exposes four read-only commands.
    warning).
    Graph-dispatched audits run the `artifact` profile so a missing or stale
    index never gates graph execution; direct strict checks may omit
-   `--profile` to keep the default `materialized` coverage. The `exit-audit`
-   node runs named audits `all`, `impl-record`, and `experiment-log`; `all`
-   keeps `--profile artifact`, so owner findings stay visible while index
-   state still cannot gate graph execution.
+   `--profile` to keep the default `materialized` coverage. Under Graph
+   Definition v3 the `exit-audit` node runs the named audit `all` only —
+   `impl-record` and `experiment-log` are `--owners` opt-ins, never
+   graph-dispatched scopes; `all`
+   keeps `--profile artifact`, so index state cannot gate graph execution.
 
 4. Treat `relations.source` as external evidence.
    HTTP, HTTPS, and mail links are allowed and should not be reported as missing

@@ -16,7 +16,6 @@ type CliArgs = {
   cwd: string;
   cwdExplicit: boolean;
   focus: string[];
-  taskDir?: string;
   run?: string;
   stateRoot?: string;
   allowExternalRoot: boolean;
@@ -24,7 +23,7 @@ type CliArgs = {
 };
 
 function usage(): string {
-  return "Usage: node inspect_graph.js [--graph <path>] [--format json|mermaid] [--cwd <path>] [--focus <artifact>] [--task-dir <path>] [--run <run-id> [--state-root <path>] [--allow-external-root]]";
+  return "Usage: node inspect_graph.js [--graph <path>] [--format json|mermaid] [--cwd <path>] [--focus <artifact-or-run>] [--run <run-id> [--state-root <path>] [--allow-external-root]]";
 }
 
 function requiredValue(argv: string[], index: number, option: string): string {
@@ -63,8 +62,9 @@ function parseArgs(argv: string[]): CliArgs {
       args.focus.push(requiredValue(argv, index, arg));
       index += 1;
     } else if (arg === "--task-dir") {
-      args.taskDir = requiredValue(argv, index, arg);
-      index += 1;
+      // Graph State v3 has no task-doc scan root — the Execution Store is
+      // the only execution-state authority (Issue #243).
+      throw new Error("--task-dir is not accepted by Graph State v3 — plan/task state lives in the Execution Store; select it with --run and --state-root");
     } else if (arg === "--run") {
       args.run = requiredValue(argv, index, arg);
       index += 1;
@@ -82,25 +82,37 @@ function parseArgs(argv: string[]): CliArgs {
   return args;
 }
 
-function run(args: CliArgs): void {
+/**
+ * True when the caller supplied any runtime-projection selector. The
+ * Execution Store root flags count too: passing only `--state-root` or
+ * `--allow-external-root` requests a projection — silently dropping them
+ * would emit definition-only output the caller never asked for (Issue
+ * #243).
+ */
+function hasRuntimeSelector(args: CliArgs): boolean {
+  return args.cwdExplicit || args.focus.length > 0 || args.run !== undefined
+    || args.stateRoot !== undefined || args.allowExternalRoot;
+}
+
+async function run(args: CliArgs): Promise<void> {
   if (!schemaEntrypointGuard(args.cwd)) return;
   const definition = loadGraphDefinition(resolveGraphPath(args.graph, args.cwd));
   const inspection = inspectGraphDefinition(definition);
   if (args.format === "mermaid") {
-    if (args.cwdExplicit || args.focus.length > 0 || args.taskDir !== undefined || args.run !== undefined || args.stateRoot !== undefined) {
-      throw new Error("Mermaid format does not support runtime selectors: --cwd, --focus, --task-dir, --run, --state-root");
+    // Mermaid is definition-only: every runtime selector is rejected —
+    // `--allow-external-root` included — never silently ignored.
+    if (hasRuntimeSelector(args)) {
+      throw new Error("Mermaid format does not support runtime selectors: --cwd, --focus, --run, --state-root, --allow-external-root");
     }
     console.log(renderGraphMermaid(inspection));
     return;
   }
 
   const output: Record<string, unknown> = { definition: inspection };
-  const hasRuntimeSelector = args.cwdExplicit || args.focus.length > 0 || args.taskDir !== undefined || args.run !== undefined;
-  if (hasRuntimeSelector) {
-    const state = projectGraphState({
+  if (hasRuntimeSelector(args)) {
+    const state = await projectGraphState({
       cwd: args.cwd,
       graphId: definition.id,
-      taskDir: args.taskDir,
       focus: args.focus,
       runId: args.run,
       stateRoot: args.stateRoot,
@@ -109,36 +121,41 @@ function run(args: CliArgs): void {
     if (args.focus.length > 0 && state.blockers.some((blocker) => blocker === "focus-invalid" || blocker === "focus-required")) {
       throw new Error(`Invalid focus: ${args.focus.join(", ")}`);
     }
+    // Graph State v3 (Issue #243): knowledge/execution/verification are the
+    // three store projections — no artifactGraph or taskDir remains.
     output.state = {
       schemaVersion: state.schemaVersion,
       graphId: state.graphId,
       cwd: state.cwd,
-      taskDir: state.taskDir,
       focus: state.focus,
       gates: state.gates,
       signals: state.signals,
       blockers: state.blockers,
       hardBlockers: state.hardBlockers,
+      execution: state.execution,
+      verification: state.verification,
     };
-    output.artifactGraph = state.artifactGraph;
-    output.taskGraph = state.taskGraph;
+    output.knowledge = state.knowledge.graph;
+    output.taskGraph = state.execution.taskGraph;
   }
   console.log(JSON.stringify(output, null, 2));
 }
 
 function main(): void {
-  try {
-    const args = parseArgs(process.argv.slice(2));
-    if (args.help) {
-      console.log(usage());
-      return;
+  (async () => {
+    try {
+      const args = parseArgs(process.argv.slice(2));
+      if (args.help) {
+        console.log(usage());
+        return;
+      }
+      await run(args);
+    } catch (error: unknown) {
+      console.error(error instanceof Error ? error.message : String(error));
+      console.error(usage());
+      process.exitCode = 1;
     }
-    run(args);
-  } catch (error: unknown) {
-    console.error(error instanceof Error ? error.message : String(error));
-    console.error(usage());
-    process.exitCode = 1;
-  }
+  })();
 }
 
 main();

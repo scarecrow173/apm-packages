@@ -39,7 +39,7 @@ one-edge command のままであり、継続を所有するのは router では�
 7. 返された delegate だけを dispatch する。
 8. audit または delegate が input、approval、authority を明示的に要求するなら、
    edge checkpoint を完了したと主張せず yield する。
-9. completion、gate、follow-up evidence を run record として保存する:
+9. completion、gate、verification evidence を run record として保存する:
    受け入れられた `completed` outcome ごとにまず run の Execution Store に
    Effect Receipt を記録し、続いて edge checkpoint record が完了した
    receipt、更新された outcome output、evidence phase で宣言された
@@ -59,19 +59,18 @@ one-edge command のままであり、継続を所有するのは router では�
 12. fresh な state projection で `next` から再入力する。
 13. `single-step` mode では yield し、`run-until-yield` mode では繰り返す。
 
-route invocation の flag は caller が所有します。`runCaller` は adapter の
-`prefixArgs` の後に pinned な `--task-dir docs/tasks` を付け、すべての
-re-projection が artifact-graph と focus bookkeeping のために同じ
-deterministic corpus root を scan するようにします。後ろの flag が意図的に
-優先され、adapter が渡す `--task-dir` は採用されません。adapter は
+route invocation の flag は caller が所有します。Graph Route v3 では
+`--task-dir` は存在しません —— plan/task 状態は Execution Store にあり、
+`route_graph.js` はこの flag を拒否します。artifact scan root は durable
+corpus だけです。adapter は
 `prefixArgs` に `--run <run-id>`（必要に応じて `--state-root` /
 `--allow-external-root` も）を置いて Execution Store run を選択します。
-`--run` がない場合、router は単一 active run 規則を適用します —
+`--run` がない場合、router はこの chain の単一 active run 規則を適用します —
 candidate が 0 のときは Task Graph を null のままにし（planning がまだ
 run を materialize していない通常状態で、blocker は出ません）、複数なら
 ambiguous として fail-closed します（`task-graph-run-ambiguous`）。
 
-completion、gate、follow-up evidence は run の Execution Store に記録します:
+completion、gate、verification evidence は run の Execution Store に記録します:
 受け入れられた completed outcome ごとに `recordReceipt` を、続いて edge に対し
 `recordCheckpoint` を実行します。receipt は execution-side の effect が完了した
 ことの証明であり、Verification Evidence ではありません。
@@ -86,8 +85,8 @@ record を置き換えません。
 
 ## Git commit boundary
 
-briefing、spec、ADR、design、plan、test-spec、task、implementation、follow-up、
-audit の全作業で、
+briefing、spec、ADR、design、plan、task、implementation、verification、
+knowledge-consolidation、audit の全作業で、
 review 可能な logical change ごとに 1 commit とします。logical change は単独で意図を
 説明・review でき、可能な限り検証方法が明確で、revert した場合の意味が明確であり、
 unrelated change を含まないものとします。commit 数の最小化・最大化は目的にしません。
@@ -149,13 +148,13 @@ stale fingerprint は再利用ではなく再投影と再取得を引き起こ�
 
 caller adapter は declared script delegate（`migrate_docs`、`scaffold_docs`、
 `build_task_graph`。migration script は `doc-maintenance` が所有）と
-named audit（`spec`、`adr`、`design`、`plan`、`task`、
-`test-spec`、`impl-record`、`experiment-log`、`all`）を `EffectOutcome` に正規化します。
-Document Registry 3 では `plan`、`task`、`test-spec` の名前は拒否される scope であり、
+named audit（`spec`、`adr`、`design`、`verification`、`knowledge`、
+`all`）を `EffectOutcome` に正規化します。
+Document Registry 3 ではレガシーな `plan`、`task`、`test-spec` の名前は
+拒否される scope であり、
 `audit_docs.js --type <name>` は registry ゲートで失敗します（`plan`/`task` は
-execution-bound、`test-spec` は migration 専用レガシー形式）。そのため
-Graph Definition v3 の rewire（#243）が superseded な `audits:` リストを置き換えるまで、
-adapter はこれらの completed outcome を正規化しません。
+execution-bound、`test-spec` は migration 専用レガシー形式）— これらは
+v3 の `audits:` リストには存在しません。
 footer を emit できる skill は直接返します。
 adapter output が missing または malformed なら `authority-required` を yield し、checkpoint
 を進めません。effect 固有の canonical input/output mapping は

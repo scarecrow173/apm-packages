@@ -5,9 +5,9 @@
 宣言に対する authority です。文章で遷移を発明したり、委譲された subgraph を
 flatten したりしてはなりません。
 
-## Graph Definition v2
+## Graph Definition v3
 
-definition は `schemaVersion: 2`、安定した `id`、`entry` node ID、任意の
+definition は `schemaVersion: 3`、安定した `id`、`entry` node ID、任意の
 `runtimeSignals`、名前付きの `conditions`、`nodes`、`edges` を持ちます:
 
 - `runtimeSignals` は CLI が受け付ける caller-provided signal value を列挙します。
@@ -48,7 +48,7 @@ definition の `kind: signal` condition が参照する値でなければなり�
 
 | Field | 意味 |
 | --- | --- |
-| `schemaVersion` | 公開 route schema。現在は `2`。 |
+| `schemaVersion` | 公開 route schema。現在は `3`。 |
 | `graphId` | 選択した definition ID。 |
 | `current` / `next` | 現在の node と 1 段階先。 |
 | `edgeId` | 選択 edge ID。terminal/blocked は `null`。 |

@@ -257,17 +257,16 @@ const canonicalDirs = [
 // itself is legacy migration-only; verification intent is durable.
 const VERIFICATION_DOC = "docs/verification/0001-graph.md";
 const PROOF_TASK_ID = "TASK-0001";
-// Durable corpus for `audit:all` / migrate / doc-status inputs — plan and
-// task Markdown are corpus/history under Registry 3, so the run's plan.md
-// and task records carry their own authority and never join this list.
+// Durable corpus for `audit:all` / doc-status inputs — plan and task Markdown
+// are corpus/history under Registry 3, so the run's plan.md and task records
+// carry their own authority and never join this list.
+const KNOWLEDGE_DOC = "docs/knowledge/0001-graph.md";
 const canonicalDocumentPaths = [
   "docs/specs/0001-graph.md",
   "docs/adr/0001-graph.md",
   "docs/designs/0001-graph.md",
-  "docs/test-specs/0001-graph.md",
-  PROOF,
-  "docs/impl/ir/0001-task.md",
   VERIFICATION_DOC,
+  KNOWLEDGE_DOC,
 ];
 
 function writeArtifact(dir: string, relativePath: string, data: Record<string, unknown>, body: string): void {
@@ -312,21 +311,22 @@ function happyRepo(): string {
     fs.mkdirSync(path.join(dir, directory), { recursive: true });
     fs.writeFileSync(path.join(dir, directory, "README.md"), `# ${directory}\n`, "utf8");
   }
-  // The experiment-log audit's canonical input anchor is the managed exp
-  // index; it needs a front-matter id to resolve as a DurableDocumentReference.
-  writeArtifact(dir, "docs/impl/exp/README.md", {
-    id: "EXP-INDEX", title: "Experiment Logs",
-  }, "# Experiment Logs\n");
   writeArtifact(dir, "docs/specs/0001-graph.md", {
     id: "SPEC-0001", type: "spec", status: "approved", title: "Graph",
   }, "# Graph\n\n## Acceptance Criteria\n\n- [ ] graph\n");
   writeArtifact(dir, "docs/adr/0001-graph.md", {
     id: "ADR-0001", type: "adr", status: "accepted", title: "Graph",
+    relations: { "decides-for": ["DESIGN-0001"] },
   }, "# Graph\n\n## Considered Options\n\n### A\n\n### B\n");
   writeArtifact(dir, "docs/designs/0001-graph.md", {
     id: "DESIGN-0001", type: "design", status: "approved", title: "Graph",
-    relations: { "derives-from": ["SPEC-0001", "ADR-0001"] },
+    relations: { realizes: ["SPEC-0001"] },
   }, "# Graph\n");
+  writeArtifact(dir, KNOWLEDGE_DOC, {
+    id: "KNOW-0001", type: "knowledge", status: "confirmed", title: "Graph Knowledge",
+    knowledge_kind: "lesson",
+    relations: { informs: ["DESIGN-0001"] },
+  }, "# Graph Knowledge\n");
   writeArtifact(dir, "docs/plans/0001-graph.md", {
     id: "PLAN-0001", type: "plan", status: "approved", title: "Graph",
     relations: { "derives-from": ["DESIGN-0001"], "verified-by": ["docs/test-specs/0001-graph.md"] },
@@ -340,7 +340,6 @@ function happyRepo(): string {
   }, "# Implementation Record\n");
   writeArtifact(dir, VERIFICATION_DOC, {
     id: "VD-0001", type: "verification", status: "approved", title: "Graph",
-    relations: { verifies: ["SPEC-0001"] },
   }, "# Graph\n");
   writeArtifact(dir, PROOF, {
     id: "TASK-0001", type: "task", status: "todo", title: "TASK-0001",
@@ -354,7 +353,7 @@ function happyRepo(): string {
   createRun(dir, {
     runId: RUN_ID,
     graphId: "doc-driven-dev",
-    focus: ["docs/plans/0001-graph.md"],
+    focus: ["docs/designs/0001-graph.md"],
     plan: "# Plan\n\nStore-managed run plan.\n",
     tasks: [{ taskId: "TASK-0001", title: "TASK-0001", status: "todo" }],
   });
@@ -384,16 +383,12 @@ function testResolveInputs(route: GraphRoute, effect: CallerEffect): ReferenceSp
       case "spec": return ["docs/specs/0001-graph.md"];
       case "adr": return ["docs/adr/0001-graph.md"];
       case "design": return ["docs/designs/0001-graph.md"];
-      case "plan": return taskRefSpecs(route);
-      case "task": return taskRefSpecs(route);
-      case "test-spec": return [VERIFICATION_DOC];
-      case "impl-record": return ["docs/impl/ir/0001-task.md"];
-      case "experiment-log": return ["docs/impl/exp/README.md"];
+      case "verification": return [VERIFICATION_DOC];
+      case "knowledge": return [KNOWLEDGE_DOC];
       case "all": return canonicalDocumentPaths;
     }
   }
   switch (effect.id) {
-    case "migrate_docs": return canonicalDocumentPaths;
     case "scaffold_docs": return ["."];
     case "build_task_graph": {
       // The delegate projects the selected Task Graph — its inputs are the
@@ -409,6 +404,7 @@ function testResolveInputs(route: GraphRoute, effect: CallerEffect): ReferenceSp
     case "design-doc": return ["docs/specs/0001-graph.md", "docs/adr/0001-graph.md"];
     case "planning-flow": return ["docs/designs/0001-graph.md"];
     case "implementation-flow": return [...taskRefSpecs(route), "docs/designs/0001-graph.md"];
+    case "knowledge-doc": return [KNOWLEDGE_DOC, VERIFICATION_DOC];
     case "doc-status": return canonicalDocumentPaths;
     default: throw new Error(`No authoritative-input mapping for ${effect.kind}:${effect.id}`);
   }
@@ -422,7 +418,8 @@ function testResolveEvidence(route: GraphRoute, effect: CallerEffect): Reference
     // the pre-v3 plan/test-spec outputs are execution-bound, never proof.
     case "planning-flow": return VERIFICATION_DOC;
     case "implementation-flow": return "docs/impl/ir/0001-task.md";
-    case "doc-status": return "docs/impl/ir/0001-task.md";
+    case "knowledge-doc": return KNOWLEDGE_DOC;
+    case "doc-status": return VERIFICATION_DOC;
     default: return testResolveInputs(route, effect)[0];
   }
 }
@@ -474,12 +471,12 @@ test("runCaller drives the real CLI end-to-end and emits run-level trace events"
   seedRun(dir);
   const result = runCaller({
     repo: dir, router: { executable: process.execPath, prefixArgs: [tsx, cli] },
-    focus: ["PLAN-0001"],
+    focus: ["DESIGN-0001"],
     // Caller-declared signals — the oracle injects them through mutable
     // signal callbacks; the runner contract declares them up front. The
     // implementation gate's verification authority is the auto-computed
     // Verification Summary bound to HEAD (Issue #241), never a signal.
-    signals: ["followup-terminal", "exit-audit-pass"],
+    signals: ["knowledge-consolidated", "exit-audit-pass"],
     dispatcher,
     store: { runId: RUN_ID },
     resolveInputs: testResolveInputs, resolveOutputPath: testResolveEvidence,
@@ -505,13 +502,14 @@ test("runCaller drives the real CLI end-to-end and emits run-level trace events"
   assert.deepEqual(
     result.routes.map((route) => route.edgeId ?? route.status),
     ["probe-to-briefing", "briefing-to-design", "design-to-planning", "planning-to-task-graph",
-     "task-graph-to-implementation", "implementation-to-followup-triage",
-     "followup-triage-terminal", "exit-audit-to-complete", "terminal"],
+     "task-graph-to-implementation", "implementation-to-verification",
+     "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit",
+     "exit-audit-to-complete", "terminal"],
   );
-  // exit-audit declares audits [all, impl-record, experiment-log]; the route
-  // exposes requiredAudits in the router's stable sorted projection.
+  // exit-audit declares audits [all] — every durable document is the audit
+  // scope; the route exposes requiredAudits in sorted projection order.
   const exitAuditRoute = result.routes.find((route) => route.next === "exit-audit");
-  assert.deepEqual(exitAuditRoute?.requiredAudits, ["all", "experiment-log", "impl-record"]);
+  assert.deepEqual(exitAuditRoute?.requiredAudits, ["all"]);
   const events = readTraceFile(trace).filter((event) => event.runId === "e2e-happy");
   assert.deepEqual(events.map((event) => event.seq), events.map((_, i) => i + 1)); // contiguous per-runId seq
   assert.equal(events.filter((e) => e.kind === "effect-dispatched").length,
@@ -554,8 +552,8 @@ test("runCaller stamps the policy's per-effect mode decision on effect-dispatche
   seedRun(dir);
   const result = runCaller({
     repo: dir, router: { executable: process.execPath, prefixArgs: [tsx, cli] },
-    focus: ["PLAN-0001"],
-    signals: ["followup-terminal", "exit-audit-pass"],
+    focus: ["DESIGN-0001"],
+    signals: ["knowledge-consolidated", "exit-audit-pass"],
     dispatcher,
     store: { runId: RUN_ID },
     resolveInputs: testResolveInputs, resolveOutputPath: testResolveEvidence,
@@ -605,7 +603,7 @@ function runnerArgs(dir: string, dispatcher: EffectDispatcher, trace: string) {
   return {
     repo: dir,
     router: { executable: process.execPath, prefixArgs: [tsx, cli] },
-    signals: ["followup-terminal", "exit-audit-pass"],
+    signals: ["knowledge-consolidated", "exit-audit-pass"],
     dispatcher,
     store: { runId: RUN_ID },
     resolveInputs: testResolveInputs,
@@ -631,7 +629,7 @@ test("a self-observation reporting a different actual mode rejects the dispatch"
     outcome: completed(dir, ctx.runId, ctx.route, ctx.effect.kind, ctx.effect),
     observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: "same-context", method: "inline-skill" }],
   });
-  const result = runCaller({ ...runnerArgs(dir, dispatcher, trace), executionMode: "tool", focus: ["PLAN-0001"] });
+  const result = runCaller({ ...runnerArgs(dir, dispatcher, trace), executionMode: "tool", focus: ["DESIGN-0001"] });
   assert.equal(result.yieldReason, "authority-required");
   const events = readTraceFile(trace);
   const observed = events.filter((event) => event.kind === "dispatch-observed");
@@ -667,7 +665,7 @@ test("a declined dispatch yields honestly; an executing dispatch may not claim n
       observations: [{ target: ctx.effect.id, requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
     };
   };
-  const result = runCaller({ ...runnerArgs(dir, dispatcher, trace), executionMode: "subagent", focus: ["PLAN-0001"] });
+  const result = runCaller({ ...runnerArgs(dir, dispatcher, trace), executionMode: "subagent", focus: ["DESIGN-0001"] });
   assert.equal(result.yieldReason, "authority-required");
   const observed = readTraceFile(trace).filter((event) => event.kind === "dispatch-observed");
   // Audits dispatch in graph order — whichever ran before spec recorded an
@@ -696,7 +694,7 @@ test("a dispatcher reporting no self-observation is rejected", () => {
     outcome: completed(dir, ctx.runId, ctx.route, ctx.effect.kind, ctx.effect),
     observations: [{ target: "some-other-dispatch", requested: ctx.requestedMode, actual: ctx.requestedMode, method: "scripted" }],
   });
-  const result = runCaller({ ...runnerArgs(dir, dispatcher, trace), focus: ["PLAN-0001"] });
+  const result = runCaller({ ...runnerArgs(dir, dispatcher, trace), focus: ["DESIGN-0001"] });
   assert.equal(result.yieldReason, "authority-required");
 });
 
@@ -722,7 +720,7 @@ test("a delegated policy decision attaches a handoff carrying the requested mode
   });
   const result = runCaller({
     ...runnerArgs(dir, dispatcher, trace),
-    focus: ["PLAN-0001"],
+    focus: ["DESIGN-0001"],
     policy,
   });
   assert.equal(result.yieldReason, "terminal");
@@ -742,7 +740,7 @@ test("a self-observation echoing a different requested mode rejects the dispatch
     outcome: completed(dir, ctx.runId, ctx.route, ctx.effect.kind, ctx.effect),
     observations: [{ target: ctx.effect.id, requested: "same-context", actual: "tool", method: "scripted" }],
   });
-  const result = runCaller({ ...runnerArgs(dir, dispatcher, trace), executionMode: "tool", focus: ["PLAN-0001"] });
+  const result = runCaller({ ...runnerArgs(dir, dispatcher, trace), executionMode: "tool", focus: ["DESIGN-0001"] });
   assert.equal(result.yieldReason, "authority-required");
   assert.equal(
     readTraceFile(trace).some((event) => event.kind === "effect-outcome"),
@@ -768,7 +766,7 @@ test("a handoff whose executionMode mismatches the request rejects the dispatch"
   });
   const result = runCaller({
     ...runnerArgs(dir, dispatcher, trace),
-    focus: ["PLAN-0001"],
+    focus: ["DESIGN-0001"],
     policy,
     // The spec audit is delegated ("tool"), but the builder pins a
     // "subagent" handoff — the delegate would run under a different
@@ -796,7 +794,7 @@ test("a delegated decision producing no handoff rejects the dispatch", () => {
   });
   const result = runCaller({
     ...runnerArgs(dir, dispatcher, trace),
-    focus: ["PLAN-0001"],
+    focus: ["DESIGN-0001"],
     policy,
     // Falsy return = no scope to delegate — running anyway would be an
     // unbounded dispatch.
@@ -816,7 +814,7 @@ test("malformed observation entries reject like a malformed outcome — no trace
         bad,
       ] as never,
     });
-    const result = runCaller({ ...runnerArgs(dir, dispatcher, trace), focus: ["PLAN-0001"] });
+    const result = runCaller({ ...runnerArgs(dir, dispatcher, trace), focus: ["DESIGN-0001"] });
     assert.equal(result.yieldReason, "authority-required", `entry ${JSON.stringify(bad)} must reject`);
     // Entries are validated before ANY is emitted — a malformed report is an
     // all-or-nothing breach, so no dispatch-observed event reaches the trace
@@ -874,7 +872,7 @@ test("byte-distinct retry outcomes on the same pending edge exhaust the dispatch
   const dir = happyRepo();
   const trace = path.join(dir, "trace.jsonl");
   const dispatcher = distinctRetryDispatcher(dir);
-  const result = runCaller({ ...runnerArgs(dir, dispatcher, trace), current: "design", focus: ["PLAN-0001"] });
+  const result = runCaller({ ...runnerArgs(dir, dispatcher, trace), current: "design", focus: ["DESIGN-0001"] });
   assert.equal(result.yieldReason, "budget-exhausted");
   assert.equal(result.hops, 0);
   assert.deepEqual(result.completedEdges, []);
@@ -899,7 +897,7 @@ test("the per-edge dispatch budget is configurable via maxDispatchesPerEdge", ()
   const dispatcher = distinctRetryDispatcher(dir);
   const result = runCaller({
     ...runnerArgs(dir, dispatcher, trace),
-    current: "design", focus: ["PLAN-0001"], maxDispatchesPerEdge: 3,
+    current: "design", focus: ["DESIGN-0001"], maxDispatchesPerEdge: 3,
   });
   assert.equal(result.yieldReason, "budget-exhausted");
   assert.equal(result.outcomes.length, 3);
@@ -956,7 +954,7 @@ test("retries alternated across different edges trip the run-level total dispatc
   const dispatcher = alternatingEdgeRetryDispatcher(dir);
   const result = runCaller({
     ...runnerArgs(dir, dispatcher, trace),
-    current: "design", focus: ["PLAN-0001"], maxTotalDispatches: 5,
+    current: "design", focus: ["DESIGN-0001"], maxTotalDispatches: 5,
   });
   assert.equal(result.yieldReason, "budget-exhausted");
   // The gate flip rotated the route on every pass: design-to-planning and
@@ -1006,7 +1004,7 @@ test("the pending-edge dispatch count survives a mid-edge yield and resume", () 
   };
   const first = runCaller({
     ...runnerArgs(dir, yieldAfter, trace),
-    current: "design", focus: ["PLAN-0001"], maxDispatchesPerEdge: 3,
+    current: "design", focus: ["DESIGN-0001"], maxDispatchesPerEdge: 3,
   });
   assert.equal(first.yieldReason, "input-required");
   assert.equal(first.handoff.pending?.dispatches, 2);
@@ -1044,7 +1042,7 @@ test("a handoff written before the run-level bound seeds totalDispatches from ou
     }
     return leg1Dispatcher(ctx);
   };
-  const first = runCaller({ ...runnerArgs(dir, yieldAfter, trace), current: "design", focus: ["PLAN-0001"] });
+  const first = runCaller({ ...runnerArgs(dir, yieldAfter, trace), current: "design", focus: ["DESIGN-0001"] });
   assert.equal(first.yieldReason, "input-required");
   // Simulate a handoff serialized by the pre-total-bound caller: it carries
   // maxDispatchesPerEdge and pending.dispatches but neither new field.

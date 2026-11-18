@@ -25,6 +25,13 @@ const CANONICAL_TARGETS = [
   "docs/tasks", "docs/test-specs", "docs/adr", "docs/impl/ir", "docs/impl/exp",
   "docs/knowledge", "docs/verification",
 ];
+// Graph State v3 scans the durable registry dirs only — plan/task/test-spec/
+// impl Markdown is migration-owned and never enters the projection (or the
+// collector's file accounting).
+const DURABLE_TARGETS = [
+  "docs/ideas", "docs/discovery", "docs/specs", "docs/designs",
+  "docs/adr", "docs/knowledge", "docs/verification",
+];
 
 function writeArtifact(repo: string, relativePath: string, data: Record<string, unknown>, body: string): number {
   const file = path.join(repo, relativePath);
@@ -36,7 +43,10 @@ function writeArtifact(repo: string, relativePath: string, data: Record<string, 
   return Buffer.byteLength(content, "utf8");
 }
 
-function fixtureRepo(): { repo: string; artifactFiles: number; totalBytes: number } {
+function fixtureRepo(): {
+  repo: string; artifactFiles: number; totalBytes: number;
+  durableFiles: number; durableBytes: number;
+} {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), "doc-driven-dev-run-trace-"));
   for (const directory of CANONICAL_TARGETS) {
     fs.mkdirSync(path.join(repo, directory), { recursive: true });
@@ -48,12 +58,25 @@ function fixtureRepo(): { repo: string; artifactFiles: number; totalBytes: numbe
   }, "# Graph\n\n## Acceptance Criteria\n\n- [ ] graph\n");
   totalBytes += writeArtifact(repo, "docs/adr/0001-graph.md", {
     id: "ADR-0001", type: "adr", status: "accepted", title: "Graph",
+    relations: { "decides-for": ["DESIGN-0001"] },
   }, "# Graph\n\n## Considered Options\n\n### A\n\n### B\n");
   totalBytes += writeArtifact(repo, "docs/designs/0001-graph.md", {
     id: "DESIGN-0001", type: "design", status: "approved", title: "Graph",
-    relations: { "derives-from": ["SPEC-0001", "ADR-0001"] },
+    relations: { realizes: ["SPEC-0001"] },
   }, "# Graph\n");
-  return { repo, artifactFiles: 3, totalBytes };
+  // Everything scanRepository reads under the durable roots — README.md
+  // index files included (the repository model counts them, unlike the
+  // artifact scan's readme/index skip).
+  let durableFiles = 0;
+  let durableBytes = 0;
+  for (const directory of DURABLE_TARGETS) {
+    for (const entry of fs.readdirSync(path.join(repo, directory))) {
+      if (!entry.endsWith(".md")) continue;
+      durableFiles += 1;
+      durableBytes += fs.statSync(path.join(repo, directory, entry)).size;
+    }
+  }
+  return { repo, artifactFiles: 3, totalBytes, durableFiles, durableBytes };
 }
 
 test("scan collector counts files, bytes, and unique paths", () => {
@@ -72,21 +95,22 @@ test("scan collector counts files, bytes, and unique paths", () => {
   assert.equal(collector.filePaths.size, artifactFiles, "unique paths dedupe repeat scans");
 });
 
-test("projectGraphState reports both internal scans through the collector", () => {
-  const { repo, artifactFiles, totalBytes } = fixtureRepo();
+test("projectGraphState reports its durable-corpus scan through the collector", async () => {
+  const { repo, durableFiles, durableBytes } = fixtureRepo();
   const collector = createArtifactScanCollector();
-  projectGraphState({ cwd: repo, graphId: "doc-driven-dev", focus: [] }, collector);
-  // projectGraphState scans once, then evaluateGraphGates re-scans once.
-  assert.equal(collector.scans, 2);
-  assert.equal(collector.filesRead, artifactFiles * 2);
-  assert.equal(collector.bytesRead, totalBytes * 2);
+  await projectGraphState({ cwd: repo, graphId: "doc-driven-dev", focus: [] }, collector);
+  // Graph State v3 projects the durable corpus in a single scanRepository
+  // pass — gates evaluate over the projected model, never a re-scan.
+  assert.equal(collector.scans, 1);
+  assert.equal(collector.filesRead, durableFiles);
+  assert.equal(collector.bytesRead, durableBytes);
 });
 
-test("omitting the collector keeps projections identical", () => {
+test("omitting the collector keeps projections identical", async () => {
   const { repo } = fixtureRepo();
-  const plain = projectGraphState({ cwd: repo, graphId: "doc-driven-dev", focus: [] });
+  const plain = await projectGraphState({ cwd: repo, graphId: "doc-driven-dev", focus: [] });
   const collector = createArtifactScanCollector();
-  const traced = projectGraphState({ cwd: repo, graphId: "doc-driven-dev", focus: [] }, collector);
+  const traced = await projectGraphState({ cwd: repo, graphId: "doc-driven-dev", focus: [] }, collector);
   assert.deepEqual(traced, plain);
 });
 
@@ -289,7 +313,7 @@ const tsxCli = path.resolve(__dirname, "../node_modules/tsx/dist/cli.mjs");
 
 function graphFile(repo: string): string {
   const file = path.join(repo, "graph.yaml");
-  fs.writeFileSync(file, `schemaVersion: 2
+  fs.writeFileSync(file, `schemaVersion: 3
 id: trace-fixture
 entry: start
 conditions:
@@ -324,7 +348,7 @@ const traceArgs = (graph: string, traceFile: string, runId: string) => [
 ];
 
 test("route_graph appends artifact-scan and route-selected events", () => {
-  const { repo } = fixtureRepo();
+  const { repo, durableFiles } = fixtureRepo();
   const graph = graphFile(repo);
   const traceFile = path.join(repo, "traces", "run.jsonl");
   const source = runSource(repo, traceArgs(graph, traceFile, "r-1"));
@@ -333,9 +357,9 @@ test("route_graph appends artifact-scan and route-selected events", () => {
   assert.deepEqual(events.map((event) => event.kind), ["artifact-scan", "route-selected"]);
   assert.deepEqual(events.map((event) => event.seq), [1, 2]);
   const scan = events[0] as Extract<typeof events[number], { kind: "artifact-scan" }>;
-  assert.equal(scan.scans, 2, "project + gate re-scan are both measured");
-  assert.equal(scan.uniqueFiles, 3);
-  assert.equal(scan.filesRead, 6);
+  assert.equal(scan.scans, 1, "the durable corpus is projected in one pass");
+  assert.equal(scan.uniqueFiles, durableFiles);
+  assert.equal(scan.filesRead, durableFiles);
   assert.ok(scan.bytesRead > 0);
   const route = events[1] as Extract<typeof events[number], { kind: "route-selected" }>;
   assert.equal(route.edgeId, "start-to-next");
@@ -398,20 +422,23 @@ test("an absolute-path relation reaches the trace only as a hashed blocker token
   const { repo } = fixtureRepo();
   writeArtifact(repo, "docs/specs/0002-broken.md", {
     id: "SPEC-0002", type: "spec", status: "approved", title: "Broken",
-    relations: { implements: ["/abs/x.md"] },
+    relations: { supersedes: ["/abs/x.md"] },
   }, "# Broken\n");
   const graph = graphFile(repo);
   const traceFile = path.join(repo, "trace.jsonl");
   const result = runSource(repo, traceArgs(graph, traceFile, "r-5"));
   assert.equal(result.status, 0, result.stderr);
-  // The stdout route keeps the human-readable blocker; only the trace tokenizes it.
-  assert.ok(JSON.parse(result.stdout).blockers.some((blocker: string) => blocker.includes("/abs/x.md")));
+  // Graph State v3 blockers are stable issue codes — the route reports
+  // `knowledge:relation-escapes-root`, never the offending path, so nothing
+  // downstream has a document path to leak.
+  const blockers = JSON.parse(result.stdout).blockers as string[];
+  assert.ok(blockers.includes("knowledge:relation-escapes-root"));
   assert.equal(fs.readFileSync(traceFile, "utf8").includes("/abs/x.md"), false);
   const route = readTraceFile(traceFile).find((event) => event.kind === "route-selected");
   const blocker = route?.kind === "route-selected"
-    ? route.blockers.find((item) => item.startsWith("broken-relation:"))
+    ? route.blockers.find((item) => item.startsWith("knowledge:"))
     : undefined;
-  assert.match(blocker ?? "", /^broken-relation:sha256:[0-9a-f]{12}$/);
+  assert.match(blocker ?? "", /^knowledge:sha256:[0-9a-f]{12}$/);
 });
 
 test("an unwritable trace file warns on stderr without failing the route", () => {
@@ -423,7 +450,7 @@ test("an unwritable trace file warns on stderr without failing the route", () =>
   const result = runSource(repo, traceArgs(graph, path.join(occupied, "trace.jsonl"), "r-6"));
   assert.equal(result.status, 0, result.stderr);
   const route = JSON.parse(result.stdout);
-  assert.equal(route.schemaVersion, 2);
+  assert.equal(route.schemaVersion, 3);
   assert.equal(route.edgeId, "start-to-next");
   assert.match(result.stderr, /run trace append failed/);
 });

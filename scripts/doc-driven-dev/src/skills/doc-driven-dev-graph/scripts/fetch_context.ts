@@ -12,9 +12,12 @@
  *   --expand    L3 bounded deterministic BFS over typed relations
  *               (expandArtifactContext).
  *
- * --task-dir selects the custom task-doc directory at every level — the scan
- * set is identical at L1/L2/L3 — and is containment-checked: an escaping or
- * absolute-outside value is a caller error before anything is read.
+ * --task-dir is a corpus-scan selector, not task authority (Issue #243):
+ * it only adds a directory to the deterministic artifact scan set — the
+ * same set at every level (L1/L2/L3). Plan/task state is never read here;
+ * the Execution Store owns that (route_graph.js --run/--state-root). The
+ * flag is containment-checked: an escaping or absolute-outside value is a
+ * caller error before anything is read.
  *
  * Output is always JSON on stdout. Mode results exit 1 when the lib reports
  * findings (fail-closed refusals are data, not crashes). CLI-level failures —
@@ -55,7 +58,9 @@ function usage(): string {
     + "  L1 metadata: --metadata --focus <id-or-path> [--focus <x> ...] [--task-dir <dir>]\n"
     + "  L2 fetch:    --fetch <path> [--fetch <path> ...] [--id <path>:<id> ...] [--fingerprint <path>:<fp> ...] [--task-dir <dir>]\n"
     + "  L3 expand:   --expand <id-or-path> [--relations <a,b,c>] [--depth <n>] [--reason <text>] [--task-dir <dir>]\n"
-    + "Exactly one mode is required per invocation.";
+    + "Exactly one mode is required per invocation.\n"
+    + "--task-dir only widens the document corpus scan set; it is not task\n"
+    + "authority (plan/task state lives in the Execution Store).";
 }
 
 function requiredValue(argv: string[], index: number, option: string): string {

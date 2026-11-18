@@ -107,7 +107,7 @@ function renderCharts(snapshot: DashboardSnapshot): string {
     { label: "info", count: severityCount("info"), cls: "fill-info", sw: "var(--progress)" },
   ], "findings なし");
 
-  const selected = snapshot.state.taskGraph;
+  const selected = snapshot.state.execution.taskGraph;
   let focused: string;
   if (selected) {
     const selectedSummary = summarizeTasks(selected.nodes);
@@ -152,8 +152,6 @@ function renderAttention(snapshot: DashboardSnapshot, ids: ReadonlyMap<string, s
     "focus-required": "進行対象（focus）の指定が必要です",
     "focus-invalid": "指定された focus を解決できません",
     "duplicate-id": "文書 ID が重複しています",
-    "followups-conflicting": "follow-up signal が競合しています",
-    "artifact-graph": "artifact graph gate が未合格です",
     "no-matching-edge": "現在の状態に合う遷移 edge がありません",
   };
   const reasonRow = (code: string): string => {
@@ -324,7 +322,9 @@ function renderDocuments(snapshot: DashboardSnapshot): string {
 
 function renderRelations(snapshot: DashboardSnapshot, ids: ReadonlyMap<string, string>): string {
   const anchor = (pathValue: string): string => ids.has(pathValue) ? `<a href="#${ids.get(pathValue)}">${e(pathValue)}</a>` : e(pathValue);
-  const items = snapshot.state.artifactGraph.edges.map((edge) => `<li class="row-item"><code>${anchor(edge.from)}</code> <span class="chip">${e(edge.relation)}</span> <span class="route-arrow" aria-hidden="true">→</span> ${edge.to ? `<code>${anchor(edge.to)}</code>` : `<span class="warning">${edge.external ? "external" : "未解決"}</span>`} <span class="row-meta">${e(edge.kind)}</span></li>`);
+  // Graph State v3 (Issue #243): relations come from the Knowledge Graph —
+  // stored forward Knowledge Relations between durable documents.
+  const items = snapshot.state.knowledge.graph.edges.map((edge) => `<li class="row-item"><code>${anchor(edge.from.path)}</code> <span class="chip">${e(edge.relation)}</span> <span class="route-arrow" aria-hidden="true">→</span> ${edge.to ? `<code>${anchor(edge.to.path)}</code>` : `<span class="warning">${e(edge.resolution)}</span>`} <span class="row-meta">${e(edge.resolution)}</span></li>`);
   return `<details><summary>文書間の関係</summary>${items.length === 0 ? `<p class="empty">なし</p>` : `<ul class="row-list">${items.join("")}</ul>`}</details>`;
 }
 
@@ -332,10 +332,10 @@ function renderDiagnostics(snapshot: DashboardSnapshot): string {
   const severityClass = (severity: string): string => severity === "error" ? "status-blocked" : severity === "warning" ? "status-unknown" : "status-in-progress";
   const findings = snapshot.findings.map((finding) => `<li class="row-item${finding.severity === "error" ? " row-danger" : ""}"><span class="status-pill ${severityClass(finding.severity)}">${e(finding.severity)}</span>${finding.blocking ? ` <span class="badge badge-blocked">blocking</span>` : ""} <code>${e(finding.ruleId)}</code> <span class="row-title">${e(finding.message)}</span> <span class="row-meta">${e(finding.path)}${finding.line === null ? "" : `:${e(finding.line)}`}</span></li>`);
   const blockingCount = snapshot.findings.filter((finding) => finding.blocking).length;
-  const graphIssues = snapshot.state.artifactGraph.issues.map((issue) => `<li class="row-item"><code>${e(issue.code)}</code> <span class="row-title">${e(issue.message)}</span></li>`);
+  const graphIssues = snapshot.state.knowledge.graph.issues.map((issue) => `<li class="row-item"><code>${e(issue.code)}</code> <span class="row-title">${e(issue.message)}</span></li>`);
   const notes = snapshot.coverageNotes.map((note) => `<li class="row-item">${e(note)}</li>`);
   const rows = (items: readonly string[]): string => items.length === 0 ? `<p class="empty">なし</p>` : `<ul class="row-list">${items.join("")}</ul>`;
-  return `<section id="diagnostics" aria-labelledby="diagnostics-heading"><h2 id="diagnostics-heading">診断</h2><p class="detail-toggle"><button type="button" data-open-all="#diagnostics">すべて開く</button> <button type="button" data-close-all="#diagnostics">すべて畳む</button></p><details${blockingCount > 0 ? " open" : ""}><summary>findings (${findings.length} / blocking ${blockingCount})</summary>${rows(findings)}</details><details><summary>artifact relation issues (${graphIssues.length})</summary>${rows(graphIssues)}</details><details><summary>対象外・不明情報 (${notes.length})</summary>${rows(notes)}</details></section>`;
+  return `<section id="diagnostics" aria-labelledby="diagnostics-heading"><h2 id="diagnostics-heading">診断</h2><p class="detail-toggle"><button type="button" data-open-all="#diagnostics">すべて開く</button> <button type="button" data-close-all="#diagnostics">すべて畳む</button></p><details${blockingCount > 0 ? " open" : ""}><summary>findings (${findings.length} / blocking ${blockingCount})</summary>${rows(findings)}</details><details><summary>knowledge graph issues (${graphIssues.length})</summary>${rows(graphIssues)}</details><details><summary>対象外・不明情報 (${notes.length})</summary>${rows(notes)}</details></section>`;
 }
 
 const filterScript = String.raw`(function(){

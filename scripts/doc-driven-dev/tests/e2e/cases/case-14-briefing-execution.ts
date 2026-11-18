@@ -32,7 +32,7 @@ export const case14a: E2ECase = {
   id: "e2e-14a",
   description: "scripted briefing pair, shared-judgment trace and real pair audit",
   fixture,
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   signals: case01.signals,
   policy,
   script: {
@@ -96,8 +96,7 @@ export const case14c: E2ECase = {
         yield: "terminal",
         edgeSequence: [
           "briefing-retry", "briefing-to-design", "design-to-planning", "planning-to-task-graph",
-          "task-graph-to-implementation", "implementation-to-followup-triage",
-          "followup-triage-terminal", "exit-audit-to-complete", null,
+          "task-graph-to-implementation", "implementation-to-verification", "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit", "exit-audit-to-complete", null,
         ],
         briefingAudit: { spec, adr, consistent: true },
         checkpointReceipts: [{ edgeId: "probe-to-briefing", count: 1 }, { edgeId: "briefing-retry", count: 1 }],
@@ -113,13 +112,11 @@ export const case14c: E2ECase = {
     ...case14a.expect,
     edgeSequence: [
       "briefing-retry", "briefing-to-design", "design-to-planning",
-      "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-followup-triage",
-      "followup-triage-terminal", "exit-audit-to-complete", null,
+      "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-verification", "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit", "exit-audit-to-complete", null,
     ],
     completedEdges: [
       "probe-to-briefing", "briefing-retry", "briefing-to-design", "design-to-planning",
-      "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-followup-triage",
-      "followup-triage-terminal", "exit-audit-to-complete",
+      "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-verification", "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit", "exit-audit-to-complete",
     ],
     events: [
       { kind: "effect-dispatched", edgeId: "briefing-retry", stage: "delegate", executionMode: "same-context", modeReason: "shared-judgment", count: 2 },

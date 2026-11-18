@@ -9,28 +9,29 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { evaluateRouteDecision, explainRoute } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_router";
 
-function stateWith(input: Partial<Pick<GraphState, "gates" | "signals" | "blockers" | "hardBlockers" | "taskGraph">> = {}): GraphState {
+function stateWith(input: Partial<Pick<GraphState, "gates" | "signals" | "blockers" | "hardBlockers">> = {}): GraphState {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     graphId: "arbitrary-graph",
     cwd: process.cwd(),
-    taskDir: "docs/tasks",
+    knowledge: {
+      graph: { nodes: [], edges: [], derivedEdges: [], checkEdges: [], issues: [] },
+      documents: [],
+    },
+    execution: { run: null, taskGraph: null },
+    verification: null,
     focus: [],
-    artifactGraph: { nodes: [], edges: [], issues: [] },
     gates: {},
     signals: [],
     blockers: [],
     hardBlockers: [],
-    taskGraph: null,
-    verification: null,
-    run: null,
     ...input,
   };
 }
 
 function definitionWith(input: Partial<GraphDefinition> = {}): GraphDefinition {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     id: "arbitrary-graph",
     entry: "alpha",
     conditions: {
@@ -89,24 +90,24 @@ test("explains normal edge ordering, condition kinds, and the selected destinati
 
 test("explains gate repair candidates in priority order before selecting the matching edge", () => {
   const definition: GraphDefinition = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     id: "arbitrary-graph",
-    entry: "followup-triage",
+    entry: "triage",
     conditions: {
       "bootstrap-not-pass": { kind: "gate", gate: "bootstrap", status: "not-pass" },
       "briefing-not-pass": { kind: "gate", gate: "briefing", status: "not-pass" },
       "design-not-pass": { kind: "gate", gate: "design", status: "not-pass" },
     },
     nodes: {
-      "followup-triage": { kind: "action" },
+      "triage": { kind: "action" },
       bootstrap: { kind: "action" },
       briefing: { kind: "delegate", delegate: "briefing-flow", audits: ["adr", "spec"] },
       design: { kind: "action", audits: ["design"] },
     },
     edges: [
-      { id: "followup-triage-to-bootstrap-repair", from: "followup-triage", to: "bootstrap", when: "bootstrap-not-pass", priority: 20 },
-      { id: "followup-triage-to-briefing-repair", from: "followup-triage", to: "briefing", when: "briefing-not-pass", priority: 30 },
-      { id: "followup-triage-to-design-repair", from: "followup-triage", to: "design", when: "design-not-pass", priority: 40 },
+      { id: "triage-to-bootstrap-repair", from: "triage", to: "bootstrap", when: "bootstrap-not-pass", priority: 20 },
+      { id: "triage-to-briefing-repair", from: "triage", to: "briefing", when: "briefing-not-pass", priority: 30 },
+      { id: "triage-to-design-repair", from: "triage", to: "design", when: "design-not-pass", priority: 40 },
     ],
   };
   const state = stateWith({
@@ -116,14 +117,14 @@ test("explains gate repair candidates in priority order before selecting the mat
       design: { status: "fail", reasons: ["design-status"] },
     },
   });
-  const decision = evaluateRouteDecision({ current: "followup-triage", definition, state });
+  const decision = evaluateRouteDecision({ current: "triage", definition, state });
 
   assert.deepEqual(decision.explanation.evaluatedEdges.map((edge) => edge.edgeId), [
-    "followup-triage-to-bootstrap-repair",
-    "followup-triage-to-briefing-repair",
-    "followup-triage-to-design-repair",
+    "triage-to-bootstrap-repair",
+    "triage-to-briefing-repair",
+    "triage-to-design-repair",
   ]);
-  assert.equal(decision.explanation.selectedEdgeId, "followup-triage-to-design-repair");
+  assert.equal(decision.explanation.selectedEdgeId, "triage-to-design-repair");
   assert.deepEqual(decision.route.requiredAudits, decision.explanation.selectedDestinationAudits);
 });
 
@@ -192,7 +193,7 @@ test("retains terminal routing when a hard blocker is present", () => {
   const decision = evaluateRouteDecision({
     current: "finished",
     definition,
-    state: stateWith({ hardBlockers: ["artifact-graph"] }),
+    state: stateWith({ hardBlockers: ["knowledge"] }),
   });
 
   assert.equal(decision.route.status, "terminal");
@@ -200,7 +201,7 @@ test("retains terminal routing when a hard blocker is present", () => {
   assert.equal(decision.route.next, "finished");
   assert.equal(decision.route.edgeId, null);
   assert.deepEqual(decision.explanation.evaluatedEdges, []);
-  assert.deepEqual(decision.explanation.hardBlockers, ["artifact-graph"]);
+  assert.deepEqual(decision.explanation.hardBlockers, ["knowledge"]);
   assert.deepEqual(decision.explanation.blockedReasons, []);
 });
 

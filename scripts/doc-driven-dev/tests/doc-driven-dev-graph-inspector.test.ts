@@ -8,7 +8,7 @@ import { loadGraphDefinition, parseGraphDefinition } from "../src/skills/doc-dri
 import { inspectGraphDefinition, renderGraphMermaid } from "../src/skills/doc-driven-dev-graph/scripts/lib/graph_inspector";
 
 const unreachableFixture = `
-schemaVersion: 2
+schemaVersion: 3
 id: unreachable
 entry: start
 conditions:
@@ -24,7 +24,7 @@ edges:
 `;
 
 const unreachableTerminalFixture = `
-schemaVersion: 2
+schemaVersion: 3
 id: unreachable-terminal
 entry: start
 conditions:
@@ -38,7 +38,7 @@ edges:
 `;
 
 const noTerminalFixture = `
-schemaVersion: 2
+schemaVersion: 3
 id: no-terminal
 entry: start
 conditions:
@@ -50,12 +50,12 @@ edges:
 `;
 
 const unusedFixture = `
-schemaVersion: 2
+schemaVersion: 3
 id: unused-condition
 entry: start
 conditions:
   ready: { kind: signal, signal: ready }
-  never-used: { kind: gate, gate: never-used, status: pass }
+  never-used: { kind: gate, gate: bootstrap, status: pass }
 nodes:
   start: { kind: action }
   done: { kind: terminal }
@@ -64,28 +64,28 @@ edges:
 `;
 
 const gateOnlyFixture = `
-schemaVersion: 2
+schemaVersion: 3
 id: gate-only-condition
 entry: start
 conditions:
   ready: { kind: signal, signal: ready }
-  quality-pass: { kind: gate, gate: quality, status: pass }
+  quality-pass: { kind: gate, gate: verification, status: pass }
 nodes:
-  start: { kind: action, requiresGates: [quality] }
+  start: { kind: action, requiresGates: [verification] }
   done: { kind: terminal }
 edges:
   - { id: start-to-done, from: start, to: done, when: ready, priority: 10 }
 `;
 
 const gateEdgeFixture = `
-schemaVersion: 2
+schemaVersion: 3
 id: gate-edge-condition
 entry: start
 conditions:
   ready: { kind: signal, signal: ready }
-  quality-pass: { kind: gate, gate: quality, status: pass }
+  quality-pass: { kind: gate, gate: verification, status: pass }
 nodes:
-  start: { kind: action, requiresGates: [quality] }
+  start: { kind: action, requiresGates: [verification] }
   done: { kind: terminal }
 edges:
   - { id: start-to-done, from: start, to: done, when: ready, priority: 10 }
@@ -93,7 +93,7 @@ edges:
 `;
 
 const customIdFixture = `
-schemaVersion: 2
+schemaVersion: 3
 id: reserved-mermaid-ids
 entry: end
 conditions:
@@ -110,7 +110,7 @@ edges:
 `;
 
 const specialLabelFixture = `
-schemaVersion: 2
+schemaVersion: 3
 id: special-mermaid-labels
 entry: 'A<&"node'
 conditions:
@@ -210,7 +210,7 @@ test("renders a stable Mermaid graph with sorted labels and edge priorities", ()
       { nodeId: "design", delegate: "design-doc" },
       { nodeId: "exit-audit", delegate: "doc-status" },
       { nodeId: "implementation", delegate: "implementation-flow" },
-      { nodeId: "migration", delegate: "migrate_docs" },
+      { nodeId: "knowledge-consolidation", delegate: "knowledge-doc" },
       { nodeId: "planning", delegate: "planning-flow" },
       { nodeId: "task-graph", delegate: "build_task_graph" },
     ].sort((left, right) => left.nodeId.localeCompare(right.nodeId)),
@@ -223,13 +223,13 @@ test("renders a stable Mermaid graph with sorted labels and edge priorities", ()
   assert.match(first, /doc-status/);
   assert.match(first, /audits: adr, spec/);
   assert.match(first, /planning.*audits: design/);
-  assert.match(first, /task-graph.*audits: plan, task/);
-  assert.match(first, /exit-audit.*audits: all, experiment-log, impl-record/);
+  assert.match(first, /task-graph.*audits: design/);
+  assert.match(first, /exit-audit.*audits: all/);
   assert.match(first, /complete.*terminal/);
   assert.match(first, /briefing.*delegate/);
   assert.match(first, /\|bootstrap · p20\|/);
   assert.match(first, /\|design · p30\|/);
-  assert.match(first, /\|exit-audit · p80\|/);
+  assert.match(first, /\|exit-audit · p90\|/);
 });
 
 test("reports commitGate nodes in JSON inspection and Mermaid labels", () => {

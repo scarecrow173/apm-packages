@@ -20,10 +20,12 @@ The package has four layers:
 
 - **Execution Graph** — declared nodes, edges, conditions, priorities, and
   delegate/audit bindings in `.apm/skills/doc-driven-dev-graph/graphs/`.
-- **Artifact Graph** — canonical Markdown IDs, types, statuses, and relations.
-- **Graph State** — fresh projection with focus, gates, signals, blockers, and
-  selected evidence.
-- **Dynamic Task Graph** — deterministic projection of focused task relations.
+- **Knowledge Graph** — durable Markdown IDs, types, statuses, and typed
+  Knowledge Relations v1 edges.
+- **Graph State** — fresh projection of the Knowledge, Execution, and
+  Evidence stores with focus, gates, signals, blockers, and verification.
+- **Dynamic Task Graph** — read-only projection of the selected Execution
+  Store run's task records.
 
 ## Condition and route rules
 
@@ -52,11 +54,13 @@ The Graph Definition declares these bindings:
 
 - `migrate_docs` and `scaffold_docs` for optional migration/bootstrap;
 - `briefing-flow` and `design-doc` for discovery and design;
-- `planning-flow`, a graph-delegated subgraph that sequences `plan-doc`
-  approval, then `test-spec-doc`, before `task-doc`, for planning;
-- `build_task_graph`, executed by `build_task_graph.js` after
-  `plan`/`task`/`test-spec` audits, for task projection;
+- `planning-flow`, a graph-delegated subgraph that owns the Execution Store
+  run's `plan.md` and task records (`plan-doc`/`task-doc` conventions govern
+  the record contract and pre-v3 migration), for planning;
+- `build_task_graph`, executed by `build_task_graph.js` after the durable
+  `design` audit, for task projection;
 - `implementation-flow` for implementation;
+- `knowledge-doc` for knowledge consolidation;
 - `doc-status` for exit audit.
 
 Delegates own their briefing, planning, or implementation subgraphs. Do not

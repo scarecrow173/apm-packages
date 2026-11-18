@@ -171,14 +171,13 @@ changing Graph Definition YAML, scripts, or generated JavaScript:
 | Declared effects | Footer owner |
 | --- | --- |
 | `migrate_docs`, `scaffold_docs`, `build_task_graph` | caller adapter for script delegates |
-| `spec`, `adr`, `design`, `plan`, `task`, `test-spec`, `impl-record`, `experiment-log`, `all` | caller adapter for named audits |
-| `briefing-flow`, `design-doc`, `planning-flow`, `implementation-flow`, `doc-status` | invoked skill |
+| `spec`, `adr`, `design`, `verification`, `knowledge`, `all` | caller adapter for named audits |
+| `briefing-flow`, `design-doc`, `planning-flow`, `implementation-flow`, `knowledge-doc`, `doc-status` | invoked skill |
 
-The `plan`, `task`, and `test-spec` audit effects in this row are declared
-names only: under Document Registry 3 those scopes refuse at the registry
-gate (see the canonical-input section below), so the adapter never
-normalizes a completed outcome for them until the graph definition is
-rewired under #243.
+Under Document Registry 3 the legacy `plan`, `task`, and `test-spec` audit
+names are refused scopes — `audit_docs.js --type <name>` fails at the
+registry gate (`plan`/`task` are execution-bound; `test-spec` is a legacy
+migration-only format) — and they appear in no v3 `audits:` list.
 
 The adapter records effect-specific canonical inputs and outputs before it
 returns `completed` or `retry`. Missing or malformed adapter outputs fail
@@ -189,27 +188,20 @@ checkpoint for them.
 
 The receipt scope uses the effect, not a generic Task Graph fallback. In the
 standard document graph, `spec`, `adr`, and `design` audits read their
-matching canonical document; `impl-record`
-reads its Implementation Record; `experiment-log` reads the Experiment Logs
-in `docs/impl/exp` (`.jsonl`); and `all` reads the declared
-canonical document set. The `plan`, `task`, and `test-spec` names still
-declared in the graph `audits` lists are refused scopes under Document
-Registry 3 — `audit_docs.js --type <name>` fails at the registry gate
-(`plan`/`task` are execution-bound; `test-spec` is a legacy migration-only
-format) — so they carry no canonical input; the declared lists are
-superseded pending the Graph Definition v3 rewire (#243).
+matching canonical document; `verification` reads the durable Verification
+Design document; `knowledge` reads the durable knowledge record; and `all`
+reads the declared durable document set.
 Graph-dispatched doc-type audits run as
 `audit_docs.js --type <name> --profile artifact` and `all` runs as
-`audit_docs.js --type all --profile artifact`; `impl-record` runs as
-`impl-doc/scripts/audit_impl_record.js` and `experiment-log` runs as
-`impl-doc/scripts/audit_experiment_log.js`. The `artifact` profile evaluates
+`audit_docs.js --type all --profile artifact`. The `artifact` profile evaluates
 canonical-document integrity only, so a missing or stale index never gates
 graph execution. `briefing-flow` reads the spec and ADR, `design-doc`
 reads the spec and ADR and records design evidence, `planning-flow` reads the
 selected approved design and records the selected run's `plan.md` and all
 produced task records, `implementation-flow` reads the selected run's task
-records plus design/plan and linked test specs, and records its
-Implementation Record, and
+records plus the design, and records its
+Implementation Record, `knowledge-doc` reads the durable knowledge and
+verification documents and records the knowledge record, and
 `doc-status` reads the declared document set. Script-adapter inputs are
 `migrate_docs` (declared document set), `scaffold_docs` (workspace-root bootstrap input), and
 `build_task_graph` (selected run's `plan.md` plus its task records). Store
@@ -228,6 +220,7 @@ This contract renders existing semantics; it does not add workflow states.
 | `design-doc` | design is approved | — | `approval-required` for its designated reviewer; `input-required` for an upstream user decision |
 | `planning-flow` | digest-approved run plan plus materialized task records | changed run plan/task repair evidence | `approval-required` when plan review is pending; `input-required` when a user-owned planning choice is missing; `unrecoverable-blocker` when no declared safe repair exists |
 | `implementation-flow` | task slice is verified and its Implementation Record is complete | declared spec/design/constraint repair | `commit-required` when its slice produced changes it cannot commit within granted authority; `authority-required` for an irreversible effect without permission; `unrecoverable-blocker` when no declared safe repair exists |
+| `knowledge-doc` | the consolidation decision is recorded (integrated findings or a deliberate no-op) | recoverable knowledge-document gap | `input-required` for a user-owned consolidation choice |
 | `doc-status` | documents are Completable | Returned with declared repair evidence | `unrecoverable-blocker` when Returned has no safe repair |
 
 ## Exact caller evaluation

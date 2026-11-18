@@ -15,10 +15,11 @@ import { createFixtureRepo, updateArtifact } from "./fixture_manager";
 
 const HAPPY_SEQUENCE = [
   "probe-to-briefing", "briefing-to-design", "design-to-planning",
-  "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-followup-triage",
-  "followup-triage-terminal", "exit-audit-to-complete",
+  "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-verification",
+  "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit",
+  "exit-audit-to-complete",
 ];
-const SIGNALS = ["followup-terminal", "exit-audit-pass"];
+const SIGNALS = ["knowledge-consolidated", "exit-audit-pass"];
 
 // Leg 1 is a blocked run (focus:[]) — handoff.current stays at the entry node
 // and leg 2 must run a FRESH run, not a resume (the e2e-02 shape). Top-level
@@ -31,15 +32,15 @@ const resumeFalseBlockedLeg: E2ECase = {
   steps: [
     { options: { focus: [] }, expect: { yield: "input-required", edgeSequence: [null] } },
     {
-      options: { resume: false, focus: ["PLAN-0001"], signals: SIGNALS },
+      options: { resume: false, focus: ["DESIGN-0001"], signals: SIGNALS },
       expect: { yield: "terminal" },
     },
   ],
   expect: {
     yield: "terminal",
-    edgeSequence: [...HAPPY_SEQUENCE, null], // last-leg scope — NOT the 10-event whole trace
+    edgeSequence: [...HAPPY_SEQUENCE, null], // last-leg scope — NOT the 11-event whole trace
     completedEdges: HAPPY_SEQUENCE,
-    events: [{ kind: "route-selected", count: 10 }], // 1 blocked (leg 1) + 9 (leg 2)
+    events: [{ kind: "route-selected", count: 11 }], // 1 blocked (leg 1) + 10 (leg 2)
     // Corpus doc untouched — the run record is the task authority (Issue #237).
     finalFiles: { "docs/tasks/0001-task.md": { frontmatter: { status: "todo" } } },
     run: { tasks: { "TASK-0001": { status: "done" } } },
@@ -54,7 +55,7 @@ const resumeFalseRestartsAtEntry: E2ECase = {
   id: "harness-resume-false-entry",
   description: "leg 2 resume:false restarts at entry instead of the handoff node",
   fixture: { taskStatuses: ["todo"] },
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   signals: SIGNALS,
   script: case01.script,
   steps: [

@@ -30,8 +30,11 @@ scope です。`plan`/`task` は execution-bound(状態は Execution Store に�
 - 必須フロントマターフィールドの欠落（id, type, status, relations）
 - 壊れた内部 relation（参照先ファイルが存在しない）
 - 索引に未登録の文書
-- `followup-triage` node から `exit-audit` node 前に残った未分類フォローアップ
-- 必須の上流 relation または依存リンクを欠くフォローアップ task
+- `exit-audit` node 前に残った型付き Knowledge Relation の問題 ——
+  未解決または曖昧なターゲット、relation cycle、migration 以外が
+  持てない legacy relation フィールド
+- 文書の格納された type・lifecycle・status が Document Registry 3 と
+  不整合である
 
 ## Output Contract
 
@@ -42,8 +45,8 @@ scope です。`plan`/`task` は execution-bound(状態は Execution Store に�
 - `Warnings`: ブロッキングではないが修正したい問題
 - `Relation errors`: 壊れた内部リンクまたは不整合な relation
 - `Index gaps`: 足りない registry / index coverage
-- `Next actions`: ゲート通過に必要な最小フォローアップ。未分類フォローアップが
-  残っている場合は、分類または修復できる最小の戻り先を示す
+- `Next actions`: ゲート通過に必要な最小の修復。各 blocking finding を
+  解決できる最小の graph repair point（router が戻る node）を示す
 
 ## ワークフロー
 
@@ -109,10 +112,12 @@ scope です。`plan`/`task` は execution-bound(状態は Execution Store に�
    Graph から dispatch される audit は `artifact` profile で実行されるため、
    missing または stale な index が graph execution を gate することは
    ありません。直接の厳密チェックでは `--profile` を省略して default の
-   `materialized` coverage を維持できます。`exit-audit` node は named audit
-   `all`、`impl-record`、`experiment-log` を実行します。`all` は
+   `materialized` coverage を維持できます。Graph Definition v3 では
+   `exit-audit` node は named audit `all` のみを実行します ——
+   `impl-record` と `experiment-log` は `--owners` の opt-in であり、
+   graph から dispatch される scope ではありません。`all` は
    `--profile artifact` を維持するため、index の状態に graph execution を
-   gate させることなく owner の finding を可視化できます。
+   gate させることはありません。
 
 4. `relations.source` は外部出典として扱う。
    HTTP、HTTPS、mail link は許可し、存在しないローカルファイルとして

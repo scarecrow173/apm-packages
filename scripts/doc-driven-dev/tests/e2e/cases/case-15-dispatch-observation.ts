@@ -76,8 +76,7 @@ const researchThenPair: SubDispatchSpec[] = [
 
 const HAPPY_EDGES = [
   "probe-to-briefing", "briefing-to-design", "design-to-planning",
-  "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-followup-triage",
-  "followup-triage-terminal", "exit-audit-to-complete",
+  "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-verification", "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit", "exit-audit-to-complete",
 ];
 
 /**
@@ -91,7 +90,7 @@ export const case15a: E2ECase = {
   id: "e2e-15a",
   description: "same-context path: spec-doc/adr-doc observed as inline-skill, zero spawns",
   fixture,
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   signals: case01.signals,
   policy,
   script: {
@@ -107,7 +106,7 @@ export const case15a: E2ECase = {
     edgeSequence: [...HAPPY_EDGES, null],
     completedEdges: HAPPY_EDGES,
     events: [
-      // 18 graph-level dispatches (2 audits + 1 delegate on this edge).
+      // 15 graph-level dispatches (2 audits + 1 delegate on this edge).
       { kind: "effect-dispatched", edgeId: "probe-to-briefing", count: 3 },
       // …but 5 dispatch-observed records on it: 2 audit selfs + delegate
       // self + spec-doc + adr-doc internals.
@@ -118,9 +117,9 @@ export const case15a: E2ECase = {
       { kind: "dispatch-observed", target: "research", count: 0 },
       { kind: "dispatch-observed", method: "subagent-spawn", count: 0 },
       { kind: "dispatch-observed", method: "not-executed", count: 0 },
-      // 18 self-observations + 2 internal = 20.
-      { kind: "dispatch-observed", count: 20 },
-      { kind: "dispatch-observed", actual: "same-context", count: 20 },
+      // 15 self-observations + 2 internal = 17.
+      { kind: "dispatch-observed", count: 17 },
+      { kind: "dispatch-observed", actual: "same-context", count: 17 },
     ],
     checkpointReceipts: [{ edgeId: "probe-to-briefing", count: 1 }],
     briefingAudit: { spec, adr, consistent: true },
@@ -143,7 +142,7 @@ export const case15b: E2ECase = {
   id: "e2e-15b",
   description: "independent research path: research observed as subagent-spawn, pair stays inline",
   fixture,
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   signals: case01.signals,
   policy,
   script: {
@@ -168,8 +167,8 @@ export const case15b: E2ECase = {
       { kind: "dispatch-observed", edgeId: "probe-to-briefing", target: "adr-doc", method: "inline-skill", count: 1 },
       { kind: "dispatch-observed", method: "subagent-spawn", count: 1 },
       { kind: "dispatch-observed", method: "not-executed", count: 0 },
-      // 18 self + research + spec-doc + adr-doc = 21.
-      { kind: "dispatch-observed", count: 21 },
+      // 15 self + research + spec-doc + adr-doc = 18.
+      { kind: "dispatch-observed", count: 18 },
       { kind: "dispatch-observed", actual: "subagent", count: 1 },
     ],
     checkpointReceipts: [{ edgeId: "probe-to-briefing", count: 1 }],
@@ -194,7 +193,7 @@ export const case15c: E2ECase = {
   id: "e2e-15c",
   description: "delegated path yield/resume: research spawn, input-required, resume writes pair + late info",
   fixture,
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   signals: case01.signals,
   policy,
   script: {
@@ -240,8 +239,7 @@ export const case15c: E2ECase = {
         yield: "terminal",
         edgeSequence: [
           "briefing-retry", "briefing-to-design", "design-to-planning", "planning-to-task-graph",
-          "task-graph-to-implementation", "implementation-to-followup-triage",
-          "followup-triage-terminal", "exit-audit-to-complete", null,
+          "task-graph-to-implementation", "implementation-to-verification", "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit", "exit-audit-to-complete", null,
         ],
         briefingAudit: { spec, adr, consistent: true },
         checkpointReceipts: [{ edgeId: "probe-to-briefing", count: 1 }, { edgeId: "briefing-retry", count: 1 }],
@@ -259,13 +257,11 @@ export const case15c: E2ECase = {
     yield: "terminal",
     edgeSequence: [
       "briefing-retry", "briefing-to-design", "design-to-planning",
-      "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-followup-triage",
-      "followup-triage-terminal", "exit-audit-to-complete", null,
+      "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-verification", "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit", "exit-audit-to-complete", null,
     ],
     completedEdges: [
       "probe-to-briefing", "briefing-retry", "briefing-to-design", "design-to-planning",
-      "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-followup-triage",
-      "followup-triage-terminal", "exit-audit-to-complete",
+      "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-verification", "verification-to-knowledge-consolidation", "knowledge-consolidation-to-exit-audit", "exit-audit-to-complete",
     ],
     events: [
       { kind: "dispatch-observed", target: "research", method: "subagent-spawn", count: 1 },
@@ -290,7 +286,7 @@ export const case15d: E2ECase = {
   id: "e2e-15d",
   description: "unavailable mode: research subagent declined, yield — never a silent same-context switch",
   fixture,
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   signals: case01.signals,
   policy,
   unsupportedModes: ["subagent"],
@@ -332,7 +328,7 @@ export const case15e: E2ECase = {
   id: "e2e-15e",
   description: "adapter reports same-context while subagent was requested → dispatch rejected",
   fixture,
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   signals: case01.signals,
   policy: (_route, effect): PolicyFacts => ({
     effectId: effect.id,
@@ -376,7 +372,7 @@ export const case15f: E2ECase = {
   id: "e2e-15f",
   description: "research write outside declared scope → refused, delegate yields authority-required",
   fixture,
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   signals: case01.signals,
   policy,
   script: {
@@ -413,7 +409,7 @@ export const case15g: E2ECase = {
   id: "e2e-15g",
   description: "same-context path: stale outcome evidence rejected, observation recorded first",
   fixture,
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   signals: case01.signals,
   policy,
   script: {
@@ -443,7 +439,7 @@ export const case15h: E2ECase = {
   id: "e2e-15h",
   description: "delegated path: executed research spawn with stale return → delegate yield",
   fixture,
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   signals: case01.signals,
   policy,
   script: {
@@ -483,7 +479,7 @@ export const case15j: E2ECase = {
   id: "e2e-15j",
   description: "top-level mode unavailable: subagent delegate declined not-executed, honest yield",
   fixture,
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   signals: case01.signals,
   policy: (_route, effect): PolicyFacts => ({
     effectId: effect.id,
@@ -535,7 +531,7 @@ export const case15i: E2ECase = {
   id: "e2e-15i",
   description: "delegated top-level dispatch: handoff-scoped writes honored, actual=subagent observed",
   fixture,
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   signals: case01.signals,
   policy: (_route, effect): PolicyFacts => ({
     effectId: effect.id,

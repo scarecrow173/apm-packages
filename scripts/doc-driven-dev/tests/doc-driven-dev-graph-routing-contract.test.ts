@@ -45,6 +45,12 @@ function git(repo: string, args: string[]): void {
   if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
 }
 
+/**
+ * Durable fixture with v1 Knowledge Relations (#235): `design.realizes →
+ * spec` and `adr.decides-for → design`. The plan/task Markdown under the
+ * legacy dirs is never read by the v3 projection — it stays as
+ * migration-era inventory proving the projection ignores it.
+ */
 function fixtureRepo(statuses: TaskStatus[] = ["todo"], dependsOn: string[][] = []): string {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), "doc-driven-dev-graph-routing-"));
   for (const directory of [
@@ -60,10 +66,11 @@ function fixtureRepo(statuses: TaskStatus[] = ["todo"], dependsOn: string[][] = 
   }, "# Graph\n\n## Acceptance Criteria\n\n- [ ] graph\n");
   writeArtifact(repo, "docs/adr/0001-graph.md", {
     id: "ADR-0001", type: "adr", status: "accepted", title: "Graph",
+    relations: { "decides-for": ["DESIGN-0001"] },
   }, "# Graph\n\n## Considered Options\n\n### A\n\n### B\n");
   writeArtifact(repo, "docs/designs/0001-graph.md", {
     id: "DESIGN-0001", type: "design", status: "approved", title: "Graph",
-    relations: { "derives-from": ["SPEC-0001", "ADR-0001"] },
+    relations: { realizes: ["SPEC-0001"] },
   }, "# Graph\n");
   writeArtifact(repo, "docs/plans/0001-graph.md", {
     id: "PLAN-0001", type: "plan", status: "approved", title: "Graph",
@@ -97,7 +104,7 @@ function fixtureRepo(statuses: TaskStatus[] = ["todo"], dependsOn: string[][] = 
     })),
   });
   approvePlan(repo, RUN_ID, { actor: "routing-contract" });
-  // The implementation gate binds its Verification Summary to HEAD through
+  // The verification gate binds its Verification Summary to HEAD through
   // the canonical subject digest (Issue #241) — the fixture needs a real
   // commit for `verifiedSummary` to bind against.
   git(repo, ["init", "-q"]);
@@ -113,10 +120,10 @@ function graphDefinition(): GraphDefinition {
   ));
 }
 
-function stateFor(repo: string, signals: string[] = [], verification?: VerificationSummary): GraphState {
+async function stateFor(repo: string, signals: string[] = [], verification?: VerificationSummary): Promise<GraphState> {
   return projectGraphState({
     cwd: repo,
-    focus: ["PLAN-0001"],
+    focus: ["DESIGN-0001"],
     signals,
     verificationSummary: verification,
   });
@@ -153,18 +160,18 @@ function verifiedSummary(repo: string): VerificationSummary {
   };
 }
 
-test("projects the selected run and its task graph", () => {
-  const state = stateFor(fixtureRepo(["todo", "done"], [[], []]));
-  assert.equal(state.taskGraph?.plan?.path, `runs/${RUN_ID}/plan.md`);
-  assert.equal(state.taskGraph?.plan?.approved, true);
-  assert.equal(state.run?.runId, RUN_ID);
-  assert.deepEqual(state.taskGraph?.runnable, ["TASK-0001"]);
+test("projects the selected run and its task graph", async () => {
+  const state = await stateFor(fixtureRepo(["todo", "done"], [[], []]));
+  assert.equal(state.execution.taskGraph?.plan?.path, `runs/${RUN_ID}/plan.md`);
+  assert.equal(state.execution.taskGraph?.plan?.approved, true);
+  assert.equal(state.execution.run?.runId, RUN_ID);
+  assert.deepEqual(state.execution.taskGraph?.runnable, ["TASK-0001"]);
   assert.equal(state.gates.planning.status, "pass");
 });
 
-test("uses the planning gate rather than a caller completion signal", () => {
+test("uses the planning gate rather than a caller completion signal", async () => {
   const definition = graphDefinition();
-  const state = stateFor(fixtureRepo(), ["planning-complete"]);
+  const state = await stateFor(fixtureRepo(), ["planning-complete"]);
   state.gates.planning = { status: "fail", reasons: ["plan-status"] };
   const route = routeGraph({ current: "planning", definition, state });
   assert.notEqual(route.next, "task-graph");
@@ -172,9 +179,9 @@ test("uses the planning gate rather than a caller completion signal", () => {
   assert.equal(route.condition, "planning-not-pass");
 });
 
-test("routes runnable tasks to the implementation delegate", () => {
+test("routes runnable tasks to the implementation delegate", async () => {
   const definition = graphDefinition();
-  const state = stateFor(fixtureRepo(), []);
+  const state = await stateFor(fixtureRepo(), []);
   const route = routeGraph({ current: "task-graph", definition, state });
   assert.equal(route.next, "implementation");
   assert.equal(route.delegate, "implementation-flow");
@@ -182,9 +189,9 @@ test("routes runnable tasks to the implementation delegate", () => {
   assert.deepEqual(route.taskGraph?.runnable, ["TASK-0001"]);
 });
 
-test("resumes an active task whose predecessors are done despite downstream waits", () => {
+test("resumes an active task whose predecessors are done despite downstream waits", async () => {
   const definition = graphDefinition();
-  const state = stateFor(fixtureRepo(
+  const state = await stateFor(fixtureRepo(
     ["done", "in-progress", "todo"],
     [[], ["TASK-0001"], ["TASK-0002"]],
   ));
@@ -200,9 +207,9 @@ test("resumes an active task whose predecessors are done despite downstream wait
   ]);
 });
 
-test("prioritizes resumable active tasks over runnable tasks with one route edge", () => {
+test("prioritizes resumable active tasks over runnable tasks with one route edge", async () => {
   const definition = graphDefinition();
-  const state = stateFor(fixtureRepo(["in-progress", "todo"], [[], []]));
+  const state = await stateFor(fixtureRepo(["in-progress", "todo"], [[], []]));
   const decision = evaluateRouteDecision({ current: "task-graph", definition, state });
 
   assert.equal(decision.route.edgeId, "task-graph-to-active-implementation");
@@ -213,23 +220,23 @@ test("prioritizes resumable active tasks over runnable tasks with one route edge
   assert.equal(decision.explanation.evaluatedEdges.filter((edge) => edge.matched).length, 1);
 });
 
-test("does not resume an active task when the task graph is invalid", () => {
+test("does not resume an active task when the task graph is invalid", async () => {
   const definition = graphDefinition();
-  const state = stateFor(fixtureRepo(
+  const state = await stateFor(fixtureRepo(
     ["in-progress", "in-progress"],
     [["TASK-0002"], ["TASK-0001"]],
   ));
   const route = routeGraph({ current: "task-graph", definition, state });
 
-  assert.ok((state.taskGraph?.issues.length ?? 0) > 0);
+  assert.ok((state.execution.taskGraph?.issues.length ?? 0) > 0);
   assert.deepEqual(route.taskGraph?.resumableActive, []);
   assert.equal(route.edgeId, "task-graph-to-planning");
   assert.notEqual(route.edgeId, "task-graph-to-active-implementation");
 });
 
-test("resumes an active task alongside an unrelated blocked task", () => {
+test("resumes an active task alongside an unrelated blocked task", async () => {
   const definition = graphDefinition();
-  const state = stateFor(fixtureRepo(["in-progress", "blocked"], [[], []]));
+  const state = await stateFor(fixtureRepo(["in-progress", "blocked"], [[], []]));
   const route = routeGraph({ current: "task-graph", definition, state });
 
   assert.equal(route.edgeId, "task-graph-to-active-implementation");
@@ -239,9 +246,9 @@ test("resumes an active task alongside an unrelated blocked task", () => {
   ]);
 });
 
-test("passes sorted active tasks and dependency edges while only ready active tasks are resumable", () => {
+test("passes sorted active tasks and dependency edges while only ready active tasks are resumable", async () => {
   const definition = graphDefinition();
-  const state = stateFor(fixtureRepo(
+  const state = await stateFor(fixtureRepo(
     ["in-progress", "in-progress", "in-progress"],
     [[], [], ["TASK-0001"]],
   ));
@@ -253,10 +260,10 @@ test("passes sorted active tasks and dependency edges while only ready active ta
   assert.deepEqual(route.taskGraph?.edges, [{ from: "TASK-0001", to: "TASK-0003" }]);
 });
 
-test("fails closed when no active task has resolved predecessors", () => {
+test("fails closed when no active task has resolved predecessors", async () => {
   const definition = graphDefinition();
-  const state = stateFor(fixtureRepo(["todo", "in-progress"], [[], ["TASK-0001"]]));
-  state.taskGraph!.runnable = [];
+  const state = await stateFor(fixtureRepo(["todo", "in-progress"], [[], ["TASK-0001"]]));
+  state.execution.taskGraph!.runnable = [];
   const route = routeGraph({ current: "task-graph", definition, state });
 
   assert.equal(route.status, "blocked");
@@ -265,49 +272,47 @@ test("fails closed when no active task has resolved predecessors", () => {
   assert.deepEqual(route.taskGraph?.resumableActive, []);
 });
 
-test("keeps dependents blocked by wont-do predecessors while resolving completion", () => {
+test("keeps dependents blocked by wont-do predecessors while resolving completion", async () => {
   const definition = graphDefinition();
   const repo = fixtureRepo(["wont-do", "todo"], [[], ["TASK-0001"]]);
-  const state = stateFor(repo, [], verifiedSummary(repo));
-  assert.deepEqual(state.taskGraph?.runnable, []);
-  assert.deepEqual(state.taskGraph?.blocked, [
+  const state = await stateFor(repo, [], verifiedSummary(repo));
+  assert.deepEqual(state.execution.taskGraph?.runnable, []);
+  assert.deepEqual(state.execution.taskGraph?.blocked, [
     { id: "TASK-0001", reasons: ["status:wont-do"] },
     { id: "TASK-0002", reasons: ["depends-on:TASK-0001"] },
   ]);
-  assert.equal(state.gates.implementation.status, "blocked");
+  assert.equal(state.gates.implementation.status, "fail");
 
   const doneRepo = fixtureRepo(["wont-do"]);
-  const doneState = stateFor(doneRepo, [], verifiedSummary(doneRepo));
+  const doneState = await stateFor(doneRepo, [], verifiedSummary(doneRepo));
   assert.equal(doneState.gates.implementation.status, "pass");
   const route = routeGraph({ current: "task-graph", definition, state: doneState });
   assert.equal(route.status, "blocked");
   assert.equal(route.next, "task-graph");
 });
 
-test("routes a completed-only task graph to follow-up triage", () => {
+test("routes a completed-only task graph to implementation before verification", async () => {
   const definition = graphDefinition();
-  for (const planStatus of ["approved", "completed"] as const) {
-    const repo = fixtureRepo(["done"]);
-    if (planStatus !== "approved") {
-      writeArtifact(repo, "docs/plans/0001-graph.md", {
-        id: "PLAN-0001", type: "plan", status: planStatus, title: "Graph",
-        relations: { "derives-from": ["DESIGN-0001"] },
-      }, "# Graph\n");
-    }
-    const decision = evaluateRouteDecision({ current: "task-graph", definition, state: stateFor(repo) });
-    assert.equal(decision.route.status, "edge", planStatus);
-    assert.equal(decision.route.edgeId, "task-graph-to-followup-triage", planStatus);
-    assert.equal(decision.route.next, "followup-triage", planStatus);
-    assert.deepEqual(decision.route.requiredAudits, ["impl-record", "task"], planStatus);
-    assert.deepEqual(decision.route.taskGraph?.completed, ["TASK-0001"], planStatus);
-    assert.equal(decision.explanation.selectedEdgeId, "task-graph-to-followup-triage", planStatus);
-  }
+  const repo = fixtureRepo(["done"]);
+  const decision = evaluateRouteDecision({ current: "task-graph", definition, state: await stateFor(repo) });
+  assert.equal(decision.route.status, "edge");
+  // `tasks-idle` means every task is terminal — the implementation gate
+  // still confirms sufficiency (and commitGate semantics apply) before the
+  // run reaches the verification stage (Issue #243).
+  assert.equal(decision.route.edgeId, "task-graph-idle-to-implementation");
+  assert.equal(decision.route.next, "implementation");
+  // The destination carries no audits — `implementation` is a commitGate
+  // node, so the caller-side commit check guards its edge checkpoint.
+  assert.deepEqual(decision.route.requiredAudits, []);
+  assert.equal(decision.route.commitGate, true);
+  assert.deepEqual(decision.route.taskGraph?.completed, ["TASK-0001"]);
+  assert.equal(decision.explanation.selectedEdgeId, "task-graph-idle-to-implementation");
 });
 
-test("task-graph edges cover done, in-progress, and todo task states", () => {
+test("task-graph edges cover done, in-progress, and todo task states", async () => {
   const definition = graphDefinition();
   const cases: Array<{ statuses: TaskStatus[]; edgeId: string; next: string }> = [
-    { statuses: ["done"], edgeId: "task-graph-to-followup-triage", next: "followup-triage" },
+    { statuses: ["done"], edgeId: "task-graph-idle-to-implementation", next: "implementation" },
     { statuses: ["in-progress"], edgeId: "task-graph-to-active-implementation", next: "implementation" },
     { statuses: ["todo"], edgeId: "task-graph-to-implementation", next: "implementation" },
   ];
@@ -315,14 +320,14 @@ test("task-graph edges cover done, in-progress, and todo task states", () => {
     const route = routeGraph({
       current: "task-graph",
       definition,
-      state: stateFor(fixtureRepo(entry.statuses)),
+      state: await stateFor(fixtureRepo(entry.statuses)),
     });
     assert.equal(route.edgeId, entry.edgeId, entry.statuses.join(","));
     assert.equal(route.next, entry.next, entry.statuses.join(","));
   }
 });
 
-test("keeps blocked, wont-do, and unresolved residue out of the idle route", () => {
+test("keeps blocked, wont-do, and unresolved residue out of the idle route", async () => {
   const definition = graphDefinition();
   const cases: Array<{ statuses: TaskStatus[]; dependsOn?: string[][] }> = [
     { statuses: ["wont-do"] },
@@ -335,7 +340,7 @@ test("keeps blocked, wont-do, and unresolved residue out of the idle route", () 
     const route = routeGraph({
       current: "task-graph",
       definition,
-      state: stateFor(fixtureRepo(entry.statuses, entry.dependsOn ?? [])),
+      state: await stateFor(fixtureRepo(entry.statuses, entry.dependsOn ?? [])),
     });
     assert.equal(route.status, "blocked", entry.statuses.join(","));
     assert.equal(route.edgeId, null, entry.statuses.join(","));
@@ -343,29 +348,62 @@ test("keeps blocked, wont-do, and unresolved residue out of the idle route", () 
   }
 });
 
-test("an empty task graph is invalid rather than idle", () => {
+test("an empty task graph is invalid rather than idle", async () => {
   const definition = graphDefinition();
-  const route = routeGraph({ current: "task-graph", definition, state: stateFor(fixtureRepo([])) });
+  const route = routeGraph({ current: "task-graph", definition, state: await stateFor(fixtureRepo([])) });
   assert.ok((route.taskGraph?.issues.length ?? 0) > 0);
   assert.equal(route.edgeId, "task-graph-to-planning");
   assert.equal(route.next, "planning");
 });
 
-test("does not let implementation verification bypass an incomplete implementation gate", () => {
+test("an incomplete implementation retries instead of reaching verification", async () => {
   const definition = graphDefinition();
   const repo = fixtureRepo(["todo"]);
-  const state = stateFor(repo, [], verifiedSummary(repo));
+  const state = await stateFor(repo, [], verifiedSummary(repo));
   const route = routeGraph({ current: "implementation", definition, state });
-  assert.equal(state.gates.implementation.status, "blocked");
+  assert.equal(state.gates.implementation.status, "fail");
   assert.equal(route.edgeId, "implementation-retry");
   assert.equal(route.next, "implementation");
   assert.equal(route.condition, "implementation-not-pass");
 });
 
-test("exit-audit cannot complete when a required upstream gate regresses", () => {
+test("a failed or stale verification routes back to implementation", async () => {
   const definition = graphDefinition();
   const repo = fixtureRepo(["done"]);
-  const state = stateFor(repo, ["followup-terminal", "exit-audit-pass"], verifiedSummary(repo));
+  const failed = await stateFor(repo, []);
+  const failedRoute = routeGraph({ current: "verification", definition, state: failed });
+  assert.equal(failedRoute.status, "edge");
+  assert.equal(failedRoute.edgeId, "verification-to-implementation");
+  assert.equal(failedRoute.next, "implementation");
+  // With a HEAD-bound verified summary the gate passes and the route moves
+  // on to knowledge consolidation.
+  const verified = await stateFor(repo, [], verifiedSummary(repo));
+  const passRoute = routeGraph({ current: "verification", definition, state: verified });
+  assert.equal(passRoute.status, "edge");
+  assert.equal(passRoute.edgeId, "verification-to-knowledge-consolidation");
+  assert.equal(passRoute.next, "knowledge-consolidation");
+});
+
+test("knowledge consolidation loops until the caller signals the decision", async () => {
+  const definition = graphDefinition();
+  const repo = fixtureRepo(["done"]);
+  const pending = await stateFor(repo, [], verifiedSummary(repo));
+  const retry = routeGraph({ current: "knowledge-consolidation", definition, state: pending });
+  assert.equal(retry.status, "edge");
+  assert.equal(retry.edgeId, "knowledge-consolidation-retry");
+  assert.equal(retry.next, "knowledge-consolidation");
+  assert.equal(retry.delegate, "knowledge-doc");
+  const decided = await stateFor(repo, ["knowledge-consolidated"], verifiedSummary(repo));
+  const advance = routeGraph({ current: "knowledge-consolidation", definition, state: decided });
+  assert.equal(advance.status, "edge");
+  assert.equal(advance.edgeId, "knowledge-consolidation-to-exit-audit");
+  assert.equal(advance.next, "exit-audit");
+});
+
+test("exit-audit cannot complete when a required upstream gate regresses", async () => {
+  const definition = graphDefinition();
+  const repo = fixtureRepo(["done"]);
+  const state = await stateFor(repo, ["knowledge-consolidated", "exit-audit-pass"], verifiedSummary(repo));
   state.gates.design = { status: "fail", reasons: ["design-status"] };
   const route = routeGraph({ current: "exit-audit", definition, state });
   assert.equal(route.status, "edge");
@@ -374,11 +412,11 @@ test("exit-audit cannot complete when a required upstream gate regresses", () =>
   assert.equal(route.condition, "design-not-pass");
 });
 
-test("fails closed at exit-audit when no declared prerequisite repair edge matches", () => {
+test("fails closed at exit-audit when no declared prerequisite repair edge matches", async () => {
   const definition = graphDefinition();
   definition.edges = definition.edges.filter((edge) => edge.id !== "exit-audit-to-design-repair");
   const repo = fixtureRepo(["done"]);
-  const state = stateFor(repo, ["followup-terminal", "exit-audit-pass"], verifiedSummary(repo));
+  const state = await stateFor(repo, ["knowledge-consolidated", "exit-audit-pass"], verifiedSummary(repo));
   state.gates.design = { status: "fail", reasons: ["design-status"] };
   const route = routeGraph({ current: "exit-audit", definition, state });
   assert.equal(route.status, "blocked");
@@ -387,34 +425,25 @@ test("fails closed at exit-audit when no declared prerequisite repair edge match
   assert.ok(route.blockers.includes("required-gate:design"));
 });
 
-test("blocks conflicting typed follow-ups instead of choosing a priority edge", () => {
-  const definition = graphDefinition();
-  const state = stateFor(fixtureRepo(["done"]), ["followup-bug-fix", "followup-terminal"]);
-  const route = routeGraph({ current: "followup-triage", definition, state });
-  assert.equal(route.status, "blocked");
-  assert.equal(route.next, "followup-triage");
-  assert.equal(route.edgeId, null);
-  assert.ok(route.blockers.includes("followups-conflicting"));
-});
-
-test("does not let exit-audit pass bypass a fatal artifact graph blocker", () => {
+test("does not let exit-audit pass bypass a knowledge integrity blocker", async () => {
   const definition = graphDefinition();
   const repo = fixtureRepo(["done"]);
-  writeArtifact(repo, "docs/ideas/0001-broken.md", {
-    id: "IDEA-0001", type: "idea", status: "draft", title: "Broken", relations: 42,
-  }, "# Broken\n");
-  const state = stateFor(repo, ["followup-terminal", "exit-audit-pass"]);
+  writeArtifact(repo, "docs/ideas/0001-legacy.md", {
+    id: "IDEA-0001", type: "idea", status: "draft", title: "Legacy",
+    relations: { "derives-from": ["SPEC-0001"] },
+  }, "# Legacy\n");
+  const state = await stateFor(repo, ["knowledge-consolidated", "exit-audit-pass"]);
   const route = routeGraph({ current: "exit-audit", definition, state });
-  assert.ok(state.hardBlockers.includes("artifact-graph"));
+  assert.ok(state.hardBlockers.includes("knowledge"));
   assert.equal(route.status, "blocked");
   assert.equal(route.edgeId, null);
   assert.equal(route.next, "exit-audit");
 });
 
-test("exit-audit reaches complete when all declared prerequisites pass", () => {
+test("exit-audit reaches complete when all declared prerequisites pass", async () => {
   const definition = graphDefinition();
   const repo = fixtureRepo(["done"]);
-  const state = stateFor(repo, ["followup-terminal", "exit-audit-pass"], verifiedSummary(repo));
+  const state = await stateFor(repo, ["knowledge-consolidated", "exit-audit-pass"], verifiedSummary(repo));
   const route = routeGraph({ current: "exit-audit", definition, state });
   assert.equal(route.status, "edge");
   assert.equal(route.edgeId, "exit-audit-to-complete");

@@ -28,7 +28,7 @@ export const case11: E2ECase = {
   current: "design",
   mode: "single-step",
   fixture: { taskStatuses: ["todo"] },
-  focus: ["PLAN-0001"],
+  focus: ["DESIGN-0001"],
   script: {
     "design-to-planning": {
       audits: { design: ["retry", "completed"] },

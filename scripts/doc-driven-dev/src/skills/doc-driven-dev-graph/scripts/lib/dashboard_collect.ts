@@ -40,7 +40,7 @@ export async function collectDashboard(options: CollectDashboardOptions): Promis
 
   const collected = await collectFindings(options.cwd, { type: "all", externalLinks: false });
   const artifacts = scanArtifactGraph({ cwd: options.cwd });
-  const state = projectGraphState({
+  const state = await projectGraphState({
     cwd: options.cwd,
     graphId: definition.id,
     focus: options.focus,

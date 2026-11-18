@@ -781,7 +781,7 @@ test("graph-invoked effects publish scoped typed outcomes", () => {
   assert.match(outcomeContractJa, /選択された run の `plan\.md` と生成されたすべての task record を記録/);
   assert.match(outcomeContract, /\| `planning-flow` \| digest-approved run plan plus materialized task records \| changed run plan\/task repair evidence \| `approval-required` when plan review is pending; `input-required` when a user-owned planning choice is missing; `unrecoverable-blocker` when no declared safe repair exists \|/);
   assert.match(outcomeContractJa, /\| `planning-flow` \| digest 承認済みの run plan と materialize された task record \| changed run plan\/task repair evidence \| plan review が pending の `approval-required`、user-owned planning choice が missing の `input-required`、declared safe repair がない場合の `unrecoverable-blocker` \|/);
-  assert.match(outcomeContract, /spec.*adr.*design.*plan.*task.*impl-record.*experiment-log.*all/s);
+  assert.match(outcomeContract, /spec.*adr.*design.*verification.*knowledge.*all/s);
   assert.match(executionContract, /caller adapter.*missing or malformed.*authority-required/is);
   assert.ok(effects[0].indexOf("## Anti-patterns") < effects[0].indexOf("## Graph Effect Outcome"));
   assert.ok(effectsJa[0].indexOf("## アンチパターン") < effectsJa[0].indexOf("## Graph Effect Outcome"));
@@ -810,6 +810,11 @@ test("graph-dispatched doc audits map to audit_docs with the artifact profile", 
   for (const text of [docStatus, docStatusJa, outcomeContract, outcomeContractJa]) {
     assert.match(text, /audit_docs\.js --type <name> --profile artifact/);
     assert.match(text, /audit_docs\.js --type all --profile artifact/);
+  }
+  // impl-record / experiment-log remain live owner audits (`--owners`), but
+  // they are not graph-dispatched scopes under Graph Definition v3 — they
+  // belong in the doc-status contract, not the graph outcome contract.
+  for (const text of [docStatus, docStatusJa]) {
     assert.match(text, /impl-doc\/scripts\/audit_impl_record\.js/);
     assert.match(text, /impl-doc\/scripts\/audit_experiment_log\.js/);
     // audit_impl_record.js rejects unknown args — a --profile flag on it would
@@ -840,16 +845,16 @@ test("graph docs bind delegates, audits, and condition-driven subgraphs", () => 
     assert.match(text, /database|DB|データベース/i);
   }
   assert.match(graphDefinition, /^  planning: \{ kind: delegate, delegate: planning-flow, audits: \[design\] \}$/m);
-  assert.match(graphDefinition, /^  task-graph: \{ kind: action, delegate: build_task_graph, audits: \[plan, task, test-spec\] \}$/m);
-  assert.match(graphDefinition, /^  exit-audit: \{ kind: audit, delegate: doc-status, audits: \[all, impl-record, experiment-log\], requiresGates: \[/m);
+  assert.match(graphDefinition, /^  task-graph: \{ kind: action, delegate: build_task_graph, audits: \[design\] \}$/m);
+  assert.match(graphDefinition, /^  exit-audit: \{ kind: audit, delegate: doc-status, audits: \[all\], requiresGates: \[/m);
   for (const text of [readme, readmeJa, agents, agentsJa]) {
     assert.match(text, /planning-flow/);
     assert.match(text, /build_task_graph/);
   }
   assert.match(packageJson.scripts["lint:md"], /planning-flow\/SKILL\.md/);
   assert.match(packageJson.scripts["lint:md"], /planning-flow\/SKILL\.ja\.md/);
-  assert.match(skill, /task-graph node audits `plan`, `task`, and `test-spec` and dispatches\s+`build_task_graph`, executed by `build_task_graph\.js`/);
-  assert.match(skillJa, /task-graph node は `plan`、`task`、`test-spec` を audit して `build_task_graph` を dispatch し、\s+`build_task_graph\.js` が実行/);
+  assert.match(skill, /task-graph node audits the durable `design` and dispatches\s+`build_task_graph`, executed by `build_task_graph\.js`/);
+  assert.match(skillJa, /task-graph node は durable な `design` を audit して `build_task_graph` を dispatch し、\s+`build_task_graph\.js` が実行/);
 });
 
 test("implementation-flow consolidates durable findings via knowledge-doc; impl-doc is migration-only", () => {
@@ -896,7 +901,7 @@ test("implementation-flow consolidates durable findings via knowledge-doc; impl-
   assert.match(graphSkill, /implementation delegates to `implementation-flow`/i);
   assert.match(graphSkill, /Execution Store checkpoint/);
   assert.match(graphSkillJa, /implementation-flow/);
-  assert.match(contract, /Record completion, gate, and follow-up evidence/);
+  assert.match(contract, /Record completion, gate, and verification evidence/);
 
   // impl-doc documents the legacy corpus contract for migration, not a
   // normal-run creation path.
@@ -905,7 +910,7 @@ test("implementation-flow consolidates durable findings via knowledge-doc; impl-
   assert.match(implDoc, /Legacy corpus shape/);
 });
 
-test("doc-driven-dev-graph documents post-implementation follow-up triage", () => {
+test("doc-driven-dev-graph documents post-implementation verification and consolidation", () => {
   const graphRoot = path.join(skillRoot, "doc-driven-dev-graph");
   const skill = fs.readFileSync(path.join(graphRoot, "SKILL.md"), "utf8");
   const skillJa = fs.readFileSync(path.join(graphRoot, "SKILL.ja.md"), "utf8");
@@ -913,19 +918,22 @@ test("doc-driven-dev-graph documents post-implementation follow-up triage", () =
   const stateContractJa = fs.readFileSync(path.join(graphRoot, "references", "graph-state.ja.md"), "utf8");
   const graph = fs.readFileSync(path.join(graphRoot, "graphs", "doc-driven-dev.yaml"), "utf8");
 
-  assert.match(skill, /follow-up triage/i);
+  assert.match(skill, /verification node/);
+  assert.match(skill, /knowledge-consolidation/);
   assert.match(skill, /Verification Summary/);
   assert.match(skill, /verification-summary-contract\.md/);
   assert.match(skill, /wont-do/);
-  assert.match(skillJa, /follow-up|フォローアップ/);
+  assert.match(skillJa, /verification node/);
+  assert.match(skillJa, /knowledge-consolidation/);
   assert.match(skillJa, /Verification Summary/);
   assert.match(skillJa, /verification-summary-contract\.ja\.md/);
-  assert.match(stateContract, /exactly one typed follow-up signal/);
-  assert.match(stateContract, /follow-up triage/);
-  assert.match(stateContractJa, /型付き|follow-up/);
-  assert.match(graph, /from: followup-triage, to: followup-triage, when: followups-unclassified/);
-  assert.match(graph, /from: followup-triage, to: planning, when: followup-bug-fix/);
-  assert.match(graph, /from: followup-triage, to: exit-audit, when: followup-terminal/);
+  assert.match(stateContract, /knowledge-consolidated/);
+  assert.match(stateContract, /exit-audit-pass/);
+  assert.match(stateContractJa, /knowledge-consolidated/);
+  assert.match(stateContractJa, /exit-audit-pass/);
+  assert.match(graph, /from: verification, to: knowledge-consolidation, when: verification/);
+  assert.match(graph, /from: knowledge-consolidation, to: exit-audit, when: knowledge-consolidation/);
+  assert.match(graph, /from: exit-audit, to: complete, when: exit-audit/);
 });
 
 test("task-doc documents follow-up task routing and dependency rules", () => {
@@ -959,23 +967,24 @@ test("task-doc documents follow-up task routing and dependency rules", () => {
   assert.match(templateJa, /## 分類/);
 });
 
-test("doc-status documents unclassified follow-up review before exit", () => {
+test("doc-status documents the durable-set exit audit before complete", () => {
   const statusRoot = path.join(skillRoot, "doc-status");
   const skill = fs.readFileSync(path.join(statusRoot, "SKILL.md"), "utf8");
   const skillJa = fs.readFileSync(path.join(statusRoot, "SKILL.ja.md"), "utf8");
   const graph = fs.readFileSync(path.join(skillRoot, "doc-driven-dev-graph", "graphs", "doc-driven-dev.yaml"), "utf8");
 
-  assert.match(skill, /unclassified follow-up/i);
-  assert.match(skill, /`followup-triage` node.*`exit-audit` node/is);
-  assert.match(skillJa, /未分類フォローアップ/);
-  assert.match(skillJa, /`followup-triage` node.*`exit-audit` node/s);
-  for (const signal of [
-    "followup-bug-fix", "followup-decision-briefing", "followup-decision-design",
-    "followup-new-feature", "followup-doc-only", "followup-terminal",
-  ]) {
-    assert.match(graph, new RegExp(`when: ${signal}`));
+  assert.match(skill, /`exit-audit` node/);
+  assert.match(skill, /runs the named audit `all` only/);
+  assert.match(skill, /Knowledge Relation/);
+  assert.match(skillJa, /`exit-audit` node/);
+  assert.match(skillJa, /named audit `all` のみ/);
+  assert.match(skillJa, /Knowledge Relation/);
+  assert.match(graph, /exit-audit: \{ kind: audit, delegate: doc-status, audits: \[all\], requiresGates: \[bootstrap, briefing, design, planning, implementation, verification, knowledge-consolidation\] \}/);
+  for (const signal of ["focus-required", "exit-audit-pass", "commit-waived", "knowledge-consolidated"]) {
+    assert.match(graph, new RegExp(`runtimeSignals:.*${signal}`));
   }
-  assert.match(graph, /when: followups-unclassified/);
+  assert.match(graph, /when: exit-audit/);
+  assert.doesNotMatch(graph, /followup/);
 });
 
 test("new_design assigns an opaque id and preserves slug naming in slug repos", () => {

@@ -11,7 +11,7 @@ Inspect the selected definition as JSON or Mermaid:
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/inspect_graph.js \
   [--graph <path>] [--format json|mermaid] [--cwd <path>] \
-  [--focus <artifact>] [--task-dir <path>] \
+  [--focus <artifact>] \
   [--run <run-id> [--state-root <path>] [--allow-external-root]]
 ```
 
@@ -109,29 +109,29 @@ and invoke the next turn.
 ## Runtime projection inclusion
 
 The JSON inspection includes only `definition` by default. Supplying any
-runtime selector (`--cwd`, `--focus`, `--task-dir`, or `--run`) adds `state`,
-`artifactGraph`, and `taskGraph` from a fresh projection. The projection is
-read-only; it does not route, dispatch a delegate, or create a parallel state
-store. An explicit focus that resolves to an invalid or required focus fails
-closed instead of guessing. A `--task-dir` that resolves outside the checkout
-is a caller error before any file is read — the same containment rule
-`route_graph.js` and `fetch_context.js` enforce, applied by real path so a
-symlinked directory cannot point outside. `--task-dir` is a recursive scan
-root: `.` scans the entire checkout including `node_modules`/`.git`, so keep
-it a focused directory.
+runtime selector (`--cwd`, `--focus`, `--run`, `--state-root`, or
+`--allow-external-root`) adds `state`,
+`knowledge`, and `taskGraph` from a fresh projection — the three store
+views of Graph State v3 (knowledge graph, execution, verification); there
+is no `artifactGraph` key and no `--task-dir` — plan/task state lives in
+the Execution Store and the flag is rejected outright. The projection is
+read-only; it does not route, dispatch a delegate, or create a parallel
+state store. An explicit focus that resolves to an invalid or required
+focus fails closed instead of guessing.
 
 `--run` selects the Execution Store run the `taskGraph` projection reads; it
 is explicit, never guessed. `--state-root` overrides the store root and
 `--allow-external-root` authorizes a root outside the checkout — both are
 validated once at the shared store boundary. Without `--run` the projection
-selects implicitly only when exactly one active run is bound to the graph;
-zero candidates leave `taskGraph` null and several fail closed as ambiguous
-(`task-graph-run-ambiguous`). A corrupt store blocks selection outright
-(`task-graph-run-unreadable`).
+selects implicitly only when exactly one active run is bound to the graph's
+focused chain; zero candidates leave `taskGraph` null and several fail
+closed as ambiguous (`task-graph-run-ambiguous`). A corrupt store blocks
+selection outright (`task-graph-run-unreadable`).
 
-Mermaid is definition-only and rejects `--cwd`, `--focus`, `--task-dir`,
-`--run`, and `--state-root`.
-JSON accepts these selectors for runtime projection.
+Mermaid is definition-only and rejects every runtime selector — `--cwd`,
+`--focus`, `--run`, `--state-root`, and `--allow-external-root`.
+JSON accepts `--cwd`, `--focus`, `--run`, `--state-root`, and
+`--allow-external-root` for runtime projection — never `--task-dir`.
 
 ## Mermaid output
 

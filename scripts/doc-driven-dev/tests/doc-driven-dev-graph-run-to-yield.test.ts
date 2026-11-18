@@ -198,14 +198,15 @@ const primaryTaskDoc = "docs/tasks/0001-task.md";
 const VERIFICATION_DOC = "docs/verification/0001-graph.md";
 const PRIMARY_TASK_ID = "TASK-0001";
 const RUN_ID = "RUN-0001";
+const KNOWLEDGE_DOC = "docs/knowledge/0001-graph.md";
+// The `all` audit's durable scope - corpus task/test-spec/impl Markdown is
+// migration inventory (Registry 3), never durable knowledge.
 const canonicalDocumentPaths = [
   "docs/specs/0001-graph.md",
   "docs/adr/0001-graph.md",
   "docs/designs/0001-graph.md",
-  "docs/test-specs/0001-graph.md",
-  primaryTaskDoc,
-  "docs/impl/ir/0001-task.md",
   VERIFICATION_DOC,
+  KNOWLEDGE_DOC,
 ];
 
 /**
@@ -235,9 +236,10 @@ const footerDelegates = new Set([
   "planning-flow",
   "implementation-flow",
   "doc-status",
+  "knowledge-doc",
 ]);
-const callerNormalizedDelegates = new Set(["migrate_docs", "scaffold_docs", "build_task_graph"]);
-const callerNormalizedAudits = new Set(["spec", "adr", "design", "plan", "task", "test-spec", "impl-record", "experiment-log", "all"]);
+const callerNormalizedDelegates = new Set(["scaffold_docs", "build_task_graph"]);
+const callerNormalizedAudits = new Set(["spec", "adr", "design", "verification", "knowledge", "all"]);
 
 function fingerprint(value: string): string {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -363,16 +365,12 @@ function effectInputSpecs(route: GraphRoute, effect: EffectIdentity): ReferenceS
       case "spec": return ["docs/specs/0001-graph.md"];
       case "adr": return ["docs/adr/0001-graph.md"];
       case "design": return ["docs/designs/0001-graph.md"];
-      case "plan": return taskRefSpecs(route);
-      case "task": return taskRefSpecs(route);
-      case "test-spec": return [VERIFICATION_DOC];
-      case "impl-record": return ["docs/impl/ir/0001-task.md"];
-      case "experiment-log": return ["docs/impl/exp/README.md"];
+      case "verification": return [VERIFICATION_DOC];
+      case "knowledge": return [KNOWLEDGE_DOC];
       case "all": return canonicalDocumentPaths;
     }
   }
   switch (effect.id) {
-    case "migrate_docs": return canonicalDocumentPaths;
     case "scaffold_docs": return ["."];
     case "build_task_graph": {
       // The delegate projects the selected Task Graph — its inputs are the
@@ -388,6 +386,7 @@ function effectInputSpecs(route: GraphRoute, effect: EffectIdentity): ReferenceS
     case "design-doc": return ["docs/specs/0001-graph.md", "docs/adr/0001-graph.md"];
     case "planning-flow": return ["docs/designs/0001-graph.md"];
     case "implementation-flow": return [...taskRefSpecs(route), "docs/designs/0001-graph.md"];
+    case "knowledge-doc": return [KNOWLEDGE_DOC, VERIFICATION_DOC];
     case "doc-status": return canonicalDocumentPaths;
     default: throw new Error(`No authoritative-input mapping for ${effect.kind}:${effect.id}`);
   }
@@ -401,7 +400,8 @@ function effectOutputSpec(route: GraphRoute, effect: EffectIdentity): ReferenceS
     // the pre-v3 plan/test-spec outputs are execution-bound, never proof.
     case "planning-flow": return VERIFICATION_DOC;
     case "implementation-flow": return "docs/impl/ir/0001-task.md";
-    case "doc-status": return "docs/impl/ir/0001-task.md";
+    case "knowledge-doc": return KNOWLEDGE_DOC;
+    case "doc-status": return VERIFICATION_DOC;
     default: return effectInputSpecs(route, effect)[0];
   }
 }
@@ -835,6 +835,8 @@ function fixtureRepo(options: {
   taskStatuses?: TaskStatus[];
   dependsOn?: string[][];
   secondPlan?: boolean;
+  /** Write a second design chain (docs/designs/0002-other.md, DESIGN-0002). */
+  secondChain?: boolean;
   /** Manifest focus — artifact paths inside the chain the run binds to. */
   runFocus?: string[];
   /** Run task records when they should not derive from taskStatuses. */
@@ -845,21 +847,22 @@ function fixtureRepo(options: {
     fs.mkdirSync(path.join(repo, directory), { recursive: true });
     fs.writeFileSync(path.join(repo, directory, "README.md"), `# ${directory}\n`, "utf8");
   }
-  // The experiment-log audit's canonical input anchor is the managed exp
-  // index; it needs a front-matter id to resolve as a DurableDocumentReference.
-  writeArtifact(repo, "docs/impl/exp/README.md", {
-    id: "EXP-INDEX", title: "Experiment Logs",
-  }, "# Experiment Logs\n");
   writeArtifact(repo, "docs/specs/0001-graph.md", {
     id: "SPEC-0001", type: "spec", status: "approved", title: "Graph",
   }, "# Graph\n\n## Acceptance Criteria\n\n- [ ] graph\n");
   writeArtifact(repo, "docs/adr/0001-graph.md", {
     id: "ADR-0001", type: "adr", status: "accepted", title: "Graph",
+    relations: { "decides-for": ["DESIGN-0001"] },
   }, "# Graph\n\n## Considered Options\n\n### A\n\n### B\n");
   writeArtifact(repo, "docs/designs/0001-graph.md", {
     id: "DESIGN-0001", type: "design", status: "approved", title: "Graph",
-    relations: { "derives-from": ["SPEC-0001", "ADR-0001"] },
+    relations: { realizes: ["SPEC-0001"] },
   }, "# Graph\n");
+  writeArtifact(repo, KNOWLEDGE_DOC, {
+    id: "KNOW-0001", type: "knowledge", status: "confirmed", title: "Graph Knowledge",
+    knowledge_kind: "lesson",
+    relations: { informs: ["DESIGN-0001"] },
+  }, "# Graph Knowledge\n");
   writeArtifact(repo, "docs/plans/0001-graph.md", {
     id: "PLAN-0001", type: "plan", status: "approved", title: "Graph",
     relations: { "derives-from": ["DESIGN-0001"], "verified-by": ["docs/test-specs/0001-graph.md"] },
@@ -870,7 +873,6 @@ function fixtureRepo(options: {
   }, "# Graph\n");
   writeArtifact(repo, VERIFICATION_DOC, {
     id: "VD-0001", type: "verification", status: "approved", title: "Graph",
-    relations: { verifies: ["SPEC-0001"] },
   }, "# Graph\n");
   writeArtifact(repo, "docs/impl/ir/0001-task.md", {
     id: "IMPL-0001", type: "implementation-record", status: "complete", title: "Graph implementation",
@@ -891,6 +893,11 @@ function fixtureRepo(options: {
       relations: { "derives-from": ["DESIGN-0001"] },
     }, "# Other\n");
   }
+  if (options.secondChain) {
+    writeArtifact(repo, "docs/designs/0002-other.md", {
+      id: "DESIGN-0002", type: "design", status: "approved", title: "Other",
+    }, "# Other\n");
+  }
   // .apm/state/ ignore coverage joins the baseline commit; the run's plan,
   // task records, and digest-bound approval are written afterwards — the
   // task graph every projection routes on is this run, never the corpus
@@ -907,7 +914,7 @@ function fixtureRepo(options: {
   createRun(repo, {
     runId: RUN_ID,
     graphId: "doc-driven-dev",
-    focus: options.runFocus ?? ["docs/plans/0001-graph.md"],
+    focus: options.runFocus ?? ["docs/designs/0001-graph.md"],
     plan: "# Plan\n\nStore-managed run plan.\n",
     tasks,
   });
@@ -972,7 +979,7 @@ function recordTrace(traces: EdgeTrace[], trace: EdgeTrace): void {
 }
 
 let scenarioRunCounter = 0;
-function runScenario(options: ScenarioOptions): ScenarioResult {
+async function runScenario(options: ScenarioOptions): Promise<ScenarioResult> {
   const mode = options.resume?.mode ?? options.mode;
   const topologyBaseHops = 10;
   let taskBudgetCount = options.resume
@@ -984,7 +991,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     ?? topologyBaseHops;
   const graphPath = options.graphPath ?? options.resume?.graphPath ?? canonicalGraphPath;
   const definition = loadGraphDefinition(graphPath);
-  const focus = options.focus ?? options.resume?.focus ?? ["PLAN-0001"];
+  const focus = options.focus ?? options.resume?.focus ?? ["DESIGN-0001"];
   const signals = new Set(options.signals ?? options.resume?.signals ?? []);
   let current = options.resume?.current ?? options.current;
   let hops = options.resume?.hops ?? 0;
@@ -1099,7 +1106,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     return null;
   };
 
-  const project = () => {
+  const project = async () => {
     projectCalls += 1;
     return projectGraphState({
       cwd: options.repo,
@@ -1153,7 +1160,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     });
   };
 
-  let state = project();
+  let state = await project();
   let yieldReason: YieldReason | null = null;
   stepLoop: for (let index = 0; index < options.steps.length; index += 1) {
     const step = options.steps[index];
@@ -1246,7 +1253,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
         savePending(route, edgeOutcomes, false, null, commitBaseline);
         if (index + 1 < options.steps.length) {
           events.push("project");
-          state = project();
+          state = await project();
           continue stepLoop;
         }
         break stepLoop;
@@ -1288,7 +1295,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
         savePending(route, edgeOutcomes, false, null, commitBaseline);
         if (index + 1 < options.steps.length) {
           events.push("project");
-          state = project();
+          state = await project();
           continue stepLoop;
         }
         break stepLoop;
@@ -1385,7 +1392,7 @@ function runScenario(options: ScenarioOptions): ScenarioResult {
     }
     if (index + 1 < options.steps.length) {
       events.push("project");
-      state = project();
+      state = await project();
     }
   }
 
@@ -1442,7 +1449,7 @@ function customGraph(repo: string, text: string): string {
 }
 
 function twoEdgeGraph(repo: string): string {
-  return customGraph(repo, `schemaVersion: 2
+  return customGraph(repo, `schemaVersion: 3
 id: caller-fixture
 entry: start
 runtimeSignals: [advance]
@@ -1459,7 +1466,7 @@ edges:
 }
 
 function cycleGraph(repo: string): string {
-  return customGraph(repo, `schemaVersion: 2
+  return customGraph(repo, `schemaVersion: 3
 id: caller-cycle
 entry: start
 runtimeSignals: [advance]
@@ -1474,9 +1481,9 @@ edges:
 `);
 }
 
-test("runs a bounded partial canonical path with fresh projection between checkpoints", () => {
+test("runs a bounded partial canonical path with fresh projection between checkpoints", async () => {
   const repo = fixtureRepo();
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     current: "probe",
     mode: "run-until-yield",
@@ -1501,20 +1508,17 @@ test("runs a bounded partial canonical path with fresh projection between checkp
   }
 });
 
-test("observes terminal after the migration path reaches the derived task budget", () => {
+test("observes terminal after the canonical path reaches the derived task budget", async () => {
   const repo = fixtureRepo({
     taskStatuses: ["todo", "todo"],
     dependsOn: [[], ["TASK-0001"]],
   });
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     current: "probe",
     mode: "run-until-yield",
-    signals: ["migration-requested", "migration-complete"],
     steps: [
-      { expectEdge: "probe-to-migration", applyCheckpointEvidence: evidence("probe-to-migration") },
-      { expectEdge: "migration-to-bootstrap", applyCheckpointEvidence: evidence("migration-to-bootstrap") },
-      { expectEdge: "bootstrap-to-briefing", applyCheckpointEvidence: evidence("bootstrap-to-briefing") },
+      { expectEdge: "probe-to-briefing", applyCheckpointEvidence: evidence("probe-to-briefing") },
       { expectEdge: "briefing-to-design", applyCheckpointEvidence: evidence("briefing-to-design") },
       { expectEdge: "design-to-planning", applyCheckpointEvidence: evidence("design-to-planning") },
       { expectEdge: "planning-to-task-graph", applyCheckpointEvidence: evidence("planning-to-task-graph") },
@@ -1532,14 +1536,22 @@ test("observes terminal after the migration path reaches the derived task budget
         }),
       },
       {
-        expectEdge: "implementation-to-followup-triage",
-        applyCheckpointEvidence: evidence("implementation-to-followup-triage", (_fixture, signals) => {
-          signals.add("followup-terminal");
+        expectEdge: "implementation-to-verification",
+        applyCheckpointEvidence: evidence("implementation-to-verification"),
+      },
+      {
+        expectEdge: "verification-to-knowledge-consolidation",
+        applyCheckpointEvidence: evidence("verification-to-knowledge-consolidation"),
+      },
+      {
+        expectEdge: "knowledge-consolidation-retry",
+        applyCheckpointEvidence: evidence("knowledge-consolidation-retry", (_fixture, signals) => {
+          signals.add("knowledge-consolidated");
         }),
       },
       {
-        expectEdge: "followup-triage-terminal",
-        applyCheckpointEvidence: evidence("followup-triage-terminal", (_fixture, signals) => {
+        expectEdge: "knowledge-consolidation-to-exit-audit",
+        applyCheckpointEvidence: evidence("knowledge-consolidation-to-exit-audit", (_fixture, signals) => {
           signals.add("exit-audit-pass");
         }),
       },
@@ -1555,10 +1567,10 @@ test("observes terminal after the migration path reaches the derived task budget
   assert.equal(result.yieldReason, "terminal");
 });
 
-test("yields approval exactly once before design evidence is written", () => {
+test("yields approval exactly once before design evidence is written", async () => {
   const repo = fixtureRepo();
   let evidenceCalls = 0;
-  const blocked = runScenario({
+  const blocked = await runScenario({
     repo,
     current: "briefing",
     mode: "run-until-yield",
@@ -1583,7 +1595,7 @@ test("yields approval exactly once before design evidence is written", () => {
   assert.equal(blocked.handoff.pending?.delegateComplete, false);
   assert.equal(blocked.projectCalls, 1);
 
-  const resumed = runScenario({
+  const resumed = await runScenario({
     repo,
     current: "briefing",
     mode: "run-until-yield",
@@ -1601,10 +1613,10 @@ test("yields approval exactly once before design evidence is written", () => {
   assert.equal(resumed.delegateCounts["design-doc"], 1, JSON.stringify({ handoff: resumed.handoff, outcomes: receiptSummaries(repo, resumed.handoff.runId) }));
 });
 
-test("focus input yield leaves the next route and effects untouched", () => {
+test("focus input yield leaves the next route and effects untouched", async () => {
   const repo = fixtureRepo({ secondPlan: true });
   let effects = 0;
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     current: "probe",
     mode: "run-until-yield",
@@ -1621,15 +1633,15 @@ test("focus input yield leaves the next route and effects untouched", () => {
   assert.equal(result.projectCalls, 1);
 });
 
-test("resume after a completed edge starts at its recorded next node", () => {
+test("resume after a completed edge starts at its recorded next node", async () => {
   const repo = fixtureRepo();
-  const first = runScenario({
+  const first = await runScenario({
     repo,
     current: "probe",
     mode: "run-until-yield",
     steps: [{ expectEdge: "probe-to-briefing", applyCheckpointEvidence: evidence("probe-to-briefing") }],
   });
-  const resumed = runScenario({
+  const resumed = await runScenario({
     repo,
     current: "probe",
     mode: "run-until-yield",
@@ -1642,9 +1654,9 @@ test("resume after a completed edge starts at its recorded next node", () => {
   assert.equal(resumed.delegateCounts["design-doc"], 1);
 });
 
-test("resume after audit-complete delegate-pending does not repeat the audit", () => {
+test("resume after audit-complete delegate-pending does not repeat the audit", async () => {
   const repo = fixtureRepo();
-  const first = runScenario({
+  const first = await runScenario({
     repo,
     current: "briefing",
     mode: "run-until-yield",
@@ -1663,7 +1675,7 @@ test("resume after audit-complete delegate-pending does not repeat the audit", (
   });
   assert.equal(first.auditCounts.design, 1);
   assert.equal(first.handoff.pending?.completedAudits.length, 1);
-  const resumed = runScenario({
+  const resumed = await runScenario({
     repo,
     current: "briefing",
     mode: "run-until-yield",
@@ -1676,9 +1688,9 @@ test("resume after audit-complete delegate-pending does not repeat the audit", (
   assert.equal(resumed.checkpoints.length, 1);
 });
 
-test("resume skips scope-valid pending audit and delegate receipts", () => {
+test("resume skips scope-valid pending audit and delegate receipts", async () => {
   const repo = fixtureRepo();
-  const interrupted = runScenario({
+  const interrupted = await runScenario({
     repo,
     current: "briefing",
     mode: "run-until-yield",
@@ -1687,7 +1699,7 @@ test("resume skips scope-valid pending audit and delegate receipts", () => {
   assert.deepEqual(interrupted.handoff.pending?.completedAudits, ["design"]);
   assert.equal(interrupted.handoff.pending?.delegateComplete, true);
 
-  const resumed = runScenario({
+  const resumed = await runScenario({
     repo,
     current: "briefing",
     mode: "run-until-yield",
@@ -1701,12 +1713,12 @@ test("resume skips scope-valid pending audit and delegate receipts", () => {
   assert.equal(resumed.checkpoints.length, 1);
 });
 
-test("a third leg reuses the first leg's stored audit and delegate receipts without re-dispatch", () => {
+test("a third leg reuses the first leg's stored audit and delegate receipts without re-dispatch", async () => {
   const repo = fixtureRepo();
   // Leg 1 — the design audit and design-doc delegate complete, then the
   // missing evidence phase yields: both receipts land in the store and the
   // pending edge carries the pair forward.
-  const interrupted = runScenario({
+  const interrupted = await runScenario({
     repo,
     current: "briefing",
     mode: "run-until-yield",
@@ -1718,7 +1730,7 @@ test("a third leg reuses the first leg's stored audit and delegate receipts with
   // Leg 2 — resume and yield again before evidence: the resuming-pending
   // validation re-proves both leg-1 receipts against the store and carries
   // them; neither effect re-dispatches (no audit:/delegate: trace events).
-  const interruptedAgain = runScenario({
+  const interruptedAgain = await runScenario({
     repo,
     current: "briefing",
     mode: "run-until-yield",
@@ -1733,7 +1745,7 @@ test("a third leg reuses the first leg's stored audit and delegate receipts with
 
   // Leg 3 — resume and supply the evidence phase: the same leg-1 receipts
   // are carried a second time and the edge finally checkpoints.
-  const resumed = runScenario({
+  const resumed = await runScenario({
     repo,
     current: "briefing",
     mode: "run-until-yield",
@@ -1747,9 +1759,9 @@ test("a third leg reuses the first leg's stored audit and delegate receipts with
   assert.equal(resumed.checkpoints.length, 1);
 });
 
-test("does not skip an implementation receipt after its authoritative Task Graph changes", () => {
+test("does not skip an implementation receipt after its authoritative Task Graph changes", async () => {
   const repo = fixtureRepo();
-  const interrupted = runScenario({
+  const interrupted = await runScenario({
     repo,
     current: "implementation",
     mode: "run-until-yield",
@@ -1758,7 +1770,7 @@ test("does not skip an implementation receipt after its authoritative Task Graph
   assert.equal(interrupted.handoff.pending?.delegateComplete, true);
 
   addTask(repo, 2);
-  const resumed = runScenario({
+  const resumed = await runScenario({
     repo,
     current: "implementation",
     mode: "run-until-yield",
@@ -1773,11 +1785,11 @@ test("does not skip an implementation receipt after its authoritative Task Graph
   assert.equal(resumed.delegateCounts["implementation-flow"], 1);
 });
 
-test("freezes focused task budget across resume and refreshes it only for a new run", () => {
+test("freezes focused task budget across resume and refreshes it only for a new run", async () => {
   const repo = fixtureRepo({
     taskStatuses: ["todo", "in-progress", "blocked", "done", "wont-do"],
   });
-  const first = runScenario({
+  const first = await runScenario({
     repo,
     current: "task-graph",
     mode: "single-step",
@@ -1790,7 +1802,7 @@ test("freezes focused task budget across resume and refreshes it only for a new 
   assert.equal(first.handoff.maxHops, 12);
 
   addTask(repo, 6);
-  const resumed = runScenario({
+  const resumed = await runScenario({
     repo,
     current: "implementation",
     mode: "single-step",
@@ -1803,7 +1815,7 @@ test("freezes focused task budget across resume and refreshes it only for a new 
   assert.equal(resumed.handoff.taskBudgetCount, 3);
   assert.equal(resumed.handoff.maxHops, 12);
 
-  const nextRun = runScenario({
+  const nextRun = await runScenario({
     repo,
     current: "implementation",
     mode: "single-step",
@@ -1816,28 +1828,35 @@ test("freezes focused task budget across resume and refreshes it only for a new 
   assert.equal(nextRun.handoff.maxHops, 13);
 });
 
-test("preserves a frozen zero task budget across same-run additions and resume", () => {
+test("preserves a frozen zero task budget across same-run additions and resume", async () => {
   const repo = fixtureRepo({ taskStatuses: ["done"] });
-  const result = runScenario({
+  // An all-terminal Task Graph routes into implementation through the idle
+  // edge — the only implementation-flow edge that can freeze a ZERO budget:
+  // once the first implementation-delegate edge freezes, added tasks and
+  // resumes never recompute it.
+  const result = await runScenario({
     repo,
-    current: "implementation",
+    current: "task-graph",
     mode: "run-until-yield",
     steps: [
       {
-        expectEdge: "implementation-retry",
-        applyCheckpointEvidence: committedEvidence("implementation-retry", (fixture) => {
+        expectEdge: "task-graph-idle-to-implementation",
+        applyCheckpointEvidence: committedEvidence("task-graph-idle-to-implementation", (fixture) => {
           addTask(fixture, 2);
           addTask(fixture, 3);
         }),
       },
-      { expectEdge: "implementation-retry", applyCheckpointEvidence: committedEvidence("implementation-retry") },
+      {
+        expectEdge: "implementation-retry",
+        applyCheckpointEvidence: committedEvidence("implementation-retry"),
+      },
     ],
   });
   assert.equal(result.handoff.taskBudgetCount, 0);
   assert.equal(result.handoff.maxHops, 10);
 
   addTask(repo, 4);
-  const resumed = runScenario({
+  const resumed = await runScenario({
     repo,
     current: "implementation",
     mode: "run-until-yield",
@@ -1848,9 +1867,9 @@ test("preserves a frozen zero task budget across same-run additions and resume",
   assert.equal(resumed.handoff.maxHops, 10);
 });
 
-test("continues implementation retry only after re-projection", () => {
+test("continues implementation retry only after re-projection", async () => {
   const repo = fixtureRepo();
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     current: "implementation",
     mode: "run-until-yield",
@@ -1860,25 +1879,24 @@ test("continues implementation retry only after re-projection", () => {
         applyCheckpointEvidence: committedEvidence("implementation-retry", (fixture, signals) => {
           setTaskStatus(fixture, 1, "done");
           signals.add("verified-summary");
-          signals.add("followup-terminal");
         }),
       },
-      { expectEdge: "implementation-to-followup-triage", applyCheckpointEvidence: evidence("implementation-to-followup-triage") },
+      { expectEdge: "implementation-to-verification", applyCheckpointEvidence: evidence("implementation-to-verification") },
     ],
   });
   assert.deepEqual(result.routes.map((route) => route.edgeId), [
     "implementation-retry",
-    "implementation-to-followup-triage",
+    "implementation-to-verification",
   ]);
   assert.equal(result.projectCalls, 2);
 });
 
-test("continues implementation retry when the Task Graph advances to the next runnable task", () => {
+test("continues implementation retry when the Task Graph advances to the next runnable task", async () => {
   const repo = fixtureRepo({
     taskStatuses: ["in-progress", "todo"],
     dependsOn: [[], ["TASK-0001"]],
   });
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     current: "implementation",
     mode: "run-until-yield",
@@ -1894,12 +1912,11 @@ test("continues implementation retry when the Task Graph advances to the next ru
         applyCheckpointEvidence: committedEvidence("implementation-retry", (fixture, signals) => {
           setTaskStatus(fixture, 2, "done");
           signals.add("verified-summary");
-          signals.add("followup-terminal");
         }),
       },
       {
-        expectEdge: "implementation-to-followup-triage",
-        applyCheckpointEvidence: evidence("implementation-to-followup-triage"),
+        expectEdge: "implementation-to-verification",
+        applyCheckpointEvidence: evidence("implementation-to-verification"),
       },
     ],
   });
@@ -1907,7 +1924,7 @@ test("continues implementation retry when the Task Graph advances to the next ru
   assert.deepEqual(result.routes.map((route) => route.edgeId), [
     "implementation-retry",
     "implementation-retry",
-    "implementation-to-followup-triage",
+    "implementation-to-verification",
   ]);
   assert.deepEqual(result.routes[0].taskGraph?.resumableActive, ["TASK-0001"]);
   assert.deepEqual(result.routes[0].taskGraph?.runnable, []);
@@ -1919,9 +1936,9 @@ test("continues implementation retry when the Task Graph advances to the next ru
   assert.equal(result.yieldReason, null);
 });
 
-test("continues implementation-to-design and then design-to-planning", () => {
+test("continues implementation-to-design and then design-to-planning", async () => {
   const repo = fixtureRepo({ taskStatuses: ["done"] });
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     current: "implementation",
     mode: "run-until-yield",
@@ -1938,9 +1955,9 @@ test("continues implementation-to-design and then design-to-planning", () => {
   assert.equal(result.projectCalls, 2);
 });
 
-test("runs planning-flow before downstream plan and task audits", () => {
+test("runs planning-flow before the task-graph delegate's design audit", async () => {
   const repo = fixtureRepo({ taskStatuses: ["todo", "todo"] });
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     current: "design",
     mode: "run-until-yield",
@@ -1957,9 +1974,7 @@ test("runs planning-flow before downstream plan and task audits", () => {
     "checkpoint:design-to-planning",
     "project",
     "route:planning-to-task-graph",
-    "audit:plan",
-    "audit:task",
-    "audit:test-spec",
+    "audit:design",
     "delegate:build_task_graph",
     "checkpoint:planning-to-task-graph",
   ]);
@@ -1982,12 +1997,12 @@ test("runs planning-flow before downstream plan and task audits", () => {
   assert.deepEqual(planningOutcome?.status === "completed" ? planningOutcome.proof : null, canonicalReference(repo, VERIFICATION_DOC));
 });
 
-test("repairs an invalid task graph before returning to task-graph", () => {
+test("repairs an invalid task graph before returning to task-graph", async () => {
   const repo = fixtureRepo({
     taskStatuses: ["in-progress", "in-progress"],
     dependsOn: [["TASK-0002"], ["TASK-0001"]],
   });
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     current: "task-graph",
     mode: "run-until-yield",
@@ -2006,25 +2021,24 @@ test("repairs an invalid task graph before returning to task-graph", () => {
   assert.equal(result.projectCalls, 2);
 });
 
-test("routes completed implementation work to follow-up triage", () => {
+test("routes completed implementation work to verification", async () => {
   const repo = fixtureRepo({ taskStatuses: ["done"] });
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     current: "implementation",
     mode: "run-until-yield",
-    signals: ["verified-summary", "followup-terminal"],
-    steps: [{ expectEdge: "implementation-to-followup-triage", applyCheckpointEvidence: evidence("implementation-to-followup-triage") }],
+    signals: ["verified-summary"],
+    steps: [{ expectEdge: "implementation-to-verification", applyCheckpointEvidence: evidence("implementation-to-verification") }],
   });
-  assert.equal(result.routes[0].edgeId, "implementation-to-followup-triage");
-  assert.deepEqual(result.routes[0].requiredAudits, ["impl-record", "task"]);
-  assert.equal(result.auditCounts["impl-record"], 1);
-  assert.equal(result.auditCounts.task, 1);
+  assert.equal(result.routes[0].edgeId, "implementation-to-verification");
+  assert.deepEqual(result.routes[0].requiredAudits, ["verification"]);
+  assert.equal(result.auditCounts.verification, 1);
   assert.equal(result.checkpoints.length, 1);
 });
 
-test("stops an unchanged self-loop on its repeated complete-route fingerprint", () => {
+test("stops an unchanged self-loop on its repeated complete-route fingerprint", async () => {
   const repo = fixtureRepo();
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     current: "implementation",
     mode: "run-until-yield",
@@ -2039,13 +2053,13 @@ test("stops an unchanged self-loop on its repeated complete-route fingerprint", 
   assert.equal(result.yieldReason, "budget-exhausted");
 });
 
-test("bounds a changing multi-node repair cycle at the default maxHops", () => {
+test("bounds a changing multi-node repair cycle at the default maxHops", async () => {
   const repo = fixtureRepo();
   const steps: ScenarioStep[] = Array.from({ length: 12 }, (_, index) => ({
     expectEdge: index % 2 === 0 ? "design-to-briefing" : "briefing-to-design",
     applyCheckpointEvidence: evidence(index % 2 === 0 ? "design-to-briefing" : "briefing-to-design", (fixture) => addTask(fixture, index + 2)),
   }));
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     current: "design",
     mode: "run-until-yield",
@@ -2060,7 +2074,7 @@ test("bounds a changing multi-node repair cycle at the default maxHops", () => {
   assert.deepEqual(graphRun(result).trace.map((entry) => entry.route.edgeId), steps.slice(0, 10).map((step) => step.expectEdge));
   assert.equal(graphRun(result).reason, "budget-exhausted");
 
-  const nextRun = runScenario({
+  const nextRun = await runScenario({
     repo,
     current: result.current,
     mode: "run-until-yield",
@@ -2074,10 +2088,10 @@ test("bounds a changing multi-node repair cycle at the default maxHops", () => {
   assert.equal(nextRun.yieldReason, null);
 });
 
-test("stops on a repeated complete GraphRoute fingerprint", () => {
+test("stops on a repeated complete GraphRoute fingerprint", async () => {
   const repo = fixtureRepo();
   const graphPath = cycleGraph(repo);
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     graphPath,
     current: "start",
@@ -2095,15 +2109,15 @@ test("stops on a repeated complete GraphRoute fingerprint", () => {
   assert.equal(result.routes[2].edgeId, result.routes[0].edgeId);
 });
 
-test("terminal re-entry yields one idempotent terminal result", () => {
+test("terminal re-entry yields one idempotent terminal result", async () => {
   const repo = fixtureRepo({ taskStatuses: ["done"] });
-  const first = runScenario({
+  const first = await runScenario({
     repo,
     current: "complete",
     mode: "run-until-yield",
     steps: [{ expectEdge: null, yield: "terminal" }],
   });
-  const second = runScenario({
+  const second = await runScenario({
     repo,
     current: "complete",
     mode: "run-until-yield",
@@ -2114,9 +2128,11 @@ test("terminal re-entry yields one idempotent terminal result", () => {
   assert.deepEqual(second.routes, first.routes);
 });
 
-test("fails closed for malformed graph, unknown signal, and invalid focus", () => {
+test("fails closed for malformed graph, unknown signal, and invalid focus", async () => {
   const repo = fixtureRepo();
   const malformed = path.join(repo, "malformed.yaml");
+  // schemaVersion 2 is refused outright (migration guidance), still under the
+  // "Invalid graph definition" envelope — normal runtime never accepts it.
   fs.writeFileSync(malformed, "schemaVersion: 2\nid: malformed\nentry: missing\nnodes: {}\nconditions: {}\nedges: []\n", "utf8");
   assert.throws(() => loadGraphDefinition(malformed), /Invalid graph definition/);
 
@@ -2127,14 +2143,14 @@ test("fails closed for malformed graph, unknown signal, and invalid focus", () =
     cli,
     "--graph", canonicalGraphPath,
     "--cwd", repo,
-    "--focus", "PLAN-0001",
+    "--focus", "DESIGN-0001",
     "--signal", "not-declared",
     "--json",
   ], { encoding: "utf8" });
   assert.notEqual(unknownSignal.status, 0);
   assert.match(unknownSignal.stderr, /Unknown signal not declared/);
 
-  const invalidFocus = runScenario({
+  const invalidFocus = await runScenario({
     repo,
     current: "probe",
     mode: "run-until-yield",
@@ -2145,9 +2161,9 @@ test("fails closed for malformed graph, unknown signal, and invalid focus", () =
   assert.ok(invalidFocus.routes[0].blockers.includes("focus-invalid"));
 });
 
-test("blocked route without a declared edge yields unrecoverable-blocker", () => {
+test("blocked route without a declared edge yields unrecoverable-blocker", async () => {
   const repo = fixtureRepo();
-  const graphPath = customGraph(repo, `schemaVersion: 2
+  const graphPath = customGraph(repo, `schemaVersion: 3
 id: blocked-fixture
 entry: blocked
 runtimeSignals: [never]
@@ -2159,7 +2175,7 @@ nodes:
 edges:
   - { id: blocked-to-done, from: blocked, to: done, when: never, priority: 10 }
 `);
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     graphPath,
     current: "blocked",
@@ -2170,9 +2186,9 @@ edges:
   assert.equal(result.routes[0].condition, "blocked");
 });
 
-test("single-step completes exactly one checkpoint", () => {
+test("single-step completes exactly one checkpoint", async () => {
   const repo = fixtureRepo();
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     current: "probe",
     mode: "single-step",
@@ -2187,9 +2203,9 @@ test("single-step completes exactly one checkpoint", () => {
   assert.equal(result.current, "briefing");
 });
 
-test("preserves deterministic evidence ordering and full-route fingerprints", () => {
+test("preserves deterministic evidence ordering and full-route fingerprints", async () => {
   const firstRepo = fixtureRepo();
-  const first = runScenario({
+  const first = await runScenario({
     repo: firstRepo,
     graphPath: twoEdgeGraph(firstRepo),
     current: "start",
@@ -2207,7 +2223,7 @@ test("preserves deterministic evidence ordering and full-route fingerprints", ()
   assert.equal(first.handoff.seenRouteFingerprints[0], routeFingerprint(first.routes[0]));
 
   const secondRepo = fixtureRepo();
-  const second = runScenario({
+  const second = await runScenario({
     repo: secondRepo,
     graphPath: twoEdgeGraph(secondRepo),
     current: "start",
@@ -2221,9 +2237,9 @@ test("preserves deterministic evidence ordering and full-route fingerprints", ()
   assert.deepEqual(second.routes, first.routes);
 });
 
-test("does not trust an unverified delegate-complete resume claim", () => {
+test("does not trust an unverified delegate-complete resume claim", async () => {
   const repo = fixtureRepo();
-  const interrupted = runScenario({
+  const interrupted = await runScenario({
     repo,
     current: "briefing",
     mode: "run-until-yield",
@@ -2242,7 +2258,7 @@ test("does not trust an unverified delegate-complete resume claim", () => {
   });
   const forged = JSON.parse(JSON.stringify(interrupted.handoff)) as ScenarioHandoff;
   forged.pending!.delegateComplete = true;
-  const resumed = runScenario({
+  const resumed = await runScenario({
     repo,
     current: "briefing",
     mode: "run-until-yield",
@@ -2253,9 +2269,9 @@ test("does not trust an unverified delegate-complete resume claim", () => {
   assert.equal(resumed.checkpoints.length, 0);
 });
 
-test("does not trust an audit receipt absent from canonical evidence", () => {
+test("does not trust an audit receipt absent from canonical evidence", async () => {
   const repo = fixtureRepo();
-  const interrupted = runScenario({
+  const interrupted = await runScenario({
     repo,
     current: "probe",
     mode: "run-until-yield",
@@ -2281,7 +2297,7 @@ test("does not trust an audit receipt absent from canonical evidence", () => {
     { kind: "audit", id: "adr" },
   )];
 
-  const resumed = runScenario({
+  const resumed = await runScenario({
     repo,
     current: "probe",
     mode: "run-until-yield",
@@ -2296,9 +2312,9 @@ test("does not trust an audit receipt absent from canonical evidence", () => {
   assert.equal(resumed.checkpoints.length, 0);
 });
 
-test("does not reuse persisted canonical evidence after its content changes", () => {
+test("does not reuse persisted canonical evidence after its content changes", async () => {
   const repo = fixtureRepo();
-  const interrupted = runScenario({
+  const interrupted = await runScenario({
     repo,
     current: "briefing",
     mode: "run-until-yield",
@@ -2323,7 +2339,7 @@ test("does not reuse persisted canonical evidence after its content changes", ()
   });
   updateArtifact(repo, "docs/designs/0001-graph.md", { title: "Changed Graph" });
 
-  const resumed = runScenario({
+  const resumed = await runScenario({
     repo,
     current: "briefing",
     mode: "run-until-yield",
@@ -2338,9 +2354,9 @@ test("does not reuse persisted canonical evidence after its content changes", ()
   assert.equal(resumed.checkpoints.length, 0);
 });
 
-test("does not trust an evidence claim proved only for another run state", () => {
+test("does not trust an evidence claim proved only for another run state", async () => {
   const repo = fixtureRepo();
-  const interrupted = runScenario({
+  const interrupted = await runScenario({
     repo,
     current: "briefing",
     mode: "run-until-yield",
@@ -2349,7 +2365,7 @@ test("does not trust an evidence claim proved only for another run state", () =>
   const forged = JSON.parse(JSON.stringify(interrupted.handoff)) as ScenarioHandoff;
   forged.pending!.evidenceRecorded = true;
 
-  const resumed = runScenario({
+  const resumed = await runScenario({
     repo,
     current: "briefing",
     mode: "run-until-yield",
@@ -2360,9 +2376,9 @@ test("does not trust an evidence claim proved only for another run state", () =>
   assert.equal(resumed.checkpoints.length, 0);
 });
 
-test("does not complete an edge when its evidence declarations cannot resolve", () => {
+test("does not complete an edge when its evidence declarations cannot resolve", async () => {
   const repo = fixtureRepo();
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     current: "probe",
     mode: "run-until-yield",
@@ -2380,10 +2396,10 @@ test("does not complete an edge when its evidence declarations cannot resolve", 
   assert.equal(result.handoff.pending?.evidenceRecorded, false);
 });
 
-test("audit effects can yield and resume without repeating completed audits", () => {
+test("audit effects can yield and resume without repeating completed audits", async () => {
   const repo = fixtureRepo();
   let auditCalls = 0;
-  const interrupted = runScenario({
+  const interrupted = await runScenario({
     repo,
     current: "probe",
     mode: "run-until-yield",
@@ -2403,7 +2419,7 @@ test("audit effects can yield and resume without repeating completed audits", ()
   assert.equal(interrupted.auditCounts.spec, undefined);
   assert.deepEqual(interrupted.handoff.pending?.completedAudits, ["adr"]);
 
-  const resumed = runScenario({
+  const resumed = await runScenario({
     repo,
     current: "probe",
     mode: "run-until-yield",
@@ -2416,9 +2432,9 @@ test("audit effects can yield and resume without repeating completed audits", ()
   assert.equal(resumed.checkpoints.length, 1);
 });
 
-test("handoff records caller mode, hop bound, and per-edge completion trace", () => {
+test("handoff records caller mode, hop bound, and per-edge completion trace", async () => {
   const repo = fixtureRepo();
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     current: "probe",
     mode: "single-step",
@@ -2437,9 +2453,9 @@ test("handoff records caller mode, hop bound, and per-edge completion trace", ()
   assert.equal(result.handoff.edgeTrace[0].checkpointComplete, true);
 });
 
-test("records ordered typed outcomes and yields an irreversible effect without proof", () => {
+test("records ordered typed outcomes and yields an irreversible effect without proof", async () => {
   const repo = fixtureRepo();
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     current: "design",
     mode: "run-until-yield",
@@ -2463,9 +2479,9 @@ test("records ordered typed outcomes and yields an irreversible effect without p
   assert.deepEqual(result.handoff.pending?.outcomes.map((outcome) => outcome.status), ["completed", "yield"]);
 });
 
-test("resumes a completed irreversible effect only with a provider idempotency receipt", () => {
+test("resumes a completed irreversible effect only with a provider idempotency receipt", async () => {
   const repo = fixtureRepo();
-  const first = runScenario({
+  const first = await runScenario({
     repo,
     current: "implementation",
     mode: "run-until-yield",
@@ -2487,7 +2503,7 @@ test("resumes a completed irreversible effect only with a provider idempotency r
     .find((outcome) => outcome.stage === "delegate");
   assert.deepEqual(delegateOutcome?.proof, { kind: "provider", provider: "deploy", idempotencyKey: "run-1" });
 
-  const resumed = runScenario({
+  const resumed = await runScenario({
     repo,
     current: "implementation",
     mode: "run-until-yield",
@@ -2498,9 +2514,9 @@ test("resumes a completed irreversible effect only with a provider idempotency r
   assert.equal(resumed.delegateCounts["implementation-flow"], 1);
 });
 
-test("continues a typed retry only after its canonical evidence changes", () => {
+test("continues a typed retry only after its canonical evidence changes", async () => {
   const repo = fixtureRepo();
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     current: "implementation",
     mode: "run-until-yield",
@@ -2510,7 +2526,6 @@ test("continues a typed retry only after its canonical evidence changes", () => 
         delegate: (fixture, signals, route, store) => {
           setTaskStatus(fixture, 1, "done");
           signals.add("verified-summary");
-          signals.add("followup-terminal");
           return retryOutcome(
             fixture,
             store,
@@ -2522,8 +2537,8 @@ test("continues a typed retry only after its canonical evidence changes", () => 
         },
       },
       {
-        expectEdge: "implementation-to-followup-triage",
-        applyCheckpointEvidence: evidence("implementation-to-followup-triage"),
+        expectEdge: "implementation-to-verification",
+        applyCheckpointEvidence: evidence("implementation-to-verification"),
       },
     ],
   });
@@ -2533,9 +2548,9 @@ test("continues a typed retry only after its canonical evidence changes", () => 
   assert.equal(outcomes.some((outcome) => outcome.status === "retry"), true);
 });
 
-test("rejects a completed outcome with a forbidden yield reason", () => {
+test("rejects a completed outcome with a forbidden yield reason", async () => {
   const repo = fixtureRepo();
-  assert.throws(() => runScenario({
+  await assert.rejects(() => runScenario({
     repo,
     current: "implementation",
     mode: "run-until-yield",
@@ -2555,9 +2570,9 @@ test("rejects a completed outcome with a forbidden yield reason", () => {
   }), /completed outcome must not include reason/);
 });
 
-test("returns a typed GraphRunResult with the final yielded route and resume data", () => {
+test("returns a typed GraphRunResult with the final yielded route and resume data", async () => {
   const repo = fixtureRepo();
-  const yielded = runScenario({
+  const yielded = await runScenario({
     repo,
     current: "briefing",
     mode: "run-until-yield",
@@ -2582,7 +2597,7 @@ test("returns a typed GraphRunResult with the final yielded route and resume dat
   assert.deepEqual(result.trace, yielded.handoff.edgeTrace);
   assert.deepEqual(result.handoff, yielded.handoff);
 
-  const terminal = graphRun(runScenario({
+  const terminal = graphRun(await runScenario({
     repo,
     current: "complete",
     mode: "run-until-yield",
@@ -2591,7 +2606,7 @@ test("returns a typed GraphRunResult with the final yielded route and resume dat
   assert.equal(terminal.route.status, "terminal");
   assert.equal(terminal.reason, "terminal");
 
-  const blocked = graphRun(runScenario({
+  const blocked = graphRun(await runScenario({
     repo,
     current: "probe",
     mode: "run-until-yield",
@@ -2602,7 +2617,7 @@ test("returns a typed GraphRunResult with the final yielded route and resume dat
   assert.equal(blocked.reason, "input-required");
 });
 
-test("normalizes every declared script delegate and named audit into typed outcomes", () => {
+test("normalizes every declared script delegate and named audit into typed outcomes", async () => {
   const graph = require("js-yaml").load(fs.readFileSync(canonicalGraphPath, "utf8")) as {
     nodes: Record<string, { delegate?: string; audits?: string[] }>;
   };
@@ -2610,28 +2625,27 @@ test("normalizes every declared script delegate and named audit into typed outco
     .map((node) => node.delegate)
     .filter((delegate): delegate is string => Boolean(delegate)))].sort();
   const declaredAudits = [...new Set(Object.values(graph.nodes).flatMap((node) => node.audits ?? []))].sort();
-  const scriptDelegates = ["migrate_docs", "scaffold_docs", "build_task_graph"];
-  const namedAudits = ["spec", "adr", "design", "plan", "task", "test-spec", "impl-record", "experiment-log", "all"];
+  const scriptDelegates = ["scaffold_docs", "build_task_graph"];
+  const namedAudits = ["spec", "adr", "design", "verification", "knowledge", "all"];
   assert.ok(scriptDelegates.every((effect) => declaredDelegates.includes(effect)));
   assert.ok(namedAudits.every((effect) => declaredAudits.includes(effect)));
   assert.ok(scriptDelegates.every((effect) => isCallerNormalizedEffect("delegate", effect)));
   assert.ok(namedAudits.every((effect) => isCallerNormalizedEffect("audit", effect)));
-  assert.ok(["briefing-flow", "design-doc", "implementation-flow", "doc-status"]
+  assert.ok(["briefing-flow", "design-doc", "planning-flow", "implementation-flow", "knowledge-doc", "doc-status"]
     .every((effect) => !isCallerNormalizedEffect("delegate", effect)));
 
   const repo = fixtureRepo();
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     current: "probe",
     mode: "run-until-yield",
-    signals: ["migration-requested"],
-    steps: [{ expectEdge: "probe-to-migration", applyCheckpointEvidence: evidence("probe-to-migration") }],
+    steps: [{ expectEdge: "probe-to-briefing", applyCheckpointEvidence: evidence("probe-to-briefing") }],
   });
-  assert.deepEqual(result.outcomes.map((outcome) => outcome.status), ["completed"]);
-  assert.deepEqual(result.outcomes[0].effect, { kind: "delegate", id: "migrate_docs" });
+  assert.deepEqual(result.outcomes.map((outcome) => outcome.status), ["completed", "completed", "completed"]);
+  assert.deepEqual(result.outcomes.at(-1)?.effect, { kind: "delegate", id: "briefing-flow" });
 });
 
-test("rejects initial completed and retry receipts without current canonical evidence", () => {
+test("rejects initial completed and retry receipts without current canonical evidence", async () => {
   const missing: DurableDocumentReference = {
     kind: "durable-document",
     path: "docs/impl/ir/missing.md",
@@ -2639,7 +2653,7 @@ test("rejects initial completed and retry receipts without current canonical evi
     revision: "sha256:missing",
   };
   const repo = fixtureRepo();
-  assert.throws(() => runScenario({
+  await assert.rejects(() => runScenario({
     repo,
     current: "probe",
     mode: "run-until-yield",
@@ -2652,7 +2666,7 @@ test("rejects initial completed and retry receipts without current canonical evi
       }),
     }],
   }), /canonical/i);
-  assert.throws(() => runScenario({
+  await assert.rejects(() => runScenario({
     repo,
     current: "implementation",
     mode: "run-until-yield",
@@ -2670,9 +2684,9 @@ test("rejects initial completed and retry receipts without current canonical evi
   }), /canonical/i);
 });
 
-test("does not reuse a non-implementation audit after its authoritative input changes", () => {
+test("does not reuse a non-implementation audit after its authoritative input changes", async () => {
   const repo = fixtureRepo();
-  const interrupted = runScenario({
+  const interrupted = await runScenario({
     repo,
     current: "probe",
     mode: "run-until-yield",
@@ -2680,7 +2694,7 @@ test("does not reuse a non-implementation audit after its authoritative input ch
   });
   updateArtifact(repo, "docs/specs/0001-graph.md", { title: "Changed Spec" });
 
-  const resumed = runScenario({
+  const resumed = await runScenario({
     repo,
     current: "probe",
     mode: "run-until-yield",
@@ -2695,9 +2709,9 @@ test("does not reuse a non-implementation audit after its authoritative input ch
   assert.equal(resumed.checkpoints.length, 0);
 });
 
-test("binds script delegates to their workspace-root and plan/task inputs", () => {
+test("binds script delegates to their workspace-root and plan/task inputs", async () => {
   const repo = fixtureRepo();
-  const graphPath = customGraph(repo, `schemaVersion: 2
+  const graphPath = customGraph(repo, `schemaVersion: 3
 id: scaffold-input-fixture
 entry: start
 runtimeSignals: [bootstrap]
@@ -2711,7 +2725,7 @@ edges:
   - { id: start-to-bootstrap, from: start, to: bootstrap, when: bootstrap, priority: 10 }
   - { id: bootstrap-to-complete, from: bootstrap, to: complete, when: bootstrap, priority: 10 }
 `);
-  const interrupted = runScenario({
+  const interrupted = await runScenario({
     repo,
     graphPath,
     current: "start",
@@ -2721,7 +2735,7 @@ edges:
   });
   assert.deepEqual(effectInputSpecs(interrupted.routes[0], { kind: "delegate", id: "scaffold_docs" }), ["."]);
   fs.unlinkSync(path.join(repo, "docs/specs/README.md"));
-  const resumed = runScenario({
+  const resumed = await runScenario({
     repo,
     graphPath,
     current: "start",
@@ -2736,11 +2750,11 @@ edges:
   });
   assert.equal(resumed.yieldReason, "authority-required");
 
-  // A run bound to the SECOND plan's chain — the store focus is the run's
+  // A run bound to the SECOND chain's design — the store focus is the run's
   // chain binding, and build_task_graph's inputs are its records (Issue #237).
   const focusedRepo = fixtureRepo({
-    secondPlan: true,
-    runFocus: ["docs/plans/0002-other.md"],
+    secondChain: true,
+    runFocus: ["docs/designs/0002-other.md"],
     runTasks: [{ taskId: "TASK-0002", status: "todo" }],
   });
   writeArtifact(focusedRepo, "docs/tasks/0002-focused.md", {
@@ -2749,13 +2763,13 @@ edges:
   }, "# Focused task\n");
   // Focus by artifact ID like every other scenario: the scenario's
   // bookkeeping run stays unbound (an unresolved token never sits inside a
-  // chain), so the run fixture created for plan 0002 remains the single
+  // chain), so the run fixture created for design 0002 remains the single
   // selected run the projection binds.
-  const taskGraph = runScenario({
+  const taskGraph = await runScenario({
     repo: focusedRepo,
     current: "planning",
     mode: "run-until-yield",
-    focus: ["PLAN-0002"],
+    focus: ["DESIGN-0002"],
     steps: [{ expectEdge: "planning-to-task-graph", yield: "authority-required" }],
   });
   // build_task_graph binds the run's task records — the focused selection
@@ -2766,16 +2780,16 @@ edges:
   ]);
 });
 
-test("fails closed when build_task_graph has no selected Task Graph", () => {
+test("fails closed when build_task_graph has no selected Task Graph", async () => {
   assert.throws(
     () => effectInputSpecs({ taskGraph: null } as unknown as GraphRoute, { kind: "delegate", id: "build_task_graph" }),
     /Missing selected Task Graph for build_task_graph/,
   );
 });
 
-test("yields commit-required when a gated checkpoint leaves new uncommitted changes", () => {
+test("yields commit-required when a gated checkpoint leaves new uncommitted changes", async () => {
   const repo = fixtureRepo();
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     current: "task-graph",
     mode: "run-until-yield",
@@ -2796,7 +2810,7 @@ test("yields commit-required when a gated checkpoint leaves new uncommitted chan
   assert.ok(result.handoff.pending?.commitBaseline);
 
   commitAll(repo);
-  const resumed = runScenario({
+  const resumed = await runScenario({
     repo,
     current: "task-graph",
     mode: "run-until-yield",
@@ -2811,9 +2825,9 @@ test("yields commit-required when a gated checkpoint leaves new uncommitted chan
   assert.equal(resumed.handoff.edgeTrace.at(-1)?.commitWaived, false);
 });
 
-test("commit-waived signal skips the gate and completes the checkpoint", () => {
+test("commit-waived signal skips the gate and completes the checkpoint", async () => {
   const repo = fixtureRepo();
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     current: "task-graph",
     mode: "run-until-yield",
@@ -2830,9 +2844,9 @@ test("commit-waived signal skips the gate and completes the checkpoint", () => {
   assert.equal(result.handoff.edgeTrace[0].commitWaived, true);
 });
 
-test("non-gated destinations ignore worktree state", () => {
+test("non-gated destinations ignore worktree state", async () => {
   const repo = fixtureRepo();
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     current: "probe",
     mode: "run-until-yield",
@@ -2842,13 +2856,13 @@ test("non-gated destinations ignore worktree state", () => {
   assert.equal(result.checkpoints.length, 1);
 });
 
-test("commit gate passes without a commit when dirty entries were already in the baseline", () => {
+test("commit gate passes without a commit when dirty entries were already in the baseline", async () => {
   const repo = fixtureRepo();
   // Dirty the task doc before the edge starts so the baseline captured at
   // edge start already contains its porcelain entry. Store writes are
   // Git-ignored, so the evidence phase adds no new dirty entries.
   updateArtifact(repo, "docs/tasks/0001-task.md", { title: "pre-existing dirty" });
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     current: "task-graph",
     mode: "run-until-yield",
@@ -2866,9 +2880,9 @@ test("commit gate passes without a commit when dirty entries were already in the
   assert.equal(result.checkpoints.length, 1);
 });
 
-test("resume reuses the retained baseline instead of recapturing it", () => {
+test("resume reuses the retained baseline instead of recapturing it", async () => {
   const repo = fixtureRepo();
-  const interrupted = runScenario({
+  const interrupted = await runScenario({
     repo,
     current: "task-graph",
     mode: "run-until-yield",
@@ -2896,7 +2910,7 @@ test("resume reuses the retained baseline instead of recapturing it", () => {
   // slice-output.txt is not in the baseline, so the gate must yield
   // commit-required again; a recaptured baseline would wrongly include it
   // and let the gate pass.
-  const resumed = runScenario({
+  const resumed = await runScenario({
     repo,
     current: "task-graph",
     mode: "run-until-yield",
@@ -2915,9 +2929,9 @@ test("resume reuses the retained baseline instead of recapturing it", () => {
   );
 });
 
-test("a delegate-emitted commit-required yields without completing the checkpoint", () => {
+test("a delegate-emitted commit-required yields without completing the checkpoint", async () => {
   const repo = fixtureRepo();
-  const result = runScenario({
+  const result = await runScenario({
     repo,
     current: "task-graph",
     mode: "run-until-yield",

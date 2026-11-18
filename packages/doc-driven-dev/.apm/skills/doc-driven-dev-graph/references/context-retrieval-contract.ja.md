@@ -62,7 +62,10 @@ L1 は、どの document を読むかを決めるときや、handoff の focus l
 | `ambiguous-target` | included record の relation target が、その ID を持つ record が複数あるため解決不能。 |
 
 `--task-dir` は、その directory を canonical docs directory とともに artifact
-scan 集合へ追加します。同じ selector が L2 と L3 でも受け付けられ、
+scan 集合へ追加します。これは corpus-scan selector にすぎません —
+retrieval が読む Markdown 文書を広げるだけで、task authority とは無関係です。
+plan/task 状態は Execution Store にあり、`route_graph.js --run`/`--state-root`
+で選択するもので、ここでは扱いません。同じ selector が L2 と L3 でも受け付けられ、
 containment 検査が適用されます — 後述の guard を参照してください。
 
 ## L2 — body fetch
@@ -177,16 +180,21 @@ curated 済みであり、報告されません。
   相互排他であり、各 supporting flag は自分の mode でのみ有効です — 他 mode の
   flag は黙って捨てるのではなく caller error です。
 - **`--task-dir` は 1 つ、scan 集合も 1 つ。** `--task-dir` は L1、L2、L3 で
-  同じ custom task-doc directory を選択するため、L1 が列挙する path が L2 で
+  同じ custom corpus directory を選択するため、L1 が列挙する path が L2 で
   `not-canonical` として拒否されることはなく、L3 の root も同じ projection
-  で解決されます。directory は checkout 内に解決されなければなりません —
+  で解決されます。これは「通常の CLI は `--task-dir` を取らない」という
+  Graph State v3 ルールに対する corpus-scan 例外です（Issue `#243`）—
+  scan root は決定的な corpus 選択であるため retrieval では維持され、
+  task authority を与えず、Execution Store の record は読みません。
+  `route_graph.js`/`inspect_graph.js` はこの flag を依然として拒否します。
+  directory は checkout 内に解決されなければなりません —
   artifact scan が強制する containment rule です。脱出する値や checkout
   外の絶対 path は、何も読まれる前に caller error として発生し、すべての
-  level と `route_graph.js`/`inspect_graph.js` で同一です。finding では
+  level で同一です。finding では
   ありません。containment は real path でも検査されます — checkout 内の
   symlinked directory が外に解決される場合も同様に拒否されます。この値は
   再帰的な scan root です — `.`（または空の値）は checkout 自体を
-  task-doc の scan 集合にし、`node_modules`/`.git` を含むすべてを走査
+  corpus の scan 集合にし、`node_modules`/`.git` を含むすべてを走査
   します。focused な directory に保ってください。
 
 ## CLI と exit code

@@ -17,8 +17,8 @@ authority です。
 
 - **Execution Graph**: `graphs/doc-driven-dev.yaml` にある node、1 エッジ
   route、condition、priority、delegate、audit の宣言。
-- **Artifact Graph**: 正規 Markdown 文書と、その ID、type、status、relation。
-- **Graph State**: Artifact Graph を毎回投影した focus、gate、signal、blocker、
+- **Knowledge Graph**: 正規 Markdown 文書と、その ID、type、status、relation。
+- **Graph State**: Knowledge Graph を毎回投影した focus、gate、signal、blocker、
   route evidence を含む状態。
 - **Dynamic Task Graph**: `(runId, taskId)` を基準に、1 つの Execution Store
   run の `plan.md` と task record を投影する deterministic かつ read-only の
@@ -29,7 +29,7 @@ authority です。
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
   [--graph <path>] [--current <node>] [--signal <condition-signal>] \
-  [--focus <artifact>] [--task-dir <path>] \
+  [--focus <artifact>] \
   [--run <run-id> [--state-root <path>] [--allow-external-root]] \
   [--verification-summary <path>] \
   [--cwd <path>] --json
@@ -71,28 +71,34 @@ current node の eligible edge は昇順の `priority`、次に安定した edge
 
 Graph Definition の binding は明示的です。
 
-- migration は `migrate_docs`、bootstrap は `scaffold_docs`。両方とも名前で
-  migration を所有する `doc-maintenance` のスクリプトへ dispatch される。
+- bootstrap は `scaffold_docs` —— scaffold を所有する `doc-maintenance` の
+  スクリプトへ名前で dispatch される（v3 には migration node がないため、
+  `migrate_docs` は graph からは到達不能で `doc-maintenance` 経由のみ）。
 - briefing は `briefing-flow`、design は `design-doc` に委譲。
 - planning node は approved design を audit して `planning-flow` を dispatch し、
-  `plan-doc` -> approval yield -> `test-spec-doc` -> `task-doc` の順に実行。
-- task-graph node は `plan`、`task`、`test-spec` を audit して `build_task_graph` を dispatch し、
+  Execution Store run の `plan.md` と task record を所有する（`plan-doc`/
+  `task-doc` の規約は record contract と v3 以前の migration を定める —
+  durable な plan/task/test-spec Markdown は書き込まない）。
+- task-graph node は durable な `design` を audit して `build_task_graph` を dispatch し、
   `build_task_graph.js` が実行。
-- implementation は `implementation-flow`、exit 検証は `doc-status` audit。
+- implementation は `implementation-flow` に委譲。verification node は
+  `verification`（durable な Verification Design 文書）を audit し、
+  gate は HEAD 束縛の Verification Summary を読む。
+- knowledge consolidation は `knowledge` を audit して `knowledge-doc` を
+  dispatch し、exit audit は `all` を audit して `doc-status` を dispatch する。
 
 delegate は briefing / planning / implementation subgraph と証跡を担当します。
 caller は返された audit を先に実行し、返された delegate だけを dispatch します。
 `focus-required` blocker は明示的 focus が渡されるまで hard stop です。
 
-Document Registry 3 では、上記の `plan`、`task`、`test-spec` audit 名は
-読み取る scope ではなく*拒否される* scope です。`plan`/`task` は
+v3 定義の `audits:` 名はすべて durable な scope です —— `spec`、`adr`、
+`design`、`verification`、`knowledge`、`all`。Document Registry 3 では、
+レガシーな `plan`、`task`、`test-spec` audit 名は読み取る scope ではなく
+*拒否される* scope です。`plan`/`task` は
 execution-bound（状態は Execution Store にあり、creator は durable な
 Git 書き込みを拒否）であり、`test-spec` は migration 専用のレガシー
 形式のため、`audit_docs.js --type <name>` は registry ゲートで失敗
-します。これらの名前が残る `audits:` リスト（`task-graph`、
-`followup-triage`）は Registry 2 定義の名残であり、Graph Definition
-v3 の rewire（#243）まで superseded とします。現在 `plan`/`task`/
-`test-spec` audit を dispatch しても拒否に解決されます。durable な
+します。durable な
 graph artifact は `idea`、`brainstorm`、`discovery`、`spec`、`design`、
 `adr`、`knowledge`、`verification` です。
 
@@ -107,7 +113,7 @@ trace summary、resume rule の詳細は
 
 1. Graph Definition、current node、caller mode を選択する。
 2. 正規 Markdown artifact と semantic relation を確認する。
-3. Artifact Graph を新しい Graph State に投影する。
+3. Knowledge Graph を新しい Graph State に投影する。
 4. 複数 chain があれば明示的 focus を解決する。
 5. gate、caller signal、決定的 blocker を評価する。
 6. 汎用 condition DSL で outgoing edge を評価する。
@@ -128,7 +134,7 @@ caller は [`references/execution-contract.ja.md`](references/execution-contract
 yield し、table が automatic continuation を許す場合だけ繰り返します。`wont-do` task は
 dependency を満たさず、未解決 task は Dynamic Task Graph で blocked のままです。
 
-implementation gate の検証権威は `HEAD` に束縛された
+verification gate の検証権威は `HEAD` に束縛された
 **Verification Summary**（Issue `#241`）です —— caller が主張する
 signal ではありません。gate が pass するのは、供給または自動計算された
 サマリーが `HEAD` に束縛され `verdict: "verified"` を報告するときだけ
@@ -139,9 +145,14 @@ caller 評価のサマリー（waiver・条件付き out-of-scope のチャン�
 [`references/verification-summary-contract.ja.md`](references/verification-summary-contract.ja.md)
 を参照してください。
 
-implementation 後の `フォローアップ分類` node は、implementation
-gate の pass と型付き signal 1 つを要求してから repair、planning、
-briefing、exit audit のいずれかへ進みます。
+implementation の後、`verification` node は durable な Verification
+Design 文書を audit します。verification gate の pass は
+`knowledge-consolidation` へ route し、そこで caller は consolidation
+判断（finding の統合、または意図的な無保存 —— gate は推測しません）を
+正直に行った後 `knowledge-consolidated` signal を送ります。
+`exit-audit` node はすべての上流 gate の pass と `exit-audit-pass`
+signal を要求してから `complete` へ route します。未達の上流 gate は
+対応する repair edge へ route します。
 
 ## Git commit boundary
 
@@ -193,7 +204,7 @@ claim ドキュメント revision・check designRevision・subject（commit
 **Evidence Assessment** が宣言された対象に対してレコードごとの
 applicability・availability・integrity・sufficiency を再導出し、
 **Verification Summary** が Claim と Check ごとの assessment を
-implementation gate が消費する verdict へ集約します。assessment の
+verification gate が消費する verdict へ集約します。assessment の
 軸、免除（waiver/not-applicable）コントラクト、gate 束縛は
 [`references/verification-summary-contract.ja.md`](references/verification-summary-contract.ja.md)
 で定義します。
@@ -224,7 +235,7 @@ canonical router を実行します:
 
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
-  --current followup-triage --signal followup-terminal --json
+  --current exit-audit --signal exit-audit-pass --json
 ```
 
 この command は選択した node を評価して 1 つの `GraphRoute` を返します。
@@ -237,7 +248,7 @@ JSON route command に `--explain` を加えると、通常の route と選択�
 
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
-  --current followup-triage --signal followup-terminal --explain --json
+  --current exit-audit --signal exit-audit-pass --explain --json
 ```
 
 結果は `{ "route": GraphRoute, "explanation": ... }` です。explanation には
@@ -258,9 +269,11 @@ node .apm/skills/doc-driven-dev-graph/scripts/inspect_graph.js \
 ```
 
 JSON は counts、topology reachability、delegate、audit、決定的な issue を含む
-`definition` を常に返します。`state`、`artifactGraph`、`taskGraph` は明示的な
-`--cwd`、`--focus`、`--task-dir`、または `--run` selector が runtime projection
-を要求した場合だけ含まれます。Inspection は route、delegate dispatch、Markdown/
+`definition` を常に返します。`state`、`knowledge`、`taskGraph` は明示的な
+`--cwd`、`--focus`、`--run`、`--state-root`、または `--allow-external-root`
+selector が runtime projection
+を要求した場合だけ含まれます（`--task-dir` は Graph State v3 で廃止 —
+plan/task 状態は Execution Store にあり、拒否されます）。Inspection は route、delegate dispatch、Markdown/
 persistence state の書き込みを行いません。
 `referencedConditions` は edge の `when` key の重複を除いた集合であり、
 `unusedConditions` はその edge の `when` key にない宣言済み condition key です。
@@ -281,8 +294,9 @@ node と edge は安定した順序で sort されます。すべての node は
 commitGate、terminal、audit label が含まれ、edge label には
 condition key と priority が含まれます。
 Mermaid rendering は text-only で、routing や persistence への副作用はありません。
-Mermaid は definition-only であり、`--cwd`、`--focus`、`--task-dir`、
-`--run`、`--state-root` を拒否します。
+Mermaid は definition-only であり、`--cwd`、`--focus`、`--run`、
+`--state-root`、`--allow-external-root` を拒否します（`--task-dir` は
+v3 ではすべての format で常に拒否）。
 元の node、delegate、audit、condition text は escape され、`|` が edge label を終了
 させることはありません。
 

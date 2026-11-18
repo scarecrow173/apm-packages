@@ -3080,7 +3080,7 @@ var require_dumper = __commonJS({
         }
       }
     }
-    function dump(input2, options2) {
+    function dump2(input2, options2) {
       options2 = options2 || {};
       var state = new State(options2);
       if (!state.noRefs) getDuplicateReferences(input2, state);
@@ -3088,9 +3088,9 @@ var require_dumper = __commonJS({
       return "";
     }
     function safeDump(input2, options2) {
-      return dump(input2, common.extend({ schema: DEFAULT_SAFE_SCHEMA }, options2));
+      return dump2(input2, common.extend({ schema: DEFAULT_SAFE_SCHEMA }, options2));
     }
-    module2.exports.dump = dump;
+    module2.exports.dump = dump2;
     module2.exports.safeDump = safeDump;
   }
 });
@@ -3318,10 +3318,10 @@ var require_stringify = __commonJS({
       data = Object.assign({}, file2.data, data);
       const open2 = opts.delimiters[0];
       const close = opts.delimiters[1];
-      const matter5 = engine.stringify(data, options2).trim();
+      const matter6 = engine.stringify(data, options2).trim();
       let buf = "";
-      if (matter5 !== "{}") {
-        buf = newline(open2) + newline(matter5) + newline(close);
+      if (matter6 !== "{}") {
+        buf = newline(open2) + newline(matter6) + newline(close);
       }
       if (typeof file2.excerpt === "string" && file2.excerpt !== "") {
         if (str2.indexOf(file2.excerpt.trim()) === -1) {
@@ -3427,19 +3427,19 @@ var require_gray_matter = __commonJS({
     var toFile = require_to_file();
     var parse4 = require_parse();
     var utils = require_utils();
-    function matter5(input2, options2) {
+    function matter6(input2, options2) {
       if (input2 === "") {
         return { data: {}, content: input2, excerpt: "", orig: input2 };
       }
       let file2 = toFile(input2);
-      const cached2 = matter5.cache[file2.content];
+      const cached2 = matter6.cache[file2.content];
       if (!options2) {
         if (cached2) {
           file2 = Object.assign({}, cached2);
           file2.orig = cached2.orig;
           return file2;
         }
-        matter5.cache[file2.content] = file2;
+        matter6.cache[file2.content] = file2;
       }
       return parseMatter(file2, options2);
     }
@@ -3461,7 +3461,7 @@ var require_gray_matter = __commonJS({
       }
       str2 = str2.slice(openLen);
       const len = str2.length;
-      const language = matter5.language(str2, opts);
+      const language = matter6.language(str2, opts);
       if (language.name) {
         file2.language = language.name;
         str2 = str2.slice(language.raw.length);
@@ -3496,24 +3496,24 @@ var require_gray_matter = __commonJS({
       }
       return file2;
     }
-    matter5.engines = engines2;
-    matter5.stringify = function(file2, data, options2) {
-      if (typeof file2 === "string") file2 = matter5(file2, options2);
+    matter6.engines = engines2;
+    matter6.stringify = function(file2, data, options2) {
+      if (typeof file2 === "string") file2 = matter6(file2, options2);
       return stringify(file2, data, options2);
     };
-    matter5.read = function(filepath, options2) {
+    matter6.read = function(filepath, options2) {
       const str2 = fs6.readFileSync(filepath, "utf8");
-      const file2 = matter5(str2, options2);
+      const file2 = matter6(str2, options2);
       file2.path = filepath;
       return file2;
     };
-    matter5.test = function(str2, options2) {
+    matter6.test = function(str2, options2) {
       return utils.startsWith(str2, defaults(options2).delimiters[0]);
     };
-    matter5.language = function(str2, options2) {
+    matter6.language = function(str2, options2) {
       const opts = defaults(options2);
       const open2 = opts.delimiters[0];
-      if (matter5.test(str2)) {
+      if (matter6.test(str2)) {
         str2 = str2.slice(open2.length);
       }
       const language = str2.slice(0, str2.search(/\r?\n/));
@@ -3522,11 +3522,11 @@ var require_gray_matter = __commonJS({
         name: language ? language.trim() : ""
       };
     };
-    matter5.cache = {};
-    matter5.clearCache = function() {
-      matter5.cache = {};
+    matter6.cache = {};
+    matter6.clearCache = function() {
+      matter6.cache = {};
     };
-    module2.exports = matter5;
+    module2.exports = matter6;
   }
 });
 
@@ -4402,7 +4402,7 @@ var import_node_path6 = __toESM(require("node:path"));
 // src/skills/doc-driven-dev-graph/scripts/lib/artifact_context.ts
 var import_node_fs5 = __toESM(require("node:fs"));
 var import_node_path5 = __toESM(require("node:path"));
-var import_gray_matter4 = __toESM(require_gray_matter());
+var import_gray_matter5 = __toESM(require_gray_matter());
 
 // src/skills/doc-driven-dev-graph/scripts/lib/artifact_graph.ts
 var import_node_fs2 = __toESM(require("node:fs"));
@@ -4859,6 +4859,21 @@ var legacyAliases = /* @__PURE__ */ new Map();
 for (const entry of Object.values(legacyDocTypes)) {
   for (const alias of [entry.type, ...entry.aliases]) legacyAliases.set(alias, entry.type);
 }
+function configFor(type) {
+  const entry = registry[type];
+  if (entry?.persistence === "durable") return entry;
+  if (entry?.persistence === "ephemeral") {
+    throw new Error(
+      `Document type "${type}" is execution-bound (persistence: ephemeral): it has no durable Git form under Document Registry 3 \u2014 plan/task state lives in the Execution Store`
+    );
+  }
+  if (legacyAliases.has(type)) {
+    throw new Error(
+      `Document type "${type}" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document`
+    );
+  }
+  throw new Error(`Unknown document type: ${type}`);
+}
 function executionBoundTypeNames() {
   return [
     ...executionTypes,
@@ -4896,6 +4911,19 @@ function knowledgeRelationFields() {
   }
   return [...fields].sort();
 }
+function knowledgeRelationInverses() {
+  const inverses = {};
+  for (const type of docTypes) {
+    for (const relation of configs[type].allowedRelations) {
+      const existing = inverses[relation.field];
+      if (existing && existing !== relation.inverse) {
+        throw new Error(`Registry inconsistency: relation ${relation.field} declares two inverse names (${existing}, ${relation.inverse})`);
+      }
+      inverses[relation.field] = relation.inverse;
+    }
+  }
+  return inverses;
+}
 var PROVENANCE_RELATION_KEYS = ["source"];
 
 // src/skills/lib/document_utils.ts
@@ -4903,6 +4931,9 @@ var nonReferenceRelationKeys = /* @__PURE__ */ new Set([
   "changes",
   "test-spec-skip"
 ]);
+function normalizeDir(input2) {
+  return input2.replace(/\\/g, "/").replace(/\/+$/g, "");
+}
 function stripExtendedLengthPrefix(value) {
   if (value.startsWith("\\\\?\\UNC\\")) return `\\\\${value.slice(8)}`;
   if (value.startsWith("\\\\?\\")) return value.slice(4);
@@ -5386,7 +5417,7 @@ var ACTIVE_STATUSES_FOR_FOCUS = /* @__PURE__ */ new Set([
 var import_node_crypto = __toESM(require("node:crypto"));
 var import_node_fs4 = __toESM(require("node:fs"));
 var import_node_path4 = __toESM(require("node:path"));
-var import_gray_matter3 = __toESM(require_gray_matter());
+var import_gray_matter4 = __toESM(require_gray_matter());
 
 // src/skills/lib/artifact_id.ts
 var import_uuid62 = __toESM(require_uuid62());
@@ -28118,6 +28149,273 @@ function date4(params) {
   return _coercedDate(ZodDate, params);
 }
 
+// src/skills/lib/doc_suite_utils.ts
+var import_gray_matter3 = __toESM(require_gray_matter());
+
+// src/skills/lib/doc_lifecycle.ts
+var SETTLED_STATUSES = {
+  ...Object.fromEntries(docTypes.map((type) => [type, new Set(configs[type].settledStatuses)])),
+  ...Object.fromEntries(Object.values(ephemeralConfigs).map((entry) => [entry.type, new Set(entry.settledStatuses)])),
+  ...Object.fromEntries(Object.values(legacyDocTypes).flatMap((entry) => [entry.type, ...entry.aliases].map((name) => [name, new Set(entry.settledStatuses)])))
+};
+var LIFECYCLE_TYPE_ALIASES = Object.fromEntries(
+  Object.values(legacyDocTypes).flatMap((entry) => entry.aliases.map((alias) => [alias, entry.type]))
+);
+
+// src/skills/lib/doc_ownership.ts
+var DOC_SUITE_MUTATORS = ["doc_maintenance", "scaffold_docs", "migrate_docs", "migrate_ids"];
+var DOC_SUITE_AUDITORS = ["doc_status", "audit_docs", "list_docs"];
+var PROMOTE_INDEX_MUTATOR = "promote_index";
+function buildContracts() {
+  const rows = /* @__PURE__ */ new Map();
+  const rowFor = (dir, owner, indexFormat, indexTitle) => {
+    const normalized = normalizeDir(dir);
+    let row = rows.get(normalized);
+    if (!row) {
+      row = {
+        dir: normalized,
+        canonical: false,
+        owner,
+        residents: [],
+        indexFormat,
+        indexTitle,
+        mutators: /* @__PURE__ */ new Set(),
+        auditors: /* @__PURE__ */ new Set()
+      };
+      rows.set(normalized, row);
+    }
+    return row;
+  };
+  for (const type of docTypes) {
+    const config2 = configFor(type);
+    for (const dir of config2.dirs) {
+      const canonical = normalizeDir(dir) === normalizeDir(config2.dir);
+      const row = rowFor(dir, config2.owner, config2.indexFormat, canonical ? config2.indexTitle : void 0);
+      row.canonical = row.canonical || canonical;
+      if (!row.residents.includes(type)) row.residents.push(type);
+      if (canonical && config2.indexTitle) row.mutators.add(PROMOTE_INDEX_MUTATOR);
+      if (config2.creator) row.mutators.add(config2.creator);
+      for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
+      for (const auditor of DOC_SUITE_AUDITORS) row.auditors.add(auditor);
+      for (const mutator of config2.mutators) row.mutators.add(mutator);
+      for (const auditor of config2.auditors) row.auditors.add(auditor);
+    }
+  }
+  for (const type of executionTypes) {
+    const entry = ephemeralConfigs[type];
+    for (const dir of entry.formerDirs) {
+      const row = rowFor(dir, entry.owner, entry.indexFormat);
+      row.canonical = row.canonical || dir === entry.formerDirs[0];
+      if (!row.residents.includes(type)) row.residents.push(type);
+      for (const mutator of DOC_SUITE_MUTATORS) row.mutators.add(mutator);
+      for (const auditor of DOC_SUITE_AUDITORS) row.auditors.add(auditor);
+      for (const mutator of entry.mutators) row.mutators.add(mutator);
+      for (const auditor of entry.auditors) row.auditors.add(auditor);
+    }
+  }
+  for (const entry of Object.values(legacyDocTypes)) {
+    for (const dir of entry.scopeDirs) {
+      const row = rowFor(dir, entry.owner, "none");
+      row.canonical = true;
+    }
+    for (const dir of entry.formerDirs) {
+      const canonical = dir === entry.formerDirs[0];
+      const row = rowFor(dir, entry.owner, entry.indexFormat, canonical ? entry.indexTitle : void 0);
+      row.canonical = row.canonical || canonical;
+      if (!row.residents.includes(entry.type)) row.residents.push(entry.type);
+      if (canonical && entry.indexTitle) row.mutators.add(PROMOTE_INDEX_MUTATOR);
+      for (const mutator of entry.mutators) row.mutators.add(mutator);
+      for (const auditor of entry.auditors) row.auditors.add(auditor);
+    }
+  }
+  return [...rows.values()].map((row) => ({
+    dir: row.dir,
+    canonical: row.canonical,
+    owner: row.owner,
+    residentTypes: row.residents,
+    indexFormat: row.indexFormat,
+    indexTitle: row.indexTitle,
+    mutators: [...row.mutators].sort(),
+    auditors: [...row.auditors].sort()
+  })).sort((a, b) => a.dir.localeCompare(b.dir));
+}
+var DIRECTORY_CONTRACTS = Object.freeze(buildContracts());
+
+// src/skills/lib/doc_suite_utils.ts
+var relationFields = ["source", ...knowledgeRelationFields()];
+var changeFields = [
+  "added",
+  "modified",
+  "deleted",
+  "renamed",
+  "moved",
+  "generated"
+];
+var scaffoldTargets = (() => {
+  const byDir = /* @__PURE__ */ new Map();
+  for (const type of docTypes) {
+    const config2 = configFor(type);
+    const existing = byDir.get(config2.dir);
+    const target = {
+      dir: config2.dir,
+      title: config2.scaffoldIndexTitle ?? `${config2.idPrefix} Documents`,
+      type
+    };
+    if (!existing || config2.indexPrimary) byDir.set(config2.dir, target);
+  }
+  return [...byDir.values()];
+})();
+var changeEntrySchema = external_exports.object({
+  type: external_exports.string().min(1)
+}).passthrough();
+var changesSchema = external_exports.object(Object.fromEntries(
+  changeFields.map((field) => [field, external_exports.array(changeEntrySchema).default([])])
+)).prefault({});
+var relationSchema = external_exports.object({
+  ...Object.fromEntries(relationFields.map((field) => [field, external_exports.array(external_exports.string()).default([])])),
+  changes: changesSchema,
+  // A non-empty reason string, not a relation target (Issue #165).
+  "test-spec-skip": external_exports.string().min(1).optional()
+}).prefault({});
+var frontMatterSchema = external_exports.object({
+  id: external_exports.string().min(1),
+  type: external_exports.enum(docTypes),
+  status: external_exports.string().min(1),
+  // `lifecycle` stays optional at the schema boundary so pre-Registry-3
+  // documents still parse — lint flags the missing field as
+  // `missing-lifecycle`; a populated non-axis value is invalid here
+  // (unknown lifecycle is never coerced to `current`).
+  lifecycle: external_exports.enum(LIFECYCLE_VALUES).optional(),
+  title: external_exports.string().min(1),
+  created: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  updated: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  owners: external_exports.array(external_exports.string()),
+  relations: relationSchema
+}).passthrough();
+
+// src/skills/lib/doc_repository.ts
+var REQUIRED_FRONT_MATTER_FIELDS = [
+  "id",
+  "type",
+  "status",
+  "lifecycle",
+  "title",
+  "created",
+  "updated",
+  "owners",
+  "relations"
+];
+function contractForDocType(entry) {
+  return {
+    type: entry.type,
+    persistence: entry.persistence,
+    idPrefix: entry.idPrefix,
+    idPattern: new RegExp(`^${entry.idPrefix}-(?:\\d+|[0-9A-Za-z]{22})$`),
+    idExceptions: [...entry.idExceptions],
+    canonicalDir: entry.dir ?? "",
+    dirs: [...entry.dirs],
+    defaultStatus: entry.defaultStatus,
+    statusValues: [...entry.statusValues],
+    lifecycleValues: [...entry.lifecycleValues],
+    defaultLifecycle: entry.defaultLifecycle,
+    requiredFields: [...REQUIRED_FRONT_MATTER_FIELDS, ...entry.requiredFields],
+    fieldVocabularies: Object.fromEntries(
+      Object.entries(entry.fieldVocabularies).map(([field, values]) => [field, [...values]])
+    ),
+    requiredRelations: entry.requiredRelations.map((rule) => ({ ...rule, targetTypes: [...rule.targetTypes] })),
+    requiredDirectoryFiles: [...entry.requiredDirectoryFiles],
+    reservedFiles: [...entry.reservedFiles],
+    allowsRootArtifact: entry.allowsRootArtifact,
+    requiresSourceEvidence: entry.requiresSourceEvidence,
+    expectedUpstream: entry.expectedUpstream.map((expectation) => ({ ...expectation, fields: [...expectation.fields] })),
+    allowedRelations: Object.fromEntries(
+      entry.allowedRelations.map((relation) => [relation.field, [...relation.targetTypes]])
+    )
+  };
+}
+var contracts = Object.fromEntries(
+  docTypes.map((type) => [type, contractForDocType(configFor(type))])
+);
+
+// src/skills/lib/knowledge_graph.ts
+var V1_FIELDS = new Set(knowledgeRelationFields());
+var INVERSES = knowledgeRelationInverses();
+
+// src/skills/lib/verification_assessment/types.ts
+var ASSESSMENT_REASON_CODES = [
+  // The caller's target could not be named (unresolvable commit, no
+  // snapshot): nothing can be judged applicable.
+  "target-unverifiable",
+  // The record's own subject could not be digested (e.g. its commit no
+  // longer resolves) — applicability cannot be proven.
+  "subject-unverifiable",
+  // The record's subject digest differs from the target's — it measured a
+  // different commit or workspace.
+  "subject-mismatch",
+  // Claim/check reference failed to resolve in the live graph (detail
+  // carries the resolution status).
+  "claim-unresolved",
+  "check-unresolved",
+  // Resolved, but the pinned revision no longer matches the live document
+  // or check design — the evidence predates the current design.
+  "claim-revision-mismatch",
+  "check-revision-mismatch",
+  // The resolved check does not target the claim the record credits.
+  "check-target-mismatch",
+  // The recorded method differs from the check's designed method — the
+  // outcome is not a measurement of the designed check.
+  "method-mismatch",
+  // A declared artifact is known-inaccessible.
+  "artifact-unavailable",
+  // A declared artifact is past its expiresAt deadline.
+  "artifact-expired",
+  // A declared artifact was recorded but never fetched — its content was
+  // never digest-verified.
+  "artifact-unverified",
+  // The record declares no artifacts at all — the outcome is
+  // attestation-only, never digest-backed (integrity `unverified`).
+  "attestation-only",
+  // The recorded outcome is a measured failure of this target.
+  "outcome-failed",
+  // The recorded outcome is inconclusive/error/not-run — not a pass.
+  "outcome-not-passed"
+];
+var ASSESSMENT_REASON_SET = new Set(ASSESSMENT_REASON_CODES);
+var CHECK_STATUSES = [
+  // An applicable record assessed `sufficient` is the newest conclusive
+  // measurement for this target.
+  "satisfied",
+  // The newest conclusive applicable measurement is `insufficient` — a
+  // recorded failure for this target. Measured outcomes outrank any
+  // exemption: a failed check stays failed even under a valid waiver.
+  "failed",
+  // No conclusive evidence, but a validated waiver exempts the check.
+  "waived",
+  // No conclusive evidence, but a validated not-applicable verdict
+  // (impact-analysis basis) exempts the check.
+  "out-of-scope",
+  // In scope, no usable outcome and no valid exemption — unexecuted or
+  // indeterminate-only evidence. This is the bucket an unexecuted check
+  // lands in; it is never silently out-of-scope.
+  "undetermined",
+  // The check ref does not resolve in the live graph — coverage is
+  // unprovable, so the check gates as required.
+  "unresolved"
+];
+var CHECK_STATUS_SET = new Set(CHECK_STATUSES);
+var CLAIM_STATUSES = [
+  // Every in-scope required check is satisfied, waived, or out-of-scope.
+  "covered",
+  // At least one required check is covered, but not all.
+  "partial",
+  // No required check is covered — including the zero-required-checks
+  // coverage gap.
+  "uncovered",
+  // A required check measured a failure for this target.
+  "failed"
+];
+var CLAIM_STATUS_SET = new Set(CLAIM_STATUSES);
+
 // src/skills/doc-driven-dev-graph/scripts/lib/graph_definition.ts
 var graphNodeId = external_exports.string().min(1);
 var graphConditionSchema = external_exports.discriminatedUnion("kind", [
@@ -28147,7 +28445,7 @@ var graphEdgeSchema = external_exports.object({
   priority: external_exports.number().int()
 }).strict();
 var graphDefinitionSchema = external_exports.object({
-  schemaVersion: external_exports.literal(2),
+  schemaVersion: external_exports.literal(3),
   id: external_exports.string().min(1),
   entry: graphNodeId,
   runtimeSignals: external_exports.array(external_exports.string().min(1)).default([]),
@@ -28215,7 +28513,7 @@ function canonicalReference(repo, relativePath) {
     } catch {
     }
   }
-  const parsed = (0, import_gray_matter3.default)(raw);
+  const parsed = (0, import_gray_matter4.default)(raw);
   const { effectOutcomes: _outcomes, checkpointEvidence: _checkpoints, ...data } = parsed.data;
   const posixPath = relativePath.split(import_node_path4.default.sep).join("/");
   const storeId = posixPath.startsWith(`${EXECUTION_STATE_ROOT}/`) ? posixPath : void 0;
@@ -28223,12 +28521,12 @@ function canonicalReference(repo, relativePath) {
     kind: "durable-document",
     path: relativePath,
     id: data.id ?? storeId,
-    revision: fingerprint(import_gray_matter3.default.stringify(parsed.content, data))
+    revision: fingerprint(import_gray_matter4.default.stringify(parsed.content, data))
   };
 }
 
 // src/skills/doc-driven-dev-graph/scripts/lib/artifact_context.ts
-function compareStrings2(left, right) {
+function compareStrings3(left, right) {
   return left.localeCompare(right);
 }
 function finalizeFindings(findings) {
@@ -28239,7 +28537,7 @@ function finalizeFindings(findings) {
     seen.add(key);
     return true;
   });
-  return unique.sort((left, right) => compareStrings2(left.code, right.code) || compareStrings2(left.path ?? "", right.path ?? "") || compareStrings2(left.message, right.message));
+  return unique.sort((left, right) => compareStrings3(left.code, right.code) || compareStrings3(left.path ?? "", right.path ?? "") || compareStrings3(left.message, right.message));
 }
 function chainMemberPaths(chain) {
   return [chain.spec, chain.adr, chain.design, chain.plan, ...chain.tasks, ...chain.anchors ?? []].filter((value) => Boolean(value));
@@ -28276,7 +28574,7 @@ function listArtifactMetadata(cwd, focus, taskDir) {
     if (record2) included.set(record2.path, record2);
   }
   for (const record2 of [...included.values()]) {
-    for (const [relation, values] of Object.entries(record2.relations).sort(([a], [b]) => compareStrings2(a, b))) {
+    for (const [relation, values] of Object.entries(record2.relations).sort(([a], [b]) => compareStrings3(a, b))) {
       for (const value of values) {
         if (isExternalArtifactReference(value)) continue;
         const target = resolveArtifactRelation(repo, record2, value, records);
@@ -28298,7 +28596,7 @@ function listArtifactMetadata(cwd, focus, taskDir) {
     type: record2.type,
     status: record2.status,
     relations: { ...record2.relations }
-  })).sort((left, right) => compareStrings2(left.path, right.path));
+  })).sort((left, right) => compareStrings3(left.path, right.path));
   return { metadata, findings: finalizeFindings(findings) };
 }
 function isCanonicalDocPath(normalizedPath, canonicalDirs) {
@@ -28338,7 +28636,7 @@ function fetchArtifactBodies(cwd, refs, taskDir) {
     let body;
     let reference;
     try {
-      body = (0, import_gray_matter4.default)(import_node_fs5.default.readFileSync(resolved, "utf8")).content;
+      body = (0, import_gray_matter5.default)(import_node_fs5.default.readFileSync(resolved, "utf8")).content;
       reference = canonicalReference(repo, normalized);
     } catch {
       fail("unreadable", `Ref path does not parse as an artifact doc: ${ref.path}`);
@@ -28355,7 +28653,7 @@ function fetchArtifactBodies(cwd, refs, taskDir) {
     }
     documents.push({ path: normalized, id: recordId, body });
   }
-  documents.sort((left, right) => compareStrings2(left.path, right.path));
+  documents.sort((left, right) => compareStrings3(left.path, right.path));
   return { level: "L2", documents, findings: finalizeFindings(findings) };
 }
 function expandArtifactContext(cwd, fromPath, options2) {
@@ -28371,7 +28669,7 @@ function expandArtifactContext(cwd, fromPath, options2) {
   } else if (idMatches.length > 1) {
     findings.push({
       code: "duplicate-id",
-      message: `Expansion root ${fromPath} matches ${idMatches.length} artifact IDs: ${idMatches.map((record2) => record2.path).sort(compareStrings2).join(", ")}`
+      message: `Expansion root ${fromPath} matches ${idMatches.length} artifact IDs: ${idMatches.map((record2) => record2.path).sort(compareStrings3).join(", ")}`
     });
   } else {
     root = byPath.get(normalizeArtifactPath(repo, trimmed));
@@ -28394,7 +28692,7 @@ function expandArtifactContext(cwd, fromPath, options2) {
   while (queue.length > 0) {
     const { record: record2, depth } = queue.shift();
     if (depth >= maxDepth) continue;
-    for (const [relation, values] of Object.entries(record2.relations).sort(([a], [b]) => compareStrings2(a, b))) {
+    for (const [relation, values] of Object.entries(record2.relations).sort(([a], [b]) => compareStrings3(a, b))) {
       if (!relations.has(relation)) continue;
       for (const value of values) {
         if (isExternalArtifactReference(value)) continue;
@@ -28425,7 +28723,7 @@ function expandArtifactContext(cwd, fromPath, options2) {
       }
     }
   }
-  nodes.sort((left, right) => left.depth - right.depth || compareStrings2(left.path, right.path));
+  nodes.sort((left, right) => left.depth - right.depth || compareStrings3(left.path, right.path));
   return {
     nodes,
     findings: finalizeFindings(findings),
@@ -28435,7 +28733,7 @@ function expandArtifactContext(cwd, fromPath, options2) {
 
 // src/skills/doc-driven-dev-graph/scripts/fetch_context.ts
 function usage() {
-  return "Usage: node fetch_context.js [--cwd <dir>] <mode> [options] [--json]\n  L1 metadata: --metadata --focus <id-or-path> [--focus <x> ...] [--task-dir <dir>]\n  L2 fetch:    --fetch <path> [--fetch <path> ...] [--id <path>:<id> ...] [--fingerprint <path>:<fp> ...] [--task-dir <dir>]\n  L3 expand:   --expand <id-or-path> [--relations <a,b,c>] [--depth <n>] [--reason <text>] [--task-dir <dir>]\nExactly one mode is required per invocation.";
+  return "Usage: node fetch_context.js [--cwd <dir>] <mode> [options] [--json]\n  L1 metadata: --metadata --focus <id-or-path> [--focus <x> ...] [--task-dir <dir>]\n  L2 fetch:    --fetch <path> [--fetch <path> ...] [--id <path>:<id> ...] [--fingerprint <path>:<fp> ...] [--task-dir <dir>]\n  L3 expand:   --expand <id-or-path> [--relations <a,b,c>] [--depth <n>] [--reason <text>] [--task-dir <dir>]\nExactly one mode is required per invocation.\n--task-dir only widens the document corpus scan set; it is not task\nauthority (plan/task state lives in the Execution Store).";
 }
 function requiredValue(argv, index, option) {
   const value = argv[index + 1];
