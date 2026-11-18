@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import fs from "node:fs";
 import path from "node:path";
 
 import {
@@ -12,6 +13,11 @@ import { evaluateRouteDecision } from "./lib/graph_router";
 import { createArtifactScanCollector } from "./lib/artifact_graph";
 import { appendTraceEvent, stableRouteHash } from "./lib/run_trace";
 import { schemaEntrypointGuard } from "../../lib/schema_preflight";
+import {
+  buildVerificationSummary,
+  validateVerificationSummary,
+} from "../../lib/verification_assessment";
+import type { VerificationSummary } from "../../lib/verification_assessment";
 
 type CliArgs = {
   graph?: string;
@@ -25,13 +31,14 @@ type CliArgs = {
   allowExternalRoot: boolean;
   traceFile?: string;
   runId?: string;
+  verificationSummary?: string;
   json: boolean;
   explain: boolean;
   help: boolean;
 };
 
 function usage(): string {
-  return "Usage: node route_graph.js [--graph <path>] [--current <node>] [--signal <condition-signal>] [--focus <artifact>] [--task-dir <path>] [--run <run-id> [--state-root <path>] [--allow-external-root]] [--cwd <path>] [--trace-file <path> --run-id <id>] [--explain] --json";
+  return "Usage: node route_graph.js [--graph <path>] [--current <node>] [--signal <condition-signal>] [--focus <artifact>] [--task-dir <path>] [--run <run-id> [--state-root <path>] [--allow-external-root]] [--cwd <path>] [--verification-summary <path>] [--trace-file <path> --run-id <id>] [--explain] --json";
 }
 
 function requiredValue(argv: string[], index: number, option: string): string {
@@ -84,6 +91,9 @@ function parseArgs(argv: string[]): CliArgs {
     } else if (arg === "--run-id") {
       args.runId = requiredValue(argv, index, arg);
       index += 1;
+    } else if (arg === "--verification-summary") {
+      args.verificationSummary = requiredValue(argv, index, arg);
+      index += 1;
     } else if (arg === "--json") {
       args.json = true;
     } else if (arg === "--explain") {
@@ -112,7 +122,34 @@ function validateSignals(definition: GraphDefinition, signals: string[]): void {
   }
 }
 
-function run(args: CliArgs): void {
+// The implementation gate's evidence authority (Issue #241). A
+// caller-supplied summary file is the exemption channel — waivers and
+// conditional out-of-scope verdicts are judgments only a caller can
+// supply — and must validate against the v1 contract before the gate
+// sees it. Without a file, the router computes the summary itself: every
+// in-scope check assessed from the live Evidence Store against HEAD, so
+// the gate always reads current measurement, never a stale artifact or a
+// caller-asserted signal.
+async function verificationSummary(args: CliArgs): Promise<VerificationSummary> {
+  if (args.verificationSummary !== undefined) {
+    const file = path.resolve(args.cwd, args.verificationSummary);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(fs.readFileSync(file, "utf8"));
+    } catch (error: unknown) {
+      throw new Error(`--verification-summary is not readable JSON: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    if (!validateVerificationSummary(parsed)) {
+      throw new Error("--verification-summary does not satisfy the Verification Summary v1 contract — refusing to route on unverifiable input");
+    }
+    return parsed;
+  }
+  return buildVerificationSummary(args.cwd, {
+    subject: { kind: "commit", commit: "HEAD" },
+  }, { stateRoot: args.stateRoot, allowExternalRoot: args.allowExternalRoot });
+}
+
+async function run(args: CliArgs): Promise<void> {
   if (!schemaEntrypointGuard(args.cwd)) return;
   if (args.explain && !args.json) throw new Error("--explain requires --json");
   if ((args.traceFile === undefined) !== (args.runId === undefined)) {
@@ -126,9 +163,11 @@ function run(args: CliArgs): void {
   }
 
   // Project fresh Graph State once — durable artifacts plus the selected
-  // run's store state (Issue #237) — then route exactly one declared edge.
-  // The public skill loop re-enters this command after delegates record evidence.
+  // run's store state (Issue #237) plus the bound Verification Summary
+  // (Issue #241) — then route exactly one declared edge. The public skill
+  // loop re-enters this command after delegates record evidence.
   const collector = args.traceFile ? createArtifactScanCollector() : undefined;
+  const summary = await verificationSummary(args);
   const state = projectGraphState({
     cwd: args.cwd,
     graphId: definition.id,
@@ -138,6 +177,7 @@ function run(args: CliArgs): void {
     runId: args.run,
     stateRoot: args.stateRoot,
     allowExternalRoot: args.allowExternalRoot,
+    verificationSummary: summary,
   }, collector);
   const decision = evaluateRouteDecision({ current, definition, state });
   if (args.traceFile && args.runId && collector) {
@@ -173,18 +213,20 @@ function run(args: CliArgs): void {
 }
 
 function main(): void {
-  try {
-    const args = parseArgs(process.argv.slice(2));
-    if (args.help) {
-      console.log(usage());
-      return;
+  (async () => {
+    try {
+      const args = parseArgs(process.argv.slice(2));
+      if (args.help) {
+        console.log(usage());
+        return;
+      }
+      await run(args);
+    } catch (error: unknown) {
+      console.error(error instanceof Error ? error.message : String(error));
+      console.error(usage());
+      process.exitCode = 1;
     }
-    run(args);
-  } catch (error: unknown) {
-    console.error(error instanceof Error ? error.message : String(error));
-    console.error(usage());
-    process.exitCode = 1;
-  }
+  })();
 }
 
 main();

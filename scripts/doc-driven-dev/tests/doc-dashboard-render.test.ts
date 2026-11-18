@@ -52,7 +52,7 @@ function snapshot(inventory: InventoryItem[] = []): DashboardSnapshot {
     state: {
       schemaVersion: 2, graphId: definition.graphId, cwd: "C:/secret/repository", taskDir: "docs/tasks",
       focus: [], artifactGraph: { nodes: [], edges: [], issues: [] }, gates: {}, signals: [],
-      blockers: [], hardBlockers: [], taskGraph: null, run: null,
+      blockers: [], hardBlockers: [], taskGraph: null, verification: null, run: null,
     },
     decision: null,
     inventory,

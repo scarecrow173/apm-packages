@@ -33,6 +33,7 @@ node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
   [--graph <path>] [--current <node>] [--signal <condition-signal>] \
   [--focus <artifact>] [--task-dir <path>] \
   [--run <run-id> [--state-root <path>] [--allow-external-root]] \
+  [--verification-summary <path>] \
   [--cwd <path>] --json
 ```
 
@@ -134,9 +135,19 @@ continuation. A task marked
 `wont-do` never satisfies a dependency; unresolved tasks remain blocked in the
 Dynamic Task Graph.
 
-After implementation, the `follow-up triage` node requires
-`implementation-verified` and one typed signal before routing to repair,
-planning, a new briefing, or exit audit.
+The implementation gate's authority is a **Verification Summary** (Issue
+`#241`) bound to `HEAD` — not a caller-asserted signal. The gate passes
+only when a supplied or auto-computed summary binds to `HEAD` and reports
+`verdict: "verified"`; missing, stale, failed, or indeterminate
+verification blocks. `route_graph.js` auto-computes against `HEAD`;
+`--verification-summary <file>` supplies a caller-evaluated summary (the
+waiver / conditional out-of-scope channel). Semantics and blocker
+taxonomy:
+[`references/verification-summary-contract.md`](references/verification-summary-contract.md).
+
+After implementation, the `follow-up triage` node requires a passing
+implementation gate and one typed follow-up signal before routing to
+repair, planning, a new briefing, or exit audit.
 
 ## Git commit boundary
 
@@ -182,6 +193,14 @@ store verifies content identity against the named commit's tree. The
 record schema, artifact/retention rules, and
 consistency model are defined in
 [`references/evidence-store-contract.md`](references/evidence-store-contract.md).
+
+Records are *measured truth*, not current verdicts: an **Evidence
+Assessment** re-derives per-record applicability, availability, integrity,
+and sufficiency against the declared target, and a **Verification
+Summary** aggregates assessments per Claim and Check into the verdict the
+implementation gate consumes. The assessment axes, exemption
+(waiver/not-applicable) contracts, and gate binding are defined in
+[`references/verification-summary-contract.md`](references/verification-summary-contract.md).
 
 ## Schema preflight gate
 
@@ -368,6 +387,10 @@ for the full command, schema, and error-code contract.
 - [`references/evidence-store-contract.md`](references/evidence-store-contract.md) —
   immutable Evidence Record schema, subject/artifact/retention rules,
   append-once writes, derived index, and workspace→commit promotion.
+- [`references/verification-summary-contract.md`](references/verification-summary-contract.md) —
+  Evidence Assessment axes, Verification Summary shape, validated
+  waiver/not-applicable exemptions, and the HEAD-bound implementation
+  gate.
 - [`references/task-graph-contract.md`](references/task-graph-contract.md) —
   Task Graph composition and fail-closed dependency rules.
 - [`references/graph-inspection.md`](references/graph-inspection.md) — inspection

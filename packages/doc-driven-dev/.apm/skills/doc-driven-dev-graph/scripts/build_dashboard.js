@@ -13585,7 +13585,7 @@ var init_unist_util_visit = __esm({
 });
 
 // src/skills/doc-driven-dev-graph/scripts/lib/dashboard_cli.ts
-var import_node_crypto3 = require("node:crypto");
+var import_node_crypto4 = require("node:crypto");
 var import_node_fs12 = __toESM(require("node:fs"));
 var import_node_path13 = __toESM(require("node:path"));
 
@@ -39422,13 +39422,13 @@ function profileGates(profile) {
 function scanRoots(relativeDirs) {
   return [...new Set(["docs", ...relativeDirs, ...managedDocDirs()].map((dir) => normalizeDir(dir)))];
 }
-function resolveQueryScope(cwd, query) {
-  const explicitDir = query.dir ? resolveContainedDir(cwd, query.dir) : null;
-  return { types: scopeTypesForQuery(explicitDir, query.type), explicitDir };
+function resolveQueryScope(cwd, query2) {
+  const explicitDir = query2.dir ? resolveContainedDir(cwd, query2.dir) : null;
+  return { types: scopeTypesForQuery(explicitDir, query2.type), explicitDir };
 }
-async function collectFindings(cwd, query) {
-  const { types, explicitDir } = resolveQueryScope(cwd, query);
-  const profile = query.profile ?? "materialized";
+async function collectFindings(cwd, query2) {
+  const { types, explicitDir } = resolveQueryScope(cwd, query2);
+  const profile = query2.profile ?? "materialized";
   const relativeDirs = types.map((type) => explicitDir ?? docDir(cwd, type));
   const model = await scanRepository({ cwd, roots: scanRoots(relativeDirs) });
   const findings = [];
@@ -39438,7 +39438,7 @@ async function collectFindings(cwd, query) {
     const scope = scopeFor(model, type, directory);
     documents += scope.documents.length;
     findings.push(...lintScope(model, type, directory, profile));
-    if (query.externalLinks) {
+    if (query2.externalLinks) {
       findings.push(...await lintExternalLinks(model, scope));
     }
   }
@@ -41364,6 +41364,64 @@ function projectRunTasks(snapshot) {
   };
 }
 
+// src/skills/lib/evidence_store/store.ts
+var import_node_child_process = require("node:child_process");
+var import_node_crypto3 = __toESM(require("node:crypto"));
+function sha2562(content3) {
+  return import_node_crypto3.default.createHash("sha256").update(content3, "utf8").digest("hex");
+}
+var SUBJECT_DIGEST_NAMESPACE = "doc-driven-dev:subject-tree:v1";
+function subjectTreeDigest(treeOid) {
+  return `sha256:${sha2562(`${SUBJECT_DIGEST_NAMESPACE}:${treeOid.toLowerCase()}`)}`;
+}
+function git(args, cwd) {
+  const result = (0, import_node_child_process.spawnSync)("git", args, { cwd, encoding: "utf8" });
+  return {
+    status: result.status,
+    stdout: result.stdout ?? "",
+    stderr: (result.stderr ?? "").trim(),
+    error: result.error
+  };
+}
+function requireCommitTreeOid(cwd, commit) {
+  const asCommit = git(["rev-parse", "--verify", "--quiet", `${commit}^{commit}`], cwd);
+  if (asCommit.error !== void 0) {
+    throw new StoreError(
+      "boundary-git-unavailable",
+      `cannot run git rev-parse (${asCommit.error.message}) \u2014 the commit's content identity cannot be verified`
+    );
+  }
+  const commitOid = asCommit.stdout.trim();
+  if (asCommit.status !== 0 || !/^[0-9a-f]{40,64}$/i.test(commitOid)) {
+    throw new StoreError(
+      "invalid-argument",
+      `commit ${JSON.stringify(commit)} does not resolve to a commit object in this repository \u2014 content identity is unprovable`,
+      { commit }
+    );
+  }
+  const asTree = git(["rev-parse", "--verify", "--quiet", `${commitOid}^{tree}`], cwd);
+  const treeOid = asTree.stdout.trim();
+  if (asTree.error !== void 0 || asTree.status !== 0 || !/^[0-9a-f]{40,64}$/i.test(treeOid)) {
+    throw new StoreError(
+      "boundary-git-unavailable",
+      `git could not read the tree of commit ${commitOid} \u2014 the commit's content identity cannot be verified`
+    );
+  }
+  return { commitOid: commitOid.toLowerCase(), treeOid: treeOid.toLowerCase() };
+}
+function isResolvableRevision(commit) {
+  return /^[A-Za-z0-9][A-Za-z0-9._/~^@-]*$/.test(commit.trim());
+}
+function resolveCommitSubject(cwd, commit) {
+  if (typeof commit !== "string" || !isResolvableRevision(commit)) return null;
+  try {
+    const { commitOid, treeOid } = requireCommitTreeOid(cwd, commit.trim());
+    return { commitOid, subjectDigest: subjectTreeDigest(treeOid) };
+  } catch {
+    return null;
+  }
+}
+
 // src/skills/lib/markdown_sections.ts
 var SECTION_HEADING_ALIASES = {
   // task-doc
@@ -41637,7 +41695,15 @@ function evaluateGraphGates(state, collector) {
     const implementationReasons = [];
     if (!taskGraph || taskGraph.nodes.length === 0) implementationReasons.push("no-selected-tasks");
     if (taskGraph && taskGraph.nodes.some((node3) => !["done", "wont-do"].includes(node3.status))) implementationReasons.push("tasks-incomplete");
-    if (!state.signals.includes("implementation-verified")) implementationReasons.push("implementation-verified");
+    const verification = state.verification;
+    if (verification == null) {
+      implementationReasons.push("verification-summary");
+    } else if (!verification.boundToHead) {
+      implementationReasons.push("verification-summary-target-mismatch");
+    } else if (verification.summary.verdict !== "verified") {
+      implementationReasons.push(`verification-${verification.summary.verdict}`);
+      implementationReasons.push(...verification.summary.reasons);
+    }
     gates.implementation = gate(implementationReasons.length === 0 ? "pass" : "blocked", implementationReasons);
   }
   const followups = state.signals.filter((signal) => FOLLOWUP_SIGNALS.has(signal));
@@ -41666,6 +41732,13 @@ function projectGraphState(options2, collector) {
   const taskGraph = run ? projectRunTasks(run) : null;
   if (taskGraph?.issues.length) blockers.push("task-graph-invalid");
   if (runBlocker !== null) blockers.push(runBlocker);
+  const verification = options2.verificationSummary === void 0 ? null : (() => {
+    const head = resolveCommitSubject(cwd, "HEAD");
+    return {
+      summary: options2.verificationSummary,
+      boundToHead: head !== null && options2.verificationSummary.target.subjectDigest === head.subjectDigest
+    };
+  })();
   const state = {
     schemaVersion: 2,
     graphId: options2.graphId ?? "doc-driven-dev",
@@ -41678,6 +41751,7 @@ function projectGraphState(options2, collector) {
     blockers: sortedUnique4(blockers),
     hardBlockers: [],
     taskGraph,
+    verification,
     run: run === null ? null : {
       runId: run.runId,
       status: run.status,
@@ -42863,7 +42937,7 @@ function resolveGraphPath(explicitGraph, cwd = process.cwd()) {
 // src/skills/doc-driven-dev-graph/scripts/lib/dashboard_cli.ts
 var DEFAULT_OUTPUT = "reports/doc-driven-dev/index.html";
 var defaultWriteOperations = {
-  randomUUID: import_node_crypto3.randomUUID,
+  randomUUID: import_node_crypto4.randomUUID,
   openExclusive: (file2) => import_node_fs12.default.openSync(file2, "wx"),
   write: (fd, html) => import_node_fs12.default.writeFileSync(fd, html, { encoding: "utf8" }),
   close: (fd) => import_node_fs12.default.closeSync(fd),

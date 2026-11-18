@@ -24,6 +24,8 @@ function stateWith(input: Partial<Pick<GraphState, "gates" | "signals" | "blocke
     blockers: [],
     hardBlockers: [],
     taskGraph: null,
+    verification: null,
+    run: null,
     ...input,
   };
 }

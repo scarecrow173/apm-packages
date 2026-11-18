@@ -193,6 +193,29 @@ function treeDigestOf(cwd: string, commit: string): string | null {
   }
 }
 
+// The full commit-side subject resolution: the normalized full commit oid
+// plus its canonical subject digest, or null when `commit` does not name a
+// commit object. Evidence Assessment (#241) uses this to compare a record's
+// commit subject — and the caller-declared assessment target — against the
+// current checkout's HEAD content. Unlike `treeDigestOf`, which validates a
+// RECORDED subject (always a concrete hex oid), the input here is a git
+// revision to resolve — `HEAD`, a branch, a tag, `HEAD~2` — so any safe
+// revspec spelling goes through `rev-parse` and git itself decides whether
+// it names a commit object in this repository.
+function isResolvableRevision(commit: string): boolean {
+  return /^[A-Za-z0-9][A-Za-z0-9._/~^@-]*$/.test(commit.trim());
+}
+
+function resolveCommitSubject(cwd: string, commit: string): { commitOid: string; subjectDigest: string } | null {
+  if (typeof commit !== "string" || !isResolvableRevision(commit)) return null;
+  try {
+    const { commitOid, treeOid } = requireCommitTreeOid(cwd, commit.trim());
+    return { commitOid, subjectDigest: subjectTreeDigest(treeOid) };
+  } catch {
+    return null;
+  }
+}
+
 function nowOf(options: StoreOptions): string {
   return (options.now ?? systemClock)();
 }
@@ -787,6 +810,7 @@ export {
   rebuildIndex,
   recoverEvidence,
   requireById,
+  resolveCommitSubject,
   treeDigestOf,
   workspaceDigestOf,
 };

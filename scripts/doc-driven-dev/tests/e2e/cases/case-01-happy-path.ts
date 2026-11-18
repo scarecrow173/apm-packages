@@ -15,12 +15,15 @@ import type { E2ECase } from "../harness/case_types";
  *
  * Two intentional differences from the plan's literal spec (the plan's version
  * is unreachable — see task-3-report.md):
- *  1. `signals` declares implementation-verified / followup-terminal /
- *     exit-audit-pass up front — the caller-side verification signals the
- *     implementation / followup-triage / exit-audit gates require. No edge
- *     before its gate's node consults them, so upfront declaration is safe
- *     (per-edge injection via the live signals set stays available for
- *     repair-loop cases).
+ *  1. `signals` declares followup-terminal / exit-audit-pass up front —
+ *     the caller-side signals the followup-triage / exit-audit gates
+ *     require. The implementation gate's verification authority is the
+ *     auto-computed Verification Summary bound to HEAD (Issue #241), never
+ *     a caller signal — the fixture declares no required checks, so the
+ *     summary verifies vacuously once every selected task is done.
+ *     No edge before its gate's node consults the signals, so upfront
+ *     declaration is safe (per-edge injection via the live signals set
+ *     stays available for repair-loop cases).
  *  2. `task-graph-to-implementation`'s completed delegate mutates TASK-0001's
  *     task RECORD to status "done" — the honest store state an
  *     implementation-flow completion asserts (the implementation gate
@@ -35,7 +38,7 @@ export const case01: E2ECase = {
   description: "happy path: probe → … → complete",
   fixture: { taskStatuses: ["todo"] },
   focus: ["PLAN-0001"],
-  signals: ["implementation-verified", "followup-terminal", "exit-audit-pass"],
+  signals: ["followup-terminal", "exit-audit-pass"],
   script: {
     "probe-to-briefing": { audits: { spec: "completed", adr: "completed" }, delegate: "completed" },
     "briefing-to-design": { audits: { design: "completed" }, delegate: "completed" },

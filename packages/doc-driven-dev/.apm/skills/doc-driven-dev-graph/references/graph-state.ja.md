@@ -7,7 +7,8 @@ Graph State は route ごとに canonical Markdown artifact から新しく投�
 
 projection は `schemaVersion: 2`、`graphId`、絶対 `cwd`、`taskDir`、正規化した
 `focus`、`artifactGraph`、gate 結果、caller signal、sort 済み `blockers`、
-選択した `taskGraph`（または `null`）を持ちます。artifact node には canonical
+選択した `taskGraph`（または `null`）、`verification` フィールド
+（または `null`）を持ちます。artifact node には canonical
 path、ID、type、status、semantic relation を保持します。
 
 `taskGraph` は Markdown から投影されません — `--run` または単一 active
@@ -15,6 +16,13 @@ run 規則で選択された 1 つの Execution Store run の Dynamic Task Graph
 です（`task-graph-contract.ja.md` 参照）。run が選択されると state はその
 `runId` を持ち、run 選択や承認の blocker も artifact blocker と同じ形で
 ここに現れます。
+
+`verification` は implementation gate が消費する Verification Summary
+（Issue `#241`）と `boundToHead` —— サマリーの対象サブジェクト
+ダイジェストがこの checkout の `HEAD` 内容同一性と一致するか —— を
+持ちます。router は live の Evidence Store から `HEAD` に対して
+サマリーを自動計算します。`--verification-summary <file>` は caller が
+評価したサマリーを供給します。
 
 ## Focus
 
@@ -47,7 +55,13 @@ state projector が fact から確認できる derived signal と統合します
 受け付ける signal は、`runtimeSignals` に列挙されるか、選択した Graph
 Definition の `kind: signal` condition が宣言した値だけです。
 
-implementation 完了には、選択 task の graph-resolved（`done` または `wont-do`）と caller による
-`implementation-verified` が必要です。follow-up triage は型付き signal が正確に
+implementation 完了には、選択 task の graph-resolved（`done` または `wont-do`）と
+`verdict: "verified"` を報告する HEAD 束縛の Verification Summary が必要です
+（`verification-summary-contract.ja.md` 参照）。サマリーなしは
+`verification-summary`、別対象を指すサマリーは
+`verification-summary-target-mismatch`、verified でない verdict は
+`verification-<verdict>` とサマリー自身の reasons で block します ——
+gate は実際の evidence assessment を読み、caller が主張する signal を
+読みません。follow-up triage は型付き signal が正確に
 1 つ必要です。exit audit は `exit-audit-pass` を必要とします。証跡が欠落または
 矛盾する場合は、黙って進めず routing を block します。

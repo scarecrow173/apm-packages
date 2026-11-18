@@ -37,7 +37,7 @@ const HAPPY_EDGES = [
   "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-followup-triage",
   "followup-triage-terminal", "exit-audit-to-complete",
 ];
-const GATE_SIGNALS = ["implementation-verified", "followup-terminal", "exit-audit-pass"];
+const GATE_SIGNALS = ["followup-terminal", "exit-audit-pass"];
 const DISPATCH_TOTAL = 18;
 
 /**

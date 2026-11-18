@@ -18,7 +18,7 @@ const HAPPY_SEQUENCE = [
   "planning-to-task-graph", "task-graph-to-implementation", "implementation-to-followup-triage",
   "followup-triage-terminal", "exit-audit-to-complete",
 ];
-const SIGNALS = ["implementation-verified", "followup-terminal", "exit-audit-pass"];
+const SIGNALS = ["followup-terminal", "exit-audit-pass"];
 
 // Leg 1 is a blocked run (focus:[]) — handoff.current stays at the entry node
 // and leg 2 must run a FRESH run, not a resume (the e2e-02 shape). Top-level

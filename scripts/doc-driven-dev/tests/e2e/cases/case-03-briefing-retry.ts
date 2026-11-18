@@ -30,7 +30,7 @@ export const case03: E2ECase = {
     },
   },
   focus: ["PLAN-0001"],
-  signals: ["implementation-verified", "followup-terminal", "exit-audit-pass"],
+  signals: ["followup-terminal", "exit-audit-pass"],
   script: {
     "briefing-retry": {
       audits: { spec: "completed", adr: "completed" },

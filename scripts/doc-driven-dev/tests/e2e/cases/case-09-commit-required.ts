@@ -48,7 +48,7 @@ export const case09: E2ECase = {
   current: "task-graph",
   fixture: { taskStatuses: ["todo", "todo"] },
   focus: ["PLAN-0001"],
-  signals: ["implementation-verified", "followup-terminal", "exit-audit-pass"],
+  signals: ["followup-terminal", "exit-audit-pass"],
   script: {
     "task-graph-to-implementation": {
       delegate: "completed",

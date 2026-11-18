@@ -708,6 +708,16 @@ export type CallerRunnerOptions = {
   focus?: string[];
   /** Default: []. */
   signals?: string[];
+  /**
+   * Verification Summary file handed to every `route_graph` hop (Issue
+   * #241): the exemption channel — a caller-produced summary carrying
+   * validated waivers and not-applicable verdicts. The file is re-read on
+   * EVERY hop, so the caller rewrites it as evidence lands; the gate
+   * binds it to that hop's HEAD and refuses a stale one. Absent, the
+   * router computes the summary itself from the live Evidence Store —
+   * the default evidence-backed authority.
+   */
+  verificationSummary?: string;
   /** Default: "run-until-yield". */
   mode?: "run-until-yield" | "single-step";
   /** Explicit fixed budget; absent -> topology budget below. */
@@ -818,6 +828,8 @@ export type CallerHandoff = {
   yieldReason: YieldReason | null;
   focus: string[];
   signals: string[];
+  /** The verification-summary file path routed on, persisted for resume. */
+  verificationSummary?: string;
   graphPath: string;
   completedEdges: string[];
   seenRouteFingerprints: string[];
@@ -903,6 +915,9 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
     ?? maxHops * maxDispatchesPerEdge;
   const focus = options.focus ?? options.resume?.focus ?? [];
   const signals = new Set(options.signals ?? options.resume?.signals ?? []);
+  // The verification-summary file path — option beats handoff, mirroring
+  // signals; the file's CONTENTS are re-read each hop either way.
+  const verificationSummary = options.verificationSummary ?? options.resume?.verificationSummary;
   let current = options.resume?.current ?? options.current ?? definition.entry;
   let hops = options.resume?.hops ?? 0;
   const routes: GraphRoute[] = [];
@@ -1000,6 +1015,7 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
       "--current", current,
       ...focus.flatMap((entry) => ["--focus", entry]),
       ...[...signals].flatMap((signal) => ["--signal", signal]),
+      ...(verificationSummary ? ["--verification-summary", verificationSummary] : []),
       // The caller owns the corpus-scan root: pinning --task-dir docs/tasks
       // keeps every re-projection scanning one deterministic directory for
       // artifact-graph and focus bookkeeping, no matter what the adapter
@@ -1565,6 +1581,7 @@ export function runCaller(options: CallerRunnerOptions): CallerRunResult {
     yieldReason,
     focus: [...focus],
     signals: [...signals].sort(),
+    verificationSummary,
     graphPath,
     completedEdges,
     seenRouteFingerprints: [...seenRouteFingerprints],

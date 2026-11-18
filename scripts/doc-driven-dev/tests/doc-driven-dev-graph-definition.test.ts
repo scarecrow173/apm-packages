@@ -66,14 +66,14 @@ const nonTerminalWithoutOutgoingFixture = validFixture.replace(
 );
 const runtimeSignalsFixture = validFixture.replace(
   "entry: probe\n",
-  "entry: probe\nruntimeSignals: [implementation-verified, exit-audit-pass]\n",
+  "entry: probe\nruntimeSignals: [review-passed, exit-audit-pass]\n",
 );
 const duplicateRuntimeSignalsFixture = runtimeSignalsFixture.replace(
-  "runtimeSignals: [implementation-verified, exit-audit-pass]",
-  "runtimeSignals: [implementation-verified, implementation-verified]",
+  "runtimeSignals: [review-passed, exit-audit-pass]",
+  "runtimeSignals: [review-passed, review-passed]",
 );
 const emptyRuntimeSignalFixture = runtimeSignalsFixture.replace(
-  "runtimeSignals: [implementation-verified, exit-audit-pass]",
+  "runtimeSignals: [review-passed, exit-audit-pass]",
   "runtimeSignals: [\"\", exit-audit-pass]",
 );
 
@@ -90,10 +90,10 @@ test("parses a schema-v2 graph definition with declared conditions", () => {
 
 test("parses and validates Graph Definition-owned runtime signal vocabulary", () => {
   const definition = parseGraphDefinition(runtimeSignalsFixture);
-  assert.deepEqual(definition.runtimeSignals, ["implementation-verified", "exit-audit-pass"]);
+  assert.deepEqual(definition.runtimeSignals, ["review-passed", "exit-audit-pass"]);
   assert.throws(
     () => parseGraphDefinition(duplicateRuntimeSignalsFixture),
-    /duplicate runtime signal: implementation-verified/,
+    /duplicate runtime signal: review-passed/,
   );
   assert.throws(() => parseGraphDefinition(emptyRuntimeSignalFixture), /runtimeSignals\.0/);
 });

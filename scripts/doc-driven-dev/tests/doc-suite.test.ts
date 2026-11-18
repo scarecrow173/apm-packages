@@ -914,10 +914,12 @@ test("doc-driven-dev-graph documents post-implementation follow-up triage", () =
   const graph = fs.readFileSync(path.join(graphRoot, "graphs", "doc-driven-dev.yaml"), "utf8");
 
   assert.match(skill, /follow-up triage/i);
-  assert.match(skill, /implementation-verified/);
+  assert.match(skill, /Verification Summary/);
+  assert.match(skill, /verification-summary-contract\.md/);
   assert.match(skill, /wont-do/);
   assert.match(skillJa, /follow-up|フォローアップ/);
-  assert.match(skillJa, /implementation-verified/);
+  assert.match(skillJa, /Verification Summary/);
+  assert.match(skillJa, /verification-summary-contract\.ja\.md/);
   assert.match(stateContract, /exactly one typed follow-up signal/);
   assert.match(stateContract, /follow-up triage/);
   assert.match(stateContractJa, /型付き|follow-up/);

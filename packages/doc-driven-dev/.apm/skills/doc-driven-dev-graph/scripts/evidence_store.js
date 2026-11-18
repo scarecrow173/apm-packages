@@ -3426,7 +3426,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs9 = require("fs");
+    var fs11 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify = require_stringify();
@@ -3510,7 +3510,7 @@ var require_gray_matter = __commonJS({
       return stringify(file2, data, options2);
     };
     matter3.read = function(filepath, options2) {
-      const str2 = fs9.readFileSync(filepath, "utf8");
+      const str2 = fs11.readFileSync(filepath, "utf8");
       const file2 = matter3(str2, options2);
       file2.path = filepath;
       return file2;
@@ -4858,8 +4858,8 @@ function assertNonEmpty(part, name) {
     throw new Error("`" + name + "` cannot be empty");
   }
 }
-function assertPath(path9, name) {
-  if (!path9) {
+function assertPath(path11, name) {
+  if (!path11) {
     throw new Error("Setting `" + name + "` requires `path` to be set too");
   }
 }
@@ -5044,13 +5044,13 @@ var init_lib4 = __esm({
        * @returns {undefined}
        *   Nothing.
        */
-      set path(path9) {
-        if (isUrl(path9)) {
-          path9 = (0, import_node_url.fileURLToPath)(path9);
+      set path(path11) {
+        if (isUrl(path11)) {
+          path11 = (0, import_node_url.fileURLToPath)(path11);
         }
-        assertNonEmpty(path9, "path");
-        if (this.path !== path9) {
-          this.history.push(path9);
+        assertNonEmpty(path11, "path");
+        if (this.path !== path11) {
+          this.history.push(path11);
         }
       }
       /**
@@ -13585,8 +13585,8 @@ var init_unist_util_visit = __esm({
 });
 
 // src/skills/doc-driven-dev-graph/scripts/evidence_store.ts
-var import_node_fs8 = __toESM(require("node:fs"));
-var import_node_path9 = __toESM(require("node:path"));
+var import_node_fs10 = __toESM(require("node:fs"));
+var import_node_path11 = __toESM(require("node:path"));
 
 // src/skills/lib/schema_preflight.ts
 var import_node_fs2 = __toESM(require("node:fs"));
@@ -18005,10 +18005,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path9) {
-  if (!path9)
+function getElementAtPath(obj, path11) {
+  if (!path11)
     return obj;
-  return path9.reduce((acc, key) => acc?.[key], obj);
+  return path11.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -18348,11 +18348,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path9, issues) {
+function prefixIssues(path11, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path9);
+    iss.path.unshift(path11);
     return iss;
   });
 }
@@ -18814,16 +18814,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError2(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path9 = []) => {
+  const processError = (error63, path11 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path9, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path11, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path9, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path11, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path9, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path11, ...issue2.path]);
       } else {
-        const fullpath = [...path9, ...issue2.path];
+        const fullpath = [...path11, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -18862,17 +18862,17 @@ function formatError2(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path9 = []) => {
+  const processError = (error63, path11 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path9, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path11, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path9, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path11, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path9, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path11, ...issue2.path]);
       } else {
-        const fullpath = [...path9, ...issue2.path];
+        const fullpath = [...path11, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -18911,8 +18911,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path9 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path9) {
+  const path11 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path11) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -36050,13 +36050,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path9 = ref.slice(1).split("/").filter(Boolean);
-  if (path9.length === 0) {
+  const path11 = ref.slice(1).split("/").filter(Boolean);
+  if (path11.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path9[0] === defsKey) {
-    const key = path9[1] === void 0 ? void 0 : decodeJSONPointerSegment(path9[1]);
+  if (path11[0] === defsKey) {
+    const key = path11[1] === void 0 ? void 0 : decodeJSONPointerSegment(path11[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -37845,6 +37845,9 @@ function checkDesignRevision(check2) {
   const canonical = JSON.stringify(canonicalCheck(check2));
   return `sha256:${(0, import_node_crypto.createHash)("sha256").update(canonical, "utf8").digest("hex")}`;
 }
+function isVerificationMethod(value) {
+  return VERIFICATION_METHODS.includes(value);
+}
 
 // src/skills/lib/knowledge_graph.ts
 var FENCE_PATTERN = /^(`{3,}|~{3,})/;
@@ -39193,6 +39196,18 @@ function requireCommitTreeOid(cwd, commit) {
   }
   return { commitOid: commitOid.toLowerCase(), treeOid: treeOid.toLowerCase() };
 }
+function isResolvableRevision(commit) {
+  return /^[A-Za-z0-9][A-Za-z0-9._/~^@-]*$/.test(commit.trim());
+}
+function resolveCommitSubject(cwd, commit) {
+  if (typeof commit !== "string" || !isResolvableRevision(commit)) return null;
+  try {
+    const { commitOid, treeOid } = requireCommitTreeOid(cwd, commit.trim());
+    return { commitOid, subjectDigest: subjectTreeDigest(treeOid) };
+  } catch {
+    return null;
+  }
+}
 function nowOf(options2) {
   return (options2.now ?? systemClock)();
 }
@@ -39657,9 +39672,623 @@ async function resolveEvidence(cwd, record2) {
   });
 }
 
+// src/skills/lib/verification_assessment/assess.ts
+var import_node_fs8 = __toESM(require("node:fs"));
+var import_node_path9 = __toESM(require("node:path"));
+
+// src/skills/lib/verification_assessment/types.ts
+var ASSESSMENT_SCHEMA_VERSION = 1;
+var VERIFICATION_SUMMARY_SCHEMA_VERSION = 1;
+var ASSESSMENT_REASON_CODES = [
+  // The caller's target could not be named (unresolvable commit, no
+  // snapshot): nothing can be judged applicable.
+  "target-unverifiable",
+  // The record's own subject could not be digested (e.g. its commit no
+  // longer resolves) — applicability cannot be proven.
+  "subject-unverifiable",
+  // The record's subject digest differs from the target's — it measured a
+  // different commit or workspace.
+  "subject-mismatch",
+  // Claim/check reference failed to resolve in the live graph (detail
+  // carries the resolution status).
+  "claim-unresolved",
+  "check-unresolved",
+  // Resolved, but the pinned revision no longer matches the live document
+  // or check design — the evidence predates the current design.
+  "claim-revision-mismatch",
+  "check-revision-mismatch",
+  // The resolved check does not target the claim the record credits.
+  "check-target-mismatch",
+  // The recorded method differs from the check's designed method — the
+  // outcome is not a measurement of the designed check.
+  "method-mismatch",
+  // A declared artifact is known-inaccessible.
+  "artifact-unavailable",
+  // A declared artifact is past its expiresAt deadline.
+  "artifact-expired",
+  // A declared artifact was recorded but never fetched — its content was
+  // never digest-verified.
+  "artifact-unverified",
+  // The recorded outcome is a measured failure of this target.
+  "outcome-failed",
+  // The recorded outcome is inconclusive/error/not-run — not a pass.
+  "outcome-not-passed"
+];
+var ASSESSMENT_REASON_SET = new Set(ASSESSMENT_REASON_CODES);
+var CHECK_STATUSES = [
+  // An applicable record assessed `sufficient` is the newest conclusive
+  // measurement for this target.
+  "satisfied",
+  // The newest conclusive applicable measurement is `insufficient` — a
+  // recorded failure for this target. Measured outcomes outrank any
+  // exemption: a failed check stays failed even under a valid waiver.
+  "failed",
+  // No conclusive evidence, but a validated waiver exempts the check.
+  "waived",
+  // No conclusive evidence, but a validated not-applicable verdict
+  // (impact-analysis basis) exempts the check.
+  "out-of-scope",
+  // In scope, no usable outcome and no valid exemption — unexecuted or
+  // indeterminate-only evidence. This is the bucket an unexecuted check
+  // lands in; it is never silently out-of-scope.
+  "undetermined",
+  // The check ref does not resolve in the live graph — coverage is
+  // unprovable, so the check gates as required.
+  "unresolved"
+];
+var CHECK_STATUS_SET = new Set(CHECK_STATUSES);
+var CLAIM_STATUSES = [
+  // Every in-scope required check is satisfied, waived, or out-of-scope.
+  "covered",
+  // At least one required check is covered, but not all.
+  "partial",
+  // No required check is covered — including the zero-required-checks
+  // coverage gap.
+  "uncovered",
+  // A required check measured a failure for this target.
+  "failed"
+];
+var CLAIM_STATUS_SET = new Set(CLAIM_STATUSES);
+function nonEmptyString2(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+function isIsoTimestamp2(value) {
+  return typeof value === "string" && !Number.isNaN(Date.parse(value));
+}
+function validateWaiver(value) {
+  if (!isPlainObject6(value)) return false;
+  if (!isPlainObject6(value.scope)) return false;
+  if (value.scope.kind !== "check" && value.scope.kind !== "claim") return false;
+  return nonEmptyString2(value.scope.ref) && nonEmptyString2(value.authority) && nonEmptyString2(value.reason) && isIsoTimestamp2(value.grantedAt) && isIsoTimestamp2(value.expiresAt);
+}
+function validateNotApplicableVerdict(value) {
+  return isPlainObject6(value) && nonEmptyString2(value.check) && nonEmptyString2(value.revision) && Array.isArray(value.paths) && value.paths.length > 0 && value.paths.every(nonEmptyString2) && nonEmptyString2(value.rule) && nonEmptyString2(value.judger) && nonEmptyString2(value.method) && nonEmptyString2(value.reason);
+}
+
+// src/skills/lib/verification_assessment/assess.ts
+function push2(reasons, code, detail = null) {
+  reasons.push({ code, detail });
+}
+function artifactAxes(record2, now, reasons) {
+  let unavailable = false;
+  let unverified = false;
+  for (const artifact of record2.artifacts) {
+    const expired = artifact.expiresAt !== null && Date.parse(artifact.expiresAt) <= Date.parse(now);
+    if (artifact.availability === "unavailable" || expired) {
+      unavailable = true;
+      push2(reasons, artifact.availability === "unavailable" ? "artifact-unavailable" : "artifact-expired", artifact.uri);
+    } else if (artifact.availability === "unverified") {
+      unverified = true;
+      push2(reasons, "artifact-unverified", artifact.uri);
+    }
+  }
+  return {
+    availability: unavailable ? "unavailable" : unverified ? "unknown" : "available",
+    brokenSupport: unavailable,
+    unverifiedSupport: unverified
+  };
+}
+function assessEvidenceIn(graph, record2, target, deps) {
+  const reasons = [];
+  const resolution = resolveEvidenceIn(graph, record2, deps.readDocument);
+  let applicability;
+  let unresolvable = false;
+  if (resolution.claim.status !== "resolved") {
+    unresolvable = true;
+    push2(reasons, "claim-unresolved", resolution.claim.status);
+  }
+  if (resolution.check.status !== "resolved") {
+    unresolvable = true;
+    push2(reasons, "check-unresolved", resolution.check.status);
+  }
+  let methodMismatch = false;
+  let mismatched = false;
+  if (!unresolvable) {
+    if (resolution.claim.status === "resolved" && !resolution.claim.matchesPinned) {
+      mismatched = true;
+      push2(reasons, "claim-revision-mismatch", resolution.claim.currentRevision);
+    }
+    if (resolution.check.status === "resolved" && !resolution.check.matchesPinned) {
+      mismatched = true;
+      push2(reasons, "check-revision-mismatch", resolution.check.currentRevision);
+    }
+    if (resolution.checkTargetsClaim === false) {
+      mismatched = true;
+      push2(reasons, "check-target-mismatch", record2.claim.ref);
+    }
+    if (resolution.check.status === "resolved") {
+      const check2 = resolveCheckReference(graph, record2.check.ref);
+      if (check2.status === "resolved" && check2.check.method !== record2.method) {
+        methodMismatch = true;
+        mismatched = true;
+        push2(reasons, "method-mismatch", `${check2.check.method}!=${record2.method}`);
+      }
+    }
+  }
+  let subjectKnown = true;
+  if (target.subjectDigest === null) {
+    subjectKnown = false;
+    push2(reasons, "target-unverifiable");
+  }
+  const recordDigest = deps.resolveSubjectDigest(record2.subject);
+  if (recordDigest === null) {
+    subjectKnown = false;
+    push2(reasons, "subject-unverifiable");
+  }
+  const subjectMatches = subjectKnown && recordDigest === target.subjectDigest;
+  if (subjectKnown && !subjectMatches) {
+    mismatched = true;
+    push2(reasons, "subject-mismatch", recordDigest);
+  }
+  if (unresolvable || !subjectKnown) {
+    applicability = "unknown";
+  } else if (mismatched) {
+    applicability = "not-applicable";
+  } else {
+    applicability = "applicable";
+  }
+  const axes = artifactAxes(record2, deps.now, reasons);
+  const integrity = axes.brokenSupport || methodMismatch ? "invalid" : axes.unverifiedSupport || record2.artifacts.length === 0 ? "unverified" : "verified";
+  if (applicability === "applicable" && record2.outcome === "failed") {
+    push2(reasons, "outcome-failed");
+  } else if (record2.outcome !== "passed" && record2.outcome !== "failed") {
+    push2(reasons, "outcome-not-passed", record2.outcome);
+  }
+  const assessment = applicability !== "applicable" ? "indeterminate" : record2.outcome === "failed" ? "insufficient" : record2.outcome !== "passed" || integrity !== "verified" ? "indeterminate" : "sufficient";
+  return {
+    schemaVersion: ASSESSMENT_SCHEMA_VERSION,
+    evidenceId: record2.evidenceId,
+    claim: record2.claim.ref,
+    check: record2.check.ref,
+    outcome: record2.outcome,
+    applicability,
+    availability: axes.availability,
+    integrity,
+    assessment,
+    reasons
+  };
+}
+function recordSubjectDigest(cwd, subject) {
+  if (subject.kind === "workspace") return subject.snapshotDigest;
+  const resolved = resolveCommitSubject(cwd, subject.commit);
+  return resolved === null ? null : resolved.subjectDigest;
+}
+async function assessEvidence(cwd, record2, target, options2 = {}) {
+  const graph = await scanKnowledgeGraph({ cwd });
+  const root = import_node_path9.default.resolve(cwd);
+  return assessEvidenceIn(graph, record2, target, {
+    readDocument: (docPath) => {
+      try {
+        return import_node_fs8.default.readFileSync(import_node_path9.default.join(root, docPath), "utf8");
+      } catch {
+        return null;
+      }
+    },
+    resolveSubjectDigest: (subject) => recordSubjectDigest(root, subject),
+    now: options2.now ?? (/* @__PURE__ */ new Date()).toISOString()
+  });
+}
+
+// src/skills/lib/verification_assessment/summary.ts
+var import_node_fs9 = __toESM(require("node:fs"));
+var import_node_path10 = __toESM(require("node:path"));
+
+// src/skills/lib/verification_assessment/waivers.ts
+var WAIVER_REASONS = {
+  malformed: "waiver-malformed",
+  untrustedAuthority: "waiver-untrusted-authority",
+  scopeUnresolved: "waiver-scope-unresolved",
+  expired: "waiver-expired",
+  invalidWindow: "waiver-invalid-window"
+};
+function waiverScopeResolves(graph, waiver) {
+  if (waiver.scope.kind === "check") {
+    return resolveCheckReference(graph, waiver.scope.ref).status === "resolved";
+  }
+  return resolveClaimReference(graph, waiver.scope.ref).status === "resolved";
+}
+function evaluateWaiver(graph, input2, authorities, now) {
+  const reasons = [];
+  if (!validateWaiver(input2)) {
+    const waiver = typeof input2 === "object" && input2 !== null ? input2 : { scope: { kind: "check", ref: "" }, authority: "", reason: "", grantedAt: "", expiresAt: "" };
+    return { verdict: waiver, status: "rejected", reasons: [WAIVER_REASONS.malformed] };
+  }
+  if (authorities === null || !authorities.includes(input2.authority)) {
+    reasons.push(WAIVER_REASONS.untrustedAuthority);
+  }
+  if (!waiverScopeResolves(graph, input2)) {
+    reasons.push(WAIVER_REASONS.scopeUnresolved);
+  }
+  const granted = Date.parse(input2.grantedAt);
+  const expires = Date.parse(input2.expiresAt);
+  if (expires <= Date.parse(now)) {
+    reasons.push(WAIVER_REASONS.expired);
+  }
+  if (expires <= granted) {
+    reasons.push(WAIVER_REASONS.invalidWindow);
+  }
+  return { verdict: input2, status: reasons.length === 0 ? "applied" : "rejected", reasons };
+}
+function evaluateWaivers(graph, inputs, authorities, now) {
+  const results = inputs.map((input2) => evaluateWaiver(graph, input2, authorities, now));
+  const rejected = results.filter((result) => result.status === "rejected").map((result) => ({ waiver: result.verdict, reasons: result.reasons }));
+  return { results, rejected };
+}
+var NOT_APPLICABLE_REASONS = {
+  malformed: "not-applicable-malformed",
+  checkUnresolved: "not-applicable-check-unresolved"
+};
+function evaluateNotApplicable(graph, input2) {
+  if (!validateNotApplicableVerdict(input2)) {
+    const verdict = typeof input2 === "object" && input2 !== null ? input2 : { check: "", revision: "", paths: [], rule: "", judger: "", method: "", reason: "" };
+    return { verdict, status: "rejected", reasons: [NOT_APPLICABLE_REASONS.malformed] };
+  }
+  if (resolveCheckReference(graph, input2.check).status !== "resolved") {
+    return { verdict: input2, status: "rejected", reasons: [NOT_APPLICABLE_REASONS.checkUnresolved] };
+  }
+  return { verdict: input2, status: "applied", reasons: [] };
+}
+function evaluateNotApplicables(graph, inputs) {
+  const results = inputs.map((input2) => evaluateNotApplicable(graph, input2));
+  const rejected = results.filter((result) => result.status === "rejected").map((result) => ({ verdict: result.verdict, reasons: result.reasons }));
+  return { results, rejected };
+}
+
+// src/skills/lib/verification_assessment/summary.ts
+var METHOD_CONSTRAINTS = {
+  "manual-review": {
+    kind: "manual-review",
+    detail: "evidence attests a human review outcome \u2014 a gate policy may require review provenance"
+  },
+  "runtime-monitoring": {
+    kind: "monitoring-continuous",
+    detail: "a point-in-time pass does not discharge a continuous monitoring obligation \u2014 a gate policy may require recency"
+  }
+};
+function scopedCheck(check2, fallbackRef) {
+  const ref = check2.qualifiedId ?? fallbackRef;
+  const method = isVerificationMethod(check2.method) ? check2.method : null;
+  return {
+    ref,
+    resolved: check2.qualifiedId !== null && method !== null,
+    claim: check2.target,
+    method,
+    required: check2.required,
+    designRevision: check2.designRevision,
+    constraints: method !== null && method in METHOD_CONSTRAINTS ? [METHOD_CONSTRAINTS[method]] : []
+  };
+}
+function scopeChecks(graph, input2) {
+  if (input2.checks !== void 0) {
+    return [...new Set(input2.checks)].sort().map((ref) => {
+      const resolution = resolveCheckReference(graph, ref);
+      if (resolution.status !== "resolved") {
+        return { ref, resolved: false, claim: null, method: null, required: true, designRevision: null, constraints: [] };
+      }
+      return scopedCheck(resolution.check, ref);
+    });
+  }
+  const scoped = [];
+  for (const node3 of graph.nodes) {
+    for (const check2 of node3.checks) {
+      scoped.push(scopedCheck(check2, `${node3.id ?? node3.path}::${check2.id}`));
+    }
+  }
+  return scoped.sort((left, right) => left.ref.localeCompare(right.ref));
+}
+function scopeClaims(graph, checks, input2) {
+  const refs = /* @__PURE__ */ new Set();
+  const resolved = /* @__PURE__ */ new Map();
+  for (const check2 of checks) {
+    if (check2.claim !== null && check2.resolved) {
+      refs.add(check2.claim);
+      resolved.set(check2.claim, true);
+    }
+  }
+  for (const ref of input2.claims ?? []) {
+    if (refs.has(ref)) continue;
+    refs.add(ref);
+    resolved.set(ref, resolveClaimReference(graph, ref).status === "resolved");
+  }
+  return [...refs].sort().map((ref) => ({ ref, resolved: resolved.get(ref) === true }));
+}
+function compareRecords(left, right) {
+  return left.createdAt === right.createdAt ? left.evidenceId.localeCompare(right.evidenceId) : left.createdAt.localeCompare(right.createdAt);
+}
+function classifyCheck(check2, assessed, waiver, notApplicable) {
+  const reasons = [];
+  if (!check2.resolved) {
+    reasons.push("check-unresolved");
+    return {
+      ref: check2.ref,
+      claim: check2.claim,
+      method: check2.method,
+      required: check2.required,
+      designRevision: check2.designRevision,
+      constraints: check2.constraints,
+      executed: false,
+      status: "unresolved",
+      evidence: { sufficient: [], insufficient: [], indeterminate: [] },
+      latestConclusiveAt: null,
+      waiver,
+      notApplicable,
+      reasons
+    };
+  }
+  const buckets = { sufficient: [], insufficient: [], indeterminate: [] };
+  const conclusive = assessed.filter((entry) => entry.assessment.assessment !== "indeterminate").sort((left, right) => compareRecords(left.record, right.record));
+  for (const entry of assessed) {
+    buckets[entry.assessment.assessment].push(entry.assessment.evidenceId);
+  }
+  const latest = conclusive.length === 0 ? null : conclusive[conclusive.length - 1];
+  const executed = latest !== null;
+  let status;
+  if (latest !== null) {
+    status = latest.assessment.assessment === "sufficient" ? "satisfied" : "failed";
+    if (status === "failed") reasons.push("required-check-failed");
+  } else if (notApplicable?.status === "applied") {
+    status = "out-of-scope";
+    reasons.push("out-of-scope-verdict");
+  } else if (waiver?.status === "applied") {
+    status = "waived";
+    reasons.push("waiver-applied");
+  } else {
+    status = "undetermined";
+    reasons.push(assessed.length === 0 ? "unexecuted" : "indeterminate-evidence");
+  }
+  if (waiver?.status === "rejected") reasons.push(...waiver.reasons);
+  if (notApplicable?.status === "rejected") reasons.push(...notApplicable.reasons);
+  return {
+    ref: check2.ref,
+    claim: check2.claim,
+    method: check2.method,
+    required: check2.required,
+    designRevision: check2.designRevision,
+    constraints: check2.constraints,
+    executed,
+    status,
+    evidence: buckets,
+    latestConclusiveAt: latest === null ? null : latest.record.createdAt,
+    waiver,
+    notApplicable,
+    reasons
+  };
+}
+function classifyClaim(ref, resolved, checks) {
+  const scoped = checks.filter((check2) => check2.claim === ref);
+  const required2 = scoped.filter((check2) => check2.required);
+  const reasons = [];
+  let status;
+  if (!resolved) {
+    status = "uncovered";
+    reasons.push("claim-unresolved");
+  } else if (required2.length === 0) {
+    status = "uncovered";
+    reasons.push("claim-no-required-checks");
+  } else if (required2.some((check2) => check2.status === "failed")) {
+    status = "failed";
+    reasons.push("claim-required-check-failed");
+  } else {
+    const covered = required2.filter((check2) => check2.status === "satisfied" || check2.status === "waived" || check2.status === "out-of-scope");
+    if (covered.length === required2.length) {
+      status = "covered";
+    } else if (covered.length === 0) {
+      status = "uncovered";
+      reasons.push("claim-uncovered");
+    } else {
+      status = "partial";
+      reasons.push("claim-partial-coverage");
+    }
+  }
+  return {
+    ref,
+    status,
+    checks: scoped.map((check2) => check2.ref).sort(),
+    requiredChecks: required2.map((check2) => check2.ref).sort(),
+    reasons
+  };
+}
+var CHECK_DESIGN_ISSUE_CODES = /* @__PURE__ */ new Set([
+  // verification_checks.ts parse findings
+  "malformed-checks",
+  "malformed-check-entry",
+  "missing-check-field",
+  "invalid-check-id",
+  "duplicate-check",
+  "invalid-check-target",
+  "invalid-check-method",
+  "check-criteria-mismatch",
+  "incomplete-required-check",
+  // knowledge_graph.ts projection findings
+  "unresolved-check-target",
+  "ambiguous-check-target",
+  "invalid-check-anchor",
+  "unresolved-check-anchor",
+  "duplicate-check-anchor",
+  "check-anchor-mismatch",
+  "misplaced-check-anchor",
+  "misplaced-checks"
+]);
+function buildVerificationSummaryIn(graph, input2, deps) {
+  const now = input2.now ?? (/* @__PURE__ */ new Date()).toISOString();
+  const target = {
+    subject: input2.subject,
+    subjectDigest: input2.subjectDigest ?? null
+  };
+  const scopedChecks = scopeChecks(graph, input2);
+  const scopedClaims = scopeClaims(graph, scopedChecks, input2);
+  const checkRefs = new Set(scopedChecks.map((check2) => check2.ref));
+  const records = [...input2.records].sort(compareRecords);
+  const assessmentsByCheck = /* @__PURE__ */ new Map();
+  const assessments = [];
+  for (const record2 of records) {
+    if (!checkRefs.has(record2.check.ref)) continue;
+    const assessment = assessEvidenceIn(graph, record2, target, {
+      readDocument: deps.readDocument,
+      resolveSubjectDigest: deps.resolveSubjectDigest,
+      now
+    });
+    assessments.push(assessment);
+    const bucket = assessmentsByCheck.get(record2.check.ref) ?? [];
+    bucket.push({ assessment, record: record2 });
+    assessmentsByCheck.set(record2.check.ref, bucket);
+  }
+  const authorities = input2.waiverAuthorities ?? null;
+  const waivers = evaluateWaivers(graph, input2.waivers ?? [], authorities, now);
+  const notApplicables = evaluateNotApplicables(graph, input2.notApplicable ?? []);
+  const checks = scopedChecks.map((check2) => {
+    const waiver = firstWaiverForScope(waivers.results, "check", check2.ref) ?? (check2.claim === null ? null : firstWaiverForScope(waivers.results, "claim", check2.claim));
+    const notApplicable = firstVerdictForCheck(notApplicables.results, check2.ref);
+    return classifyCheck(check2, assessmentsByCheck.get(check2.ref) ?? [], waiver, notApplicable);
+  });
+  const claims = scopedClaims.map((claim2) => classifyClaim(claim2.ref, claim2.resolved, checks));
+  const requiredChecks = checks.filter((check2) => check2.required);
+  const reasons = [];
+  const failed = requiredChecks.filter((check2) => check2.status === "failed");
+  const gated = requiredChecks.filter((check2) => check2.status === "undetermined" || check2.status === "unresolved");
+  const uncovered = claims.filter((claim2) => claim2.status !== "covered");
+  for (const check2 of failed) reasons.push(`required-check-failed:${check2.ref}`);
+  for (const check2 of gated) reasons.push(`required-check-${check2.status}:${check2.ref}`);
+  for (const claim2 of uncovered) reasons.push(`claim-${claim2.status}:${claim2.ref}`);
+  for (const entry of waivers.rejected) {
+    reasons.push(`rejected-waiver:${entry.waiver.scope.ref}`);
+  }
+  for (const entry of notApplicables.rejected) {
+    reasons.push(`rejected-not-applicable:${entry.verdict.check}`);
+  }
+  const designIssues = graph.issues.filter((issue2) => CHECK_DESIGN_ISSUE_CODES.has(issue2.code));
+  for (const issue2 of designIssues) {
+    reasons.push(`check-design-invalid:${issue2.code}:${issue2.path}`);
+  }
+  if (target.subjectDigest === null) reasons.push("target-unverifiable");
+  let verdict;
+  if (failed.length > 0 || claims.some((claim2) => claim2.status === "failed")) {
+    verdict = "failed";
+  } else if (gated.length > 0 || uncovered.length > 0 || designIssues.length > 0) {
+    verdict = "indeterminate";
+  } else {
+    verdict = "verified";
+    if (requiredChecks.length === 0 && claims.length === 0) {
+      reasons.push("no-required-coverage");
+    } else if (requiredChecks.length === 0) {
+      reasons.push("no-required-checks");
+    }
+  }
+  const counts = {
+    checks: {
+      total: checks.length,
+      required: requiredChecks.length,
+      advisory: checks.length - requiredChecks.length,
+      satisfied: checks.filter((check2) => check2.status === "satisfied").length,
+      failed: failed.length,
+      waived: checks.filter((check2) => check2.status === "waived").length,
+      outOfScope: checks.filter((check2) => check2.status === "out-of-scope").length,
+      undetermined: checks.filter((check2) => check2.status === "undetermined").length,
+      unresolved: checks.filter((check2) => check2.status === "unresolved").length
+    },
+    claims: {
+      total: claims.length,
+      covered: claims.filter((claim2) => claim2.status === "covered").length,
+      partial: claims.filter((claim2) => claim2.status === "partial").length,
+      uncovered: claims.filter((claim2) => claim2.status === "uncovered").length,
+      failed: claims.filter((claim2) => claim2.status === "failed").length
+    },
+    evidence: {
+      total: assessments.length,
+      sufficient: assessments.filter((entry) => entry.assessment === "sufficient").length,
+      insufficient: assessments.filter((entry) => entry.assessment === "insufficient").length,
+      indeterminate: assessments.filter((entry) => entry.assessment === "indeterminate").length
+    }
+  };
+  return {
+    schemaVersion: VERIFICATION_SUMMARY_SCHEMA_VERSION,
+    kind: "verification-summary",
+    target,
+    assessedAt: now,
+    scope: {
+      claims: claims.map((claim2) => claim2.ref),
+      checks: checks.map((check2) => check2.ref)
+    },
+    claims,
+    checks,
+    evidence: assessments,
+    rejectedWaivers: waivers.rejected,
+    rejectedNotApplicable: notApplicables.rejected,
+    counts,
+    verdict,
+    reasons: reasons.sort()
+  };
+}
+function firstWaiverForScope(results, kind, ref) {
+  for (const result of results) {
+    if (result.verdict.scope.kind === kind && result.verdict.scope.ref === ref) return result;
+  }
+  return null;
+}
+function firstVerdictForCheck(results, ref) {
+  for (const result of results) {
+    if (result.verdict.check === ref) return result;
+  }
+  return null;
+}
+function normalizeTarget(cwd, input2) {
+  if (input2.subject.kind === "commit") {
+    const resolved = resolveCommitSubject(cwd, input2.subject.commit);
+    return {
+      subject: resolved === null ? input2.subject : { kind: "commit", commit: resolved.commitOid },
+      subjectDigest: resolved === null ? null : resolved.subjectDigest
+    };
+  }
+  return { subject: input2.subject, subjectDigest: input2.subject.snapshotDigest };
+}
+async function buildVerificationSummary(cwd, input2, options2 = {}) {
+  const root = import_node_path10.default.resolve(cwd);
+  const graph = await scanKnowledgeGraph({ cwd: root });
+  const records = input2.records ?? query(root, { runId: input2.runId }, options2);
+  const target = normalizeTarget(root, input2);
+  return buildVerificationSummaryIn(graph, { ...input2, subject: target.subject, records, subjectDigest: target.subjectDigest }, {
+    readDocument: (docPath) => {
+      try {
+        return import_node_fs9.default.readFileSync(import_node_path10.default.join(root, docPath), "utf8");
+      } catch {
+        return null;
+      }
+    },
+    resolveSubjectDigest: (subject) => recordSubjectDigest(root, subject)
+  });
+}
+
 // src/skills/doc-driven-dev-graph/scripts/evidence_store.ts
 function parseArgs(argv) {
-  const args = { positional: [], cwd: process.cwd(), allowExternalRoot: false, json: false };
+  const args = {
+    positional: [],
+    cwd: process.cwd(),
+    allowExternalRoot: false,
+    json: false,
+    claims: [],
+    checks: [],
+    waiverAuthorities: []
+  };
   const take = (flag, i) => {
     const value = argv[i + 1];
     if (value === void 0) throw new Error(`Missing value for ${flag}`);
@@ -39675,11 +40304,18 @@ function parseArgs(argv) {
     else if (arg === "--resolve") args.resolve = true;
     else if (arg === "--check") args.check = take(arg, i), i += 1;
     else if (arg === "--claim") args.claim = take(arg, i), i += 1;
+    else if (arg === "--scope-claim") args.claims.push(take(arg, i)), i += 1;
+    else if (arg === "--scope-check") args.checks.push(take(arg, i)), i += 1;
+    else if (arg === "--waivers") args.waivers = take(arg, i), i += 1;
+    else if (arg === "--waiver-authority") args.waiverAuthorities.push(take(arg, i)), i += 1;
+    else if (arg === "--not-applicable") args.notApplicable = take(arg, i), i += 1;
+    else if (arg === "--out") args.out = take(arg, i), i += 1;
     else if (arg === "--outcome") args.outcome = take(arg, i), i += 1;
     else if (arg === "--retention") args.retention = take(arg, i), i += 1;
     else if (arg === "--subject-kind") args.subjectKind = take(arg, i), i += 1;
     else if (arg === "--run-id") args.runId = take(arg, i), i += 1;
     else if (arg === "--commit") args.commit = take(arg, i), i += 1;
+    else if (arg === "--snapshot") args.snapshot = take(arg, i), i += 1;
     else if (arg === "--as") args.as = take(arg, i), i += 1;
     else if (arg === "--help" || arg === "-h") args.help = true;
     else if (!arg.startsWith("-") && args.command === void 0) args.command = arg;
@@ -39692,15 +40328,16 @@ function usage() {
   return [
     "Usage: node scripts/evidence_store.js <command> [options]",
     "",
-    "Commands: put | get | query | reindex | resolve | promote | manifest | recover",
+    "Commands: put | get | query | reindex | resolve | assess | summary | promote | manifest | recover",
     "",
     "Run `node scripts/evidence_store.js` with a command plus --cwd <repo>;",
-    "see references/evidence-store-contract.md for the record contract."
+    "see references/evidence-store-contract.md for the record contract and",
+    "references/verification-summary-contract.md for the assessment contract."
   ].join("\n");
 }
 function readFileArg(cwd, value, flag) {
   if (value === void 0) throw new Error(`${flag} is required`);
-  return import_node_fs8.default.readFileSync(import_node_path9.default.resolve(cwd, value), "utf8");
+  return import_node_fs10.default.readFileSync(import_node_path11.default.resolve(cwd, value), "utf8");
 }
 function requireEvidenceId(args) {
   const id = args.positional[0];
@@ -39709,6 +40346,25 @@ function requireEvidenceId(args) {
 }
 function storeOptions(args) {
   return { stateRoot: args.stateRoot, allowExternalRoot: args.allowExternalRoot };
+}
+function targetSubject(args) {
+  if (args.commit !== void 0 && args.snapshot !== void 0) {
+    throw new Error(`${args.command} takes exactly one subject: --commit <sha> or --snapshot <digest>`);
+  }
+  if (args.commit !== void 0) return { kind: "commit", commit: args.commit };
+  if (args.snapshot !== void 0) {
+    if (!isRevisionDigest(args.snapshot)) {
+      throw new Error(`--snapshot must be a sha256:<64-hex> digest, got ${JSON.stringify(args.snapshot)}`);
+    }
+    return { kind: "workspace", snapshotDigest: args.snapshot };
+  }
+  throw new Error(`${args.command} requires a target subject: --commit <sha> or --snapshot <digest>`);
+}
+function readJsonArray(cwd, value, flag) {
+  if (value === void 0) return [];
+  const parsed = JSON.parse(readFileArg(cwd, value, flag));
+  if (!Array.isArray(parsed)) throw new Error(`${flag} must contain a JSON array`);
+  return parsed;
 }
 function emit(args, payload) {
   if (args.json) {
@@ -39727,7 +40383,7 @@ async function resolvePinnedRevisions(cwd, input2) {
     );
   }
   input2.claim.documentRevision = documentRevisionOf(
-    import_node_fs8.default.readFileSync(import_node_path9.default.join(import_node_path9.default.resolve(cwd), claim2.node.path), "utf8")
+    import_node_fs10.default.readFileSync(import_node_path11.default.join(import_node_path11.default.resolve(cwd), claim2.node.path), "utf8")
   );
   const check2 = resolveCheckReference(graph, String(input2.check?.ref ?? ""));
   if (check2.status !== "resolved") {
@@ -39745,7 +40401,15 @@ async function resolvePinnedRevisions(cwd, input2) {
   input2.check.designRevision = check2.check.designRevision;
 }
 async function main() {
-  let args = { positional: [], cwd: process.cwd(), allowExternalRoot: false, json: false };
+  let args = {
+    positional: [],
+    cwd: process.cwd(),
+    allowExternalRoot: false,
+    json: false,
+    claims: [],
+    checks: [],
+    waiverAuthorities: []
+  };
   try {
     args = parseArgs(process.argv.slice(2));
     if (args.help || args.command === void 0) {
@@ -39753,8 +40417,8 @@ async function main() {
       if (!args.help && args.command === void 0) process.exitCode = 1;
       return;
     }
-    const cwd = import_node_path9.default.resolve(args.cwd);
-    if (!import_node_fs8.default.existsSync(cwd) || !import_node_fs8.default.statSync(cwd).isDirectory()) {
+    const cwd = import_node_path11.default.resolve(args.cwd);
+    if (!import_node_fs10.default.existsSync(cwd) || !import_node_fs10.default.statSync(cwd).isDirectory()) {
       throw new Error(`--cwd does not exist or is not a directory: ${args.cwd}`);
     }
     if (!schemaEntrypointGuard(cwd)) return;
@@ -39797,6 +40461,33 @@ async function main() {
         throw new StoreError("evidence-not-found", `evidence ${args.positional[0]} does not exist`);
       }
       emit(args, { resolution: await resolveEvidence(cwd, record2) });
+      return;
+    }
+    if (command === "assess") {
+      const record2 = getById(cwd, requireEvidenceId(args), options2);
+      if (record2 === null) {
+        throw new StoreError("evidence-not-found", `evidence ${args.positional[0]} does not exist`);
+      }
+      const target = normalizeTarget(cwd, { subject: targetSubject(args) });
+      emit(args, { assessment: await assessEvidence(cwd, record2, target) });
+      return;
+    }
+    if (command === "summary") {
+      const summary = await buildVerificationSummary(cwd, {
+        subject: targetSubject(args),
+        claims: args.claims.length > 0 ? args.claims : void 0,
+        checks: args.checks.length > 0 ? args.checks : void 0,
+        runId: args.runId,
+        waivers: readJsonArray(cwd, args.waivers, "--waivers"),
+        waiverAuthorities: args.waiverAuthorities.length > 0 ? args.waiverAuthorities : void 0,
+        notApplicable: readJsonArray(cwd, args.notApplicable, "--not-applicable")
+      }, options2);
+      if (args.out !== void 0) {
+        const outFile = import_node_path11.default.resolve(cwd, args.out);
+        import_node_fs10.default.writeFileSync(outFile, `${JSON.stringify(summary, null, 2)}
+`, "utf8");
+      }
+      emit(args, { summary });
       return;
     }
     if (command === "promote") {
