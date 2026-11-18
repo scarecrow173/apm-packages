@@ -14,7 +14,9 @@ import {
   preDesignAnchors,
 } from "../../../doc-driven-dev-graph/scripts/lib/graph_state";
 import {
+  artifactKeyOf,
   compareStrings,
+  groupByArtifact,
   scanRepository,
   type RepositoryDocument,
 } from "../../../lib/doc_repository";
@@ -232,8 +234,18 @@ export async function auditBriefingPair(cwd: string, specPath: string, adrPath: 
     }
   }
   const duplicateIds = model.duplicateIds();
+  const groups = groupByArtifact(records);
+  const auditedArtifacts = new Set<string>();
   for (const record of records.filter((item) => relevant.has(item.path))) {
-    auditRelations(record, duplicateIds, knowledge, findings);
+    // `relevant` holds graph node paths — artifact primaries — but the raw
+    // front-matter check must see the whole artifact group: a malformed
+    // `relations` field on a locale sibling is normalized away by
+    // `extractRelations` before the graph reads it, so each member file is
+    // audited once per artifact group.
+    const groupKey = artifactKeyOf(record.path);
+    if (auditedArtifacts.has(groupKey)) continue;
+    auditedArtifacts.add(groupKey);
+    auditRelations(record, groups.get(groupKey) ?? [record], duplicateIds, knowledge, findings);
   }
   return {
     spec: spec?.path ?? null,
@@ -267,6 +279,7 @@ const RELATION_ISSUE_CODES: ReadonlySet<string> = new Set([
 
 function auditRelations(
   record: RepositoryDocument,
+  members: RepositoryDocument[],
   duplicateIds: { id: string; paths: string[] }[],
   knowledge: KnowledgeGraph,
   findings: BriefingAuditFinding[],
@@ -276,27 +289,35 @@ function auditRelations(
   }
   // Structural relation defects the repository parser normalizes away
   // (non-mapping `relations`, non-string members) still fail the audit —
-  // malformed front matter is invalid, never silently empty.
-  const raw = record.frontMatter.relations;
-  if (raw !== undefined && raw !== null) {
+  // malformed front matter is invalid, never silently empty. The raw check
+  // walks every member file of the artifact group: a malformed `relations`
+  // field on a locale sibling never reaches the primary's raw front matter
+  // or the normalized relation map the graph reads.
+  for (const member of members) {
+    const raw = member.frontMatter.relations;
+    if (raw === undefined || raw === null) continue;
     if (typeof raw !== "object" || Array.isArray(raw)) {
-      findings.push({ severity: "error", code: "invalid-relation", file: record.path, message: "relations must be a mapping of relation names to target lists" });
-    } else {
-      for (const [field, value] of Object.entries(raw as Record<string, unknown>).sort((a, b) => compareStrings(a[0], b[0]))) {
-        if (nonReferenceRelationKeys.has(field)) continue;
-        const items = Array.isArray(value) ? value : typeof value === "string" ? [value] : null;
-        if (items === null || items.some((item) => typeof item !== "string" || !item.trim())) {
-          findings.push({ severity: "error", code: "invalid-relation", file: record.path, message: `Relation ${field} has a malformed (non-string) target` });
-        }
+      findings.push({ severity: "error", code: "invalid-relation", file: member.path, message: "relations must be a mapping of relation names to target lists" });
+      continue;
+    }
+    for (const [field, value] of Object.entries(raw as Record<string, unknown>).sort((a, b) => compareStrings(a[0], b[0]))) {
+      if (nonReferenceRelationKeys.has(field)) continue;
+      const items = Array.isArray(value) ? value : typeof value === "string" ? [value] : null;
+      if (items === null || items.some((item) => typeof item !== "string" || !item.trim())) {
+        findings.push({ severity: "error", code: "invalid-relation", file: member.path, message: `Relation ${field} has a malformed (non-string) target` });
       }
     }
   }
+  // Graph issues attribute node-level findings to the artifact's primary
+  // path — match against every member path so an audit entered through a
+  // locale sibling still surfaces them.
+  const memberPaths = new Set(members.map((member) => member.path));
   for (const issue of knowledge.issues) {
-    if (issue.path !== record.path || !RELATION_ISSUE_CODES.has(issue.code)) continue;
+    if (!memberPaths.has(issue.path) || !RELATION_ISSUE_CODES.has(issue.code)) continue;
     findings.push({
       severity: "error",
       code: BROKEN_LINK_ISSUE_CODES.has(issue.code) ? "broken-relation-link" : "invalid-relation",
-      file: record.path,
+      file: issue.path,
       message: issue.message,
     });
   }

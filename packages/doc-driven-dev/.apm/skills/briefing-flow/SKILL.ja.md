@@ -258,7 +258,7 @@ edge が届く共通の discovery/brainstorm anchor、または共通の承認�
 finding であり、audit を通過するのではなく失敗させる。
 両文書とすべての共通 anchor を検査し、直接 evidence も anchor
 evidence もない場合は代わりにすべての supporting design を検査する。plan の検証や
-下流 chain の選択は行わず、design/plan の focus 曖昧性は graph の focus gate に委ねる。
+下流 chain の選択は行わず、design の focus 曖昧性は graph の focus gate に委ねる。
 外部 URL、fragment の参照先、参照先の内容は検査せず、placeholder は警告となる。
 この audit は意味的同一性や意味的矛盾、既知の制約が正しく反映されたことを証明しない。
 caller は上記の別途確認を行う。

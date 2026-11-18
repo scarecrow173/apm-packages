@@ -289,7 +289,7 @@ artifacts, or a shared approved design (`design realizes → spec` plus
 rather than satisfying it. The audit
 checks both documents and all shared anchors; when neither direct
 nor anchor evidence exists, it checks all supporting designs instead. It
-does not validate plans or select a downstream chain; design/plan focus
+does not validate plans or select a downstream chain; design focus
 ambiguity belongs to the graph's focus gate. External URLs, fragment targets
 and destination contents are not checked; placeholders are warnings. The
 audit does not establish semantic identity or detect semantic contradictions

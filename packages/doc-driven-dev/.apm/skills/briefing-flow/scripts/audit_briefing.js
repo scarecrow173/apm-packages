@@ -38984,8 +38984,13 @@ async function auditBriefingPair(cwd, specPath, adrPath) {
     }
   }
   const duplicateIds = model.duplicateIds();
+  const groups = groupByArtifact(records);
+  const auditedArtifacts = /* @__PURE__ */ new Set();
   for (const record2 of records.filter((item) => relevant.has(item.path))) {
-    auditRelations(record2, duplicateIds, knowledge, findings);
+    const groupKey = artifactKeyOf(record2.path);
+    if (auditedArtifacts.has(groupKey)) continue;
+    auditedArtifacts.add(groupKey);
+    auditRelations(record2, groups.get(groupKey) ?? [record2], duplicateIds, knowledge, findings);
   }
   return {
     spec: spec?.path ?? null,
@@ -39008,30 +39013,32 @@ var RELATION_ISSUE_CODES = /* @__PURE__ */ new Set([
   "invalid-relation-target-type",
   "relation-cycle"
 ]);
-function auditRelations(record2, duplicateIds, knowledge, findings) {
+function auditRelations(record2, members2, duplicateIds, knowledge, findings) {
   if (record2.id && duplicateIds.some((entry) => entry.id === record2.id)) {
     findings.push({ severity: "error", code: "duplicate-id", file: record2.path, message: `Duplicate artifact ID: ${record2.id}` });
   }
-  const raw = record2.frontMatter.relations;
-  if (raw !== void 0 && raw !== null) {
+  for (const member of members2) {
+    const raw = member.frontMatter.relations;
+    if (raw === void 0 || raw === null) continue;
     if (typeof raw !== "object" || Array.isArray(raw)) {
-      findings.push({ severity: "error", code: "invalid-relation", file: record2.path, message: "relations must be a mapping of relation names to target lists" });
-    } else {
-      for (const [field, value] of Object.entries(raw).sort((a, b) => compareStrings(a[0], b[0]))) {
-        if (nonReferenceRelationKeys.has(field)) continue;
-        const items = Array.isArray(value) ? value : typeof value === "string" ? [value] : null;
-        if (items === null || items.some((item) => typeof item !== "string" || !item.trim())) {
-          findings.push({ severity: "error", code: "invalid-relation", file: record2.path, message: `Relation ${field} has a malformed (non-string) target` });
-        }
+      findings.push({ severity: "error", code: "invalid-relation", file: member.path, message: "relations must be a mapping of relation names to target lists" });
+      continue;
+    }
+    for (const [field, value] of Object.entries(raw).sort((a, b) => compareStrings(a[0], b[0]))) {
+      if (nonReferenceRelationKeys.has(field)) continue;
+      const items = Array.isArray(value) ? value : typeof value === "string" ? [value] : null;
+      if (items === null || items.some((item) => typeof item !== "string" || !item.trim())) {
+        findings.push({ severity: "error", code: "invalid-relation", file: member.path, message: `Relation ${field} has a malformed (non-string) target` });
       }
     }
   }
+  const memberPaths = new Set(members2.map((member) => member.path));
   for (const issue2 of knowledge.issues) {
-    if (issue2.path !== record2.path || !RELATION_ISSUE_CODES.has(issue2.code)) continue;
+    if (!memberPaths.has(issue2.path) || !RELATION_ISSUE_CODES.has(issue2.code)) continue;
     findings.push({
       severity: "error",
       code: BROKEN_LINK_ISSUE_CODES.has(issue2.code) ? "broken-relation-link" : "invalid-relation",
-      file: record2.path,
+      file: issue2.path,
       message: issue2.message
     });
   }

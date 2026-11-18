@@ -476,6 +476,37 @@ test("fails closed on a selected discovery's malformed or missing relations", as
   assert.equal(report.consistent, false);
 });
 
+test("flags a malformed relations field on an audited artifact's locale sibling", async () => {
+  const repo = pairedRepo();
+  // The locale sibling shares the spec's artifact identity, so its raw
+  // front matter is audited too: `extractRelations` normalizes the
+  // non-string `decides-for` value away before the graph can see it, and
+  // only the per-member raw check can still surface the defect.
+  writeArtifact(repo, "docs/specs/0001-graph.ja.md", {
+    id: "SPEC-0001", type: "spec", status: "proposed", title: "Graph",
+    relations: { "decides-for": 5 },
+  }, "# Graph\n");
+  const report = await auditBriefingPair(repo, "docs/specs/0001-graph.md", "docs/adr/0001-graph.md");
+  const finding = report.findings.find((entry) => entry.code === "invalid-relation");
+  assert.ok(finding);
+  assert.equal(finding.severity, "error");
+  assert.equal(finding.file, "docs/specs/0001-graph.ja.md");
+  assert.equal(report.consistent, false);
+});
+
+test("flags a non-mapping relations field on an audited artifact's locale sibling", async () => {
+  const repo = pairedRepo();
+  writeArtifact(repo, "docs/adr/0001-graph.ja.md", {
+    id: "ADR-0001", type: "adr", status: "proposed", title: "Graph ADR",
+    relations: ["ADR-0001"],
+  }, "# Graph ADR\n");
+  const report = await auditBriefingPair(repo, "docs/specs/0001-graph.md", "docs/adr/0001-graph.md");
+  const finding = report.findings.find((entry) => entry.code === "invalid-relation");
+  assert.ok(finding);
+  assert.equal(finding.file, "docs/adr/0001-graph.ja.md");
+  assert.equal(report.consistent, false);
+});
+
 test("checks local Markdown destinations but not external URLs, fragments or code", async () => {
   const repo = pairedRepo();
   writeArtifact(repo, "docs/specs/0001-graph.md", {
