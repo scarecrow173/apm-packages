@@ -7,6 +7,10 @@
 アーキテクチャメモ、運用runbook、あるいは教訓。正規の Git-Markdown であり、
 実行アーティファクトでも派生出力でもありません。
 
+契約の*抽出*部分 —— 実装の知見がいつナレッジになるか、および assess → 決定 →
+apply の統合フロー —— は `references/knowledge-extraction.md` にあります。
+このファイルは形式契約です。
+
 ## ディレクトリ
 
 正規ディレクトリは `docs/knowledge/` です。旧スイートと異なり、ナレッジは
@@ -44,6 +48,7 @@ relations:
 - `id` —— `KNOW-` プレフィックスと共有の 22 文字 Base62 アーティファクト ID。
 - `type` —— 常に `knowledge`。
 - `knowledge_kind` —— レコードを分類するトップレベルフィールド:
+
   | 値 | 意味 |
   | --- | --- |
   | `codebase` | コードが今日どう構成され振る舞うか。 |
@@ -61,7 +66,7 @@ relations:
 | ステータス | 意味 |
 | --- | --- |
 | `draft` | 記録済みだが未検証。 |
-| `confirmed` | レビュー済みで正確と認められた。 |
+| `confirmed` | レビュー済みで正確と認められた —— 記録済み出処が必須 (作成時に `--from`; 未検証の推測は確定的なものとして保存しない)。 |
 | `archived` | 保守終了。参照用に保持 (確定)。 |
 | `superseded` | 新しいナレッジドキュメントに置き換えられた (確定)。 |
 
@@ -71,7 +76,33 @@ relations:
   Knowledge Relations 語彙ではなく出処情報です。
 - `relations.informs` —— この知識が影響する durable ドキュメント。
 - `relations.explains` —— この知識が説明する durable ドキュメント。
-- `relations.supersedes` —— このドキュメントが置き換えるナレッジドキュメント。
+- `relations.supersedes` —— このドキュメントが置き換えるナレッジドキュメント
+  (`new_knowledge.js --supersedes` と `consolidate_knowledge.js` は対象が
+  ナレッジドキュメントに解決されることを検証します)。
+
+## 統合 CLI
+
+`scripts/consolidate_knowledge.js` は統合エントリポイントです ——
+`knowledge-extraction.md` の決定契約を決定的に強制します:
+
+```bash
+# 読み取り専用スクリーニング: 候補、競合、ゲート。
+node scripts/consolidate_knowledge.js assess --title "…" [--kind codebase] [--keyword …]
+
+# 明示的な決定 —— ちょうど1つ:
+node scripts/consolidate_knowledge.js apply --decision none
+node scripts/consolidate_knowledge.js apply --decision route --to spec|design|adr|verification|discovery|idea|brainstorm
+node scripts/consolidate_knowledge.js apply --decision integrate --into <knowledge-doc> --from <src>… --basis <evidence> [--status …] [--informs <doc>]… [--explains <doc>]…
+node scripts/consolidate_knowledge.js apply --decision create --title "…" --kind <kind> --from <src>… --basis <evidence> [--acknowledge <id|path>]…
+```
+
+- `assess` は書き込みません; `route` と `none` も書き込みません。
+- `integrate` はナレッジドキュメントのみ変更します —— spec/design/ADR 対象は
+  拒否され、所有スキルに振られます。
+- `create` は `assess` が未承認の競合を報告する間は拒否します; 各競合は
+  レビュー後に `--acknowledge` で渡す必要があります。
+- `--from` と `--basis` は `integrate` と `create` で必須です: 抽出の
+  原典と根拠は常に記録されます。
 
 ## インデックス
 

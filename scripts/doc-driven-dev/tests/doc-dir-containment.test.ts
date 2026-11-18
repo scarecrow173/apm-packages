@@ -54,6 +54,7 @@ const writerClis: Array<[skill: string, script: string, extraArgs: string[]]> = 
   ["discovery-doc", "new_discovery.js", ["--title", "X"]],
   ["idea-doc", "new_idea.js", ["--title", "X"]],
   ["knowledge-doc", "new_knowledge.js", ["--title", "X", "--kind", "lesson"]],
+  ["knowledge-doc", "consolidate_knowledge.js", ["apply", "--decision", "create", "--title", "X", "--kind", "lesson", "--from", "s", "--basis", "b"]],
   ["verification-doc", "new_verification.js", ["--title", "X"]],
   ["spec-doc", "new_spec.js", ["--title", "X"]],
 ];

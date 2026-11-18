@@ -1,16 +1,16 @@
 ---
 name: impl-doc
-description: "Record what was actually implemented (ir) and what was tried during
-  implementation (exp) under docs/impl/. Use when creating or auditing Implementation
-  Records or Experiment Logs for any task. Keywords: implementation record, experiment
-  log, ir, exp, impl audit, docs/impl"
+description: "Audit the legacy Implementation Record (ir) and Experiment Log (exp)
+  corpus under docs/impl/ for migration. Migration-only under Document Registry 3 —
+  no normal-run creation path exists; durable findings consolidate via knowledge-doc.
+  Keywords: implementation record, experiment log, ir, exp, impl audit, docs/impl"
 license: MIT
 ---
 
 # Implementation Documentation Skill
 
 Use this skill to audit what was actually implemented and what was tried
-during implementation in a pre-v3 corpus.
+during implementation in a pre-v3 corpus — as migration input only.
 
 `impl-doc` is a document-generation sibling of `adr-doc`, `spec-doc`,
 `design-doc`, `plan-doc`, and `task-doc`. It is not an implementation workflow
@@ -46,18 +46,30 @@ The conventions and workflows below remain the contract for reading and
 migrating a pre-v3 `docs/impl` corpus; they no longer describe files this
 skill mints.
 
-## When to Create What
+## The abolished default-generation contract
 
-Before running any commands, decide which artifact you need:
+The old contract forced an in-progress Implementation Record before every
+task's first code change and made IR/EXP mandatory completion evidence.
+**That contract is abolished** — a normal change completes with no IR, no
+EXP, and no forced Knowledge document; durable findings consolidate
+conditionally through `knowledge-doc`.
 
-| Situation | Create | Timing |
+## Legacy corpus shape (migration reference)
+
+The tables below describe the *pre-v3 corpus shape* — what the old contract
+produced and what migration tooling reads. They are format reference for a
+legacy `docs/impl` tree, not creation instructions for new work.
+
+The pre-v3 contract produced these artifacts per task:
+
+| Situation (pre-v3) | Artifact produced | Timing (pre-v3) |
 | --- | --- | --- |
 | Task implementation is starting | Create or reuse an in-progress Implementation Record | At task start, before the first code change, with `--status "in-progress"` |
 | Task approach is uncertain - exploring options or testing hypotheses | Experiment Log | Optional before or at the start of exploratory implementation |
 | Task approach is clear - executing a known plan | Skip exp, ir only | Still create the Implementation Record at task start |
 | Multiple approaches were tested | One Experiment Log per approach | During investigation |
 
-### Granularity Rules
+### Legacy granularity rules
 
 - **1 task-doc -> 1 ir**: One Implementation Record per task. Subtasks link via
   `relations.changes`.
@@ -132,20 +144,22 @@ Both audits are read-only and report index drift as findings:
 
 ## NEVER
 
-- NEVER start task implementation without first creating or reusing an
-  in-progress ir for that task
-- NEVER treat known-solution or mechanical tasks as an excuse to skip the ir;
-  they still require an in-progress Implementation Record from task start
-- NEVER write an ir after the fact from memory - ir must reflect decisions made
-  during implementation, not a post-hoc narrative
-- NEVER manually edit JSONL files - use `append_experiment_event` or
-  `edit_experiment_log`; direct edits break sequential `seq` integrity
-- NEVER merge multiple tasks into one ir - one task = one ir; traceability
-  depends on this 1:1 mapping
-- NEVER skip the audit step before reporting completion - undetected front matter
-  errors break downstream tools that query `relations.changes`
-- NEVER create an exp after the task is done - it records real-time observations,
-  not retrospective notes
+- NEVER attempt to create or mutate `impl`/`exp` documents under Registry 3 —
+  every mutator refuses at the registry gate; durable findings consolidate
+  through `knowledge-doc` instead
+- NEVER treat the legacy corpus table as a normal-run instruction — no
+  Implementation Record is opened before code changes; the always-on
+  generation contract is abolished
+- NEVER conflate reduced recording volume with erased verification results —
+  migration reads the corpus as-is; nothing is deleted to slim it
+- NEVER manually edit JSONL files in a corpus destined for migration or
+  audit - use `append_experiment_event` or `edit_experiment_log` on a pre-v3
+  tree only; direct edits break sequential `seq` integrity
+- NEVER merge multiple tasks into one ir when interpreting a corpus - one
+  task = one ir; traceability depends on this 1:1 mapping
+- NEVER skip the audit step before reporting a corpus readable for migration -
+  undetected front matter errors break downstream tools that query
+  `relations.changes`
 
 ## Conventions
 

@@ -15,6 +15,7 @@ type CliArgs = {
   explains: string[];
   from: string[];
   informs: string[];
+  supersedes: string[];
   kind?: string;
   lifecycle?: string;
   name?: string;
@@ -26,7 +27,7 @@ type CliArgs = {
 };
 
 function parseArgs(argv: string[]): CliArgs {
-  const args: CliArgs = { cwd: process.cwd(), explains: [], from: [], informs: [] };
+  const args: CliArgs = { cwd: process.cwd(), explains: [], from: [], informs: [], supersedes: [] };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--title") args.title = argv[++i];
@@ -34,6 +35,7 @@ function parseArgs(argv: string[]): CliArgs {
     else if (arg === "--from") args.from.push(argv[++i]);
     else if (arg === "--informs") args.informs.push(argv[++i]);
     else if (arg === "--explains") args.explains.push(argv[++i]);
+    else if (arg === "--supersedes") args.supersedes.push(argv[++i]);
     else if (arg === "--dir") args.dir = argv[++i];
     else if (arg === "--name") args.name = argv[++i];
     else if (arg === "--no-index") args.noIndex = true;
@@ -50,7 +52,7 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function usage(): string {
-  return `Usage: node scripts/new_knowledge.js --title <title> --kind <${KNOWLEDGE_KINDS.join("|")}> [--from <source>] [--informs <doc>] [--explains <doc>] [--dir <path>] [--name <filename>] [--status <status>] [--lifecycle <lifecycle>]`;
+  return `Usage: node scripts/new_knowledge.js --title <title> --kind <${KNOWLEDGE_KINDS.join("|")}> [--from <source>] [--informs <doc>] [--explains <doc>] [--supersedes <doc>] [--dir <path>] [--name <filename>] [--status <status>] [--lifecycle <lifecycle>]`;
 }
 
 async function main(): Promise<void> {
@@ -65,6 +67,12 @@ async function main(): Promise<void> {
     if (!KNOWLEDGE_KINDS.includes(args.kind)) {
       throw new Error(`Invalid knowledge kind: ${args.kind} (expected one of: ${KNOWLEDGE_KINDS.join(", ")})`);
     }
+    // The extraction contract (Issue #242): `confirmed` marks verified,
+    // reviewed knowledge — it always carries recorded provenance. An
+    // unverified guess is never saved as certain; it stays `draft`.
+    if (args.status === "confirmed" && args.from.length === 0) {
+      throw new Error("--status confirmed requires at least one --from source (unverified findings stay draft)");
+    }
     const cwd = path.resolve(args.cwd);
     if (!schemaEntrypointGuard(cwd)) return;
     const result = await createDocument("knowledge", {
@@ -78,6 +86,7 @@ async function main(): Promise<void> {
         source: args.from,
         informs: args.informs,
         explains: args.explains,
+        supersedes: args.supersedes,
       },
       status: args.status,
       title: args.title,

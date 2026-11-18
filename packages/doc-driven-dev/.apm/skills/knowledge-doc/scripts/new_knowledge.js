@@ -27624,7 +27624,10 @@ var configs = {
     owner: "doc-suite",
     indexFormat: "shared-4col",
     creator: "new_knowledge",
-    mutators: [],
+    // `consolidate_knowledge` is the #242 consolidation mutator: it updates
+    // existing records (integrate) and mints reviewed ones (create) under
+    // the conflict-acknowledgment contract.
+    mutators: ["consolidate_knowledge"],
     auditors: [],
     // `knowledge_kind` classifies the durable knowledge record
     // (codebase|architecture|operation|lesson — the Registry's fixed
@@ -29116,7 +29119,7 @@ function schemaEntrypointGuard(cwd) {
 // src/skills/knowledge-doc/scripts/new_knowledge.ts
 var KNOWLEDGE_KINDS = configFor("knowledge").fieldVocabularies.knowledge_kind ?? [];
 function parseArgs(argv) {
-  const args = { cwd: process.cwd(), explains: [], from: [], informs: [] };
+  const args = { cwd: process.cwd(), explains: [], from: [], informs: [], supersedes: [] };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--title") args.title = argv[++i];
@@ -29124,6 +29127,7 @@ function parseArgs(argv) {
     else if (arg === "--from") args.from.push(argv[++i]);
     else if (arg === "--informs") args.informs.push(argv[++i]);
     else if (arg === "--explains") args.explains.push(argv[++i]);
+    else if (arg === "--supersedes") args.supersedes.push(argv[++i]);
     else if (arg === "--dir") args.dir = argv[++i];
     else if (arg === "--name") args.name = argv[++i];
     else if (arg === "--no-index") args.noIndex = true;
@@ -29139,7 +29143,7 @@ function parseArgs(argv) {
   return args;
 }
 function usage() {
-  return `Usage: node scripts/new_knowledge.js --title <title> --kind <${KNOWLEDGE_KINDS.join("|")}> [--from <source>] [--informs <doc>] [--explains <doc>] [--dir <path>] [--name <filename>] [--status <status>] [--lifecycle <lifecycle>]`;
+  return `Usage: node scripts/new_knowledge.js --title <title> --kind <${KNOWLEDGE_KINDS.join("|")}> [--from <source>] [--informs <doc>] [--explains <doc>] [--supersedes <doc>] [--dir <path>] [--name <filename>] [--status <status>] [--lifecycle <lifecycle>]`;
 }
 async function main() {
   try {
@@ -29153,6 +29157,9 @@ async function main() {
     if (!KNOWLEDGE_KINDS.includes(args.kind)) {
       throw new Error(`Invalid knowledge kind: ${args.kind} (expected one of: ${KNOWLEDGE_KINDS.join(", ")})`);
     }
+    if (args.status === "confirmed" && args.from.length === 0) {
+      throw new Error("--status confirmed requires at least one --from source (unverified findings stay draft)");
+    }
     const cwd = import_node_path4.default.resolve(args.cwd);
     if (!schemaEntrypointGuard(cwd)) return;
     const result = await createDocument("knowledge", {
@@ -29165,7 +29172,8 @@ async function main() {
       relations: {
         source: args.from,
         informs: args.informs,
-        explains: args.explains
+        explains: args.explains,
+        supersedes: args.supersedes
       },
       status: args.status,
       title: args.title

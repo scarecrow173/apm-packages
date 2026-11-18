@@ -162,6 +162,7 @@ test("shared-type creators reject foreign-owned dirs before writing anything", (
     ["design-doc", "new_design.js", ["--title", "X"]],
     ["spec-doc", "new_spec.js", ["--title", "X"]],
     ["knowledge-doc", "new_knowledge.js", ["--title", "X", "--kind", "lesson"]],
+    ["knowledge-doc", "consolidate_knowledge.js", ["apply", "--decision", "create", "--title", "X", "--kind", "lesson", "--from", "s", "--basis", "b"]],
     ["verification-doc", "new_verification.js", ["--title", "X"]],
   ];
   for (const [skill, script, args] of creators) {

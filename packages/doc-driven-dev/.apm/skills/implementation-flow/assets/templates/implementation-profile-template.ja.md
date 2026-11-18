@@ -24,7 +24,7 @@ repository: "<repository-name>"
 | <!-- 例: test-driven-development --> | Build | .apm/skills/ | conditional | rigid | リポジトリまたは環境が test-led workflow を提供する場合 |
 | <!-- 例: subagent-driven-development --> | Build | .apm/skills/ | conditional | flexible | 独立サブタスクを隔離コンテキストのサブエージェントへ委譲できる場合 |
 | <!-- 例: cheap-action --> | Tooling | .apm/skills/ | conditional | flexible | 単純で低リスクの作業を、必要ツールを維持したまま低コスト実行経路に載せられる場合 |
-| <!-- 例: impl-doc --> | Documentation | .apm/skills/ | always | rigid | コード変更前に実装ドキュメントを開く |
+| <!-- 例: knowledge-doc --> | Documentation | .apm/skills/ | conditional | rigid | ランが統合すべき durable な知見を産んだ場合 |
 | <!-- 例: systematic-debugging --> | Process | .apm/skills/ | conditional | rigid | バグ修正またはテスト失敗 |
 | <!-- 例: source-driven-development --> | Verify | .apm/skills/ | conditional | flexible | フレームワーク / ライブラリの利用 |
 | <!-- 例: requesting-code-review --> | Review | .apm/skills/ | conditional | flexible | レビューゲートが利用可能 |
@@ -49,9 +49,9 @@ repository: "<repository-name>"
 
 ### Documentation
 
-実装中に Implementation Record と関連エビデンスを開き、維持するスキル。
+ランが永続的な知識を産んだときに durable な知見を統合するスキル。
 
-- <!-- 例: impl-doc — 各 task の最初のコード変更前に `impl-doc` で `in-progress` の Implementation Record を開き、検証完了まで更新を続ける -->
+- <!-- 例: knowledge-doc — assess/apply で durable な知見を統合する; none は有効な結果 -->
 
 ### Verify
 
@@ -92,7 +92,7 @@ override で解決されるまでその slot を空のままにできる。
 | Priority | Category | Skill | Rationale |
 | -------- | -------- | ----- | --------- |
 | 1 | Build | <!-- repository default --> | 利用可能なら既定の Build 構成を定義する |
-| 2 | Documentation | <!-- repository default --> | 各 task の最初のコード変更前に実装ドキュメントを開く |
+| 2 | Documentation | <!-- repository default --> | ランが永続的な知識を産んだときに durable な知見を統合する |
 | 3 | Build | <!-- repository default --> | 受け入れ条件が明確な独立サブタスクを分散する |
 | 4 | Verify | <!-- repository default --> | 利用可能なら正しさ検証を追加する |
 | 5 | Tooling | <!-- repository default --> | 対応環境では低リスクな機械的作業を低コスト実行に寄せる |

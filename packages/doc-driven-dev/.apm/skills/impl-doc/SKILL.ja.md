@@ -1,7 +1,8 @@
 ---
 name: impl-doc
-description: "実際に実装したこと（ir）と実装中に試したこと（exp）を docs/impl/ 配下に記録します。
-  タスクの Implementation Record または Experiment Log を作成・監査するときに使います。
+description: "docs/impl/ 配下の legacy Implementation Record (ir) と Experiment Log (exp)
+  corpus を migration 向けに監査します。Document Registry 3 では migration 専用 —
+  通常実行の作成経路はなく、永続的な知見は knowledge-doc で統合します。
   キーワード: implementation record, experiment log, ir, exp, impl 監査, docs/impl"
 license: MIT
 ---
@@ -9,7 +10,7 @@ license: MIT
 # 実装記録スキル
 
 このスキルは、Registry 2 以前の corpus に残る「実際に何を実装したか、
-実装中に何を試したか」を監査するために使います。
+実装中に何を試したか」を監査するために使います —— migration の入力としてのみ。
 
 `impl-doc` は `adr-doc`、`spec-doc`、`design-doc`、`plan-doc`、`task-doc` と
 同列の文書生成スキルです。実装フェーズのワークフロースキルではありません。
@@ -44,18 +45,30 @@ Log)は **legacy 形式**です。migration ツーリングのみが解釈し、
 ・移行するための契約であり、この skill が Git 文書を mint する話では
 なくなりました。
 
-## いつ何を作るか
+## 廃止された既定生成契約
 
-コマンドを実行する前に、必要なアーティファクトを決定してください:
+旧契約は、すべての task の最初のコード変更前に in-progress の
+Implementation Record を開くことを強制し、IR/EXP を必須の完了証跡と
+していました。**その契約は廃止されました** —— 通常の修正は IR も EXP も
+強制されるナレッジドキュメントもなく完了し、永続的な知見は
+`knowledge-doc` で条件付きに統合します。
 
-| 状況 | 作成するもの | タイミング |
+## Legacy corpus の形 (migration リファレンス)
+
+以下の表は *Registry 2 以前の corpus の形* —— 旧契約が産んだものと
+migration ツーリングが読むもの —— を説明します。legacy な `docs/impl`
+ツリーの形式リファレンスであり、新しい作業への作成指示ではありません。
+
+Registry 2 以前の契約は task ごとにこれらのアーティファクトを産みました:
+
+| 状況 (Registry 2 以前) | 産まれたアーティファクト | タイミング (Registry 2 以前) |
 | --- | --- | --- |
 | task 実装を開始する | in-progress の Implementation Record を作成または再利用する | 最初のコード変更前 に ``--status "in-progress"`` で開始する |
 | アプローチが不確実 - 選択肢の調査や仮説の検証が必要 | Experiment Log | 探索的な実装の開始前または開始時に任意で作成する |
 | アプローチが明確 - 既知の計画を実行するだけ | exp なし、ir のみ | Experiment Log は省略できるが、Implementation Record は task 開始時に必ず作成する |
 | 複数のアプローチを試した | アプローチごとに Experiment Log 1件 | 調査中 |
 
-### 粒度ルール
+### Legacy 粒度ルール
 
 - **task-doc 1件 -> ir 1件**: タスクごとに Implementation Record を1件作成する。
   サブタスクは `relations.changes` でリンクする。
@@ -132,20 +145,21 @@ Registry 3 ではその再同期は **migration-owned** です。
 
 ## NEVER
 
-- NEVER task 実装を開始する前に in-progress の ir を作成または再利用せずに
-  実装へ入らない
-- NEVER 解決策が既知の task だからといって ir 作成を省略しない -
-  既知解でも task 開始時の Implementation Record は必須
-- NEVER ir を記憶を頼りに事後に書く - ir は実装中に下された判断を記録するものであり、
-  事後の叙述ではない
-- NEVER JSONL ファイルを手動で編集する - `append_experiment_event` または
+- NEVER Registry 3 で `impl`/`exp` ドキュメントを作成・変更しようとしない —
+  すべての mutator が registry ゲートで拒否します; 永続的な知見は
+  `knowledge-doc` で統合します
+- NEVER legacy corpus 表を通常実行の指示として扱わない — コード変更前に
+  Implementation Record は開きません; 常時生成契約は廃止されました
+- NEVER 記録量の削減を検証結果の消去と混同しない —
+  migration は corpus をそのまま読みます; 減量のために何も削除しません
+- NEVER migration や監査対象の corpus 内の JSONL ファイルを手動で編集する -
+  Registry 2 以前のツリーでは `append_experiment_event` または
   `edit_experiment_log` を使うこと。直接編集すると `seq` の連続性が壊れる
-- NEVER 複数タスクを1つの ir にまとめる - タスク 1件 = ir 1件。
+- NEVER corpus の解釈で複数タスクを1つの ir にまとめる - タスク 1件 = ir 1件。
   追跡可能性はこの 1:1 対応に依存している
-- NEVER 完了報告前に監査ステップを省略する - front matter エラーが検出されないと、
+- NEVER migration 向けに corpus を読み取れると報告する前に監査ステップを
+  省略する - front matter エラーが検出されないと、
   `relations.changes` を参照する下流ツールが壊れる
-- NEVER タスク完了後に exp を作成する - exp はリアルタイムの観察を記録するものであり、
-  事後メモではない
 
 ## 規約
 
