@@ -59,7 +59,7 @@ function usage(): string {
     "  apply        Apply whitelisted repairs, then rescan and validate",
     "  index plan   Preview managed index materialization without writing",
     "  index apply  Materialize managed indexes, revalidating drift pins first",
-    "  migrate plan      Read-only schema-preflight diagnostic + planHash (#233)",
+    "  migrate plan      Read-only migration inventory + dry-run plan (#233/#245)",
     "  migrate apply     Install/repair the schema manifest on consistent content",
     "  migrate recovery  Report migration journal state without mutating it",
     "",
@@ -169,11 +169,14 @@ async function runIndexApply(args: CliArgs, cwd: string): Promise<void> {
   if (report.blocked.length > 0) process.exitCode = 1;
 }
 
-// `migrate` is the only authorized migration surface (Issue #233): plan is
-// fully read-only, apply installs/repairs the manifest only on already-
-// consistent content, recovery reports journal state untouched. These verbs
-// bypass the normal-execution guard by design — they are the way through a
-// non-current state — while every other command here is guarded.
+// `migrate` is the only authorized migration surface (Issues #233, #245):
+// plan is fully read-only — it emits the complete legacy inventory plus the
+// deterministic dry-run plan and never touches the repository, the Git
+// index, the Execution Store, or the manifest — apply installs/repairs the
+// manifest only on already-consistent content, recovery reports journal
+// state untouched. These verbs bypass the normal-execution guard by design
+// — they are the way through a non-current state — while every other
+// command here is guarded.
 function validateMigrateArgs(args: CliArgs): void {
   if (args.verb === undefined) {
     throw new Error("migrate requires a verb: migrate plan|apply|recovery");

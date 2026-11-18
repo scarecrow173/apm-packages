@@ -182,7 +182,23 @@ node scripts/doc_maintenance.js migrate recovery [--cwd <repo>] [--json]
 ```
 
 - `migrate plan` — fully read-only; reports the preflight diagnosis, apply
-  eligibility, and a deterministic `planHash`.
+  eligibility, and a deterministic `planHash`. On a `migration-required`
+  repository it additionally emits the complete legacy inventory and
+  dry-run migration plan: every legacy document (Spec, ADR, Design,
+  Discovery, Test Spec, Plan, Task, IR, EXP), old relations and indexes,
+  caller checkpoints/receipts/`effectOutcome` bookkeeping, experiment
+  JSONL events, active runs with their required handoff, foreign state,
+  input hashes, planned writes and removals, collisions with their
+  deterministic alternates, mechanical convertibles, semantic-decision
+  blockers, resolution inputs, and residual risks. It writes nothing —
+  not the repository, the Git index, the Execution Store, or the
+  manifest — and never guesses lifecycle, status, relations, or
+  evidence truth: ambiguous items are explicit decisions or blockers.
+  Test Specs plan into Verification Design documents preserving their
+  intent; Plans/Tasks plan into an Execution Store run snapshot; IR/EXP
+  items classify conservatively into durable or diagnostic destinations.
+  Legacy relations such as `derives-from` are never mechanically
+  rewritten into Knowledge Relations v1 — each is a semantic decision.
 - `migrate apply` — installs or repairs the manifest only when the scanned
   content is already consistent with it, then re-runs the preflight and
   reports the post state. `--expect <planHash>` pins the apply to a
@@ -278,7 +294,9 @@ preview-first:
 - `scripts/doc_maintenance.js`: plan/apply entry point for safe repairs and
   managed index regeneration; `index plan|apply` is the explicit managed
   index materialization entrypoint across owners; `migrate plan|apply|recovery`
-  is the schema-manifest migration surface behind the shared preflight gate.
+  is the schema-manifest migration surface behind the shared preflight gate,
+  where `migrate plan` also emits the read-only legacy migration inventory
+  and dry-run plan on `migration-required` repositories.
 - `scripts/migrate_docs.js`, `scripts/migrate_ids.js`,
   `scripts/scaffold_docs.js`, `scripts/promote_index.js`: migration and
   bootstrap entry points owned by this skill (the first three are also

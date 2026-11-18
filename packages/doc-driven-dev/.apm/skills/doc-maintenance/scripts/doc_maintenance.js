@@ -3326,10 +3326,10 @@ var require_stringify = __commonJS({
       data = Object.assign({}, file2.data, data);
       const open2 = opts.delimiters[0];
       const close = opts.delimiters[1];
-      const matter4 = engine.stringify(data, options2).trim();
+      const matter5 = engine.stringify(data, options2).trim();
       let buf = "";
-      if (matter4 !== "{}") {
-        buf = newline(open2) + newline(matter4) + newline(close);
+      if (matter5 !== "{}") {
+        buf = newline(open2) + newline(matter5) + newline(close);
       }
       if (typeof file2.excerpt === "string" && file2.excerpt !== "") {
         if (str2.indexOf(file2.excerpt.trim()) === -1) {
@@ -3426,7 +3426,7 @@ var require_parse = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs12 = require("fs");
+    var fs13 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify = require_stringify();
@@ -3435,19 +3435,19 @@ var require_gray_matter = __commonJS({
     var toFile = require_to_file();
     var parse5 = require_parse();
     var utils = require_utils();
-    function matter4(input2, options2) {
+    function matter5(input2, options2) {
       if (input2 === "") {
         return { data: {}, content: input2, excerpt: "", orig: input2 };
       }
       let file2 = toFile(input2);
-      const cached2 = matter4.cache[file2.content];
+      const cached2 = matter5.cache[file2.content];
       if (!options2) {
         if (cached2) {
           file2 = Object.assign({}, cached2);
           file2.orig = cached2.orig;
           return file2;
         }
-        matter4.cache[file2.content] = file2;
+        matter5.cache[file2.content] = file2;
       }
       return parseMatter(file2, options2);
     }
@@ -3469,7 +3469,7 @@ var require_gray_matter = __commonJS({
       }
       str2 = str2.slice(openLen);
       const len = str2.length;
-      const language = matter4.language(str2, opts);
+      const language = matter5.language(str2, opts);
       if (language.name) {
         file2.language = language.name;
         str2 = str2.slice(language.raw.length);
@@ -3504,24 +3504,24 @@ var require_gray_matter = __commonJS({
       }
       return file2;
     }
-    matter4.engines = engines2;
-    matter4.stringify = function(file2, data, options2) {
-      if (typeof file2 === "string") file2 = matter4(file2, options2);
+    matter5.engines = engines2;
+    matter5.stringify = function(file2, data, options2) {
+      if (typeof file2 === "string") file2 = matter5(file2, options2);
       return stringify(file2, data, options2);
     };
-    matter4.read = function(filepath, options2) {
-      const str2 = fs12.readFileSync(filepath, "utf8");
-      const file2 = matter4(str2, options2);
+    matter5.read = function(filepath, options2) {
+      const str2 = fs13.readFileSync(filepath, "utf8");
+      const file2 = matter5(str2, options2);
       file2.path = filepath;
       return file2;
     };
-    matter4.test = function(str2, options2) {
+    matter5.test = function(str2, options2) {
       return utils.startsWith(str2, defaults(options2).delimiters[0]);
     };
-    matter4.language = function(str2, options2) {
+    matter5.language = function(str2, options2) {
       const opts = defaults(options2);
       const open2 = opts.delimiters[0];
-      if (matter4.test(str2)) {
+      if (matter5.test(str2)) {
         str2 = str2.slice(open2.length);
       }
       const language = str2.slice(0, str2.search(/\r?\n/));
@@ -3530,11 +3530,11 @@ var require_gray_matter = __commonJS({
         name: language ? language.trim() : ""
       };
     };
-    matter4.cache = {};
-    matter4.clearCache = function() {
-      matter4.cache = {};
+    matter5.cache = {};
+    matter5.clearCache = function() {
+      matter5.cache = {};
     };
-    module2.exports = matter4;
+    module2.exports = matter5;
   }
 });
 
@@ -4429,7 +4429,7 @@ var require_extend = __commonJS({
       }
       return toStr.call(arr) === "[object Array]";
     };
-    var isPlainObject6 = function isPlainObject7(obj) {
+    var isPlainObject7 = function isPlainObject8(obj) {
       if (!obj || toStr.call(obj) !== "[object Object]") {
         return false;
       }
@@ -4486,12 +4486,12 @@ var require_extend = __commonJS({
             src = getProperty(target, name);
             copy = getProperty(options2, name);
             if (target !== copy) {
-              if (deep && copy && (isPlainObject6(copy) || (copyIsArray = isArray(copy)))) {
+              if (deep && copy && (isPlainObject7(copy) || (copyIsArray = isArray(copy)))) {
                 if (copyIsArray) {
                   copyIsArray = false;
                   clone2 = src && isArray(src) ? src : [];
                 } else {
-                  clone2 = src && isPlainObject6(src) ? src : {};
+                  clone2 = src && isPlainObject7(src) ? src : {};
                 }
                 setProperty(target, { name, newValue: extend3(deep, clone2, copy) });
               } else if (typeof copy !== "undefined") {
@@ -4858,8 +4858,8 @@ function assertNonEmpty(part, name) {
     throw new Error("`" + name + "` cannot be empty");
   }
 }
-function assertPath(path12, name) {
-  if (!path12) {
+function assertPath(path13, name) {
+  if (!path13) {
     throw new Error("Setting `" + name + "` requires `path` to be set too");
   }
 }
@@ -5044,13 +5044,13 @@ var init_lib4 = __esm({
        * @returns {undefined}
        *   Nothing.
        */
-      set path(path12) {
-        if (isUrl(path12)) {
-          path12 = (0, import_node_url.fileURLToPath)(path12);
+      set path(path13) {
+        if (isUrl(path13)) {
+          path13 = (0, import_node_url.fileURLToPath)(path13);
         }
-        assertNonEmpty(path12, "path");
-        if (this.path !== path12) {
-          this.history.push(path12);
+        assertNonEmpty(path13, "path");
+        if (this.path !== path13) {
+          this.history.push(path13);
         }
       }
       /**
@@ -13585,8 +13585,8 @@ var init_unist_util_visit = __esm({
 });
 
 // src/skills/doc-maintenance/scripts/doc_maintenance.ts
-var import_node_fs11 = __toESM(require("node:fs"));
-var import_node_path12 = __toESM(require("node:path"));
+var import_node_fs12 = __toESM(require("node:fs"));
+var import_node_path13 = __toESM(require("node:path"));
 
 // src/skills/lib/doc_maintenance.ts
 var import_node_fs6 = __toESM(require("node:fs"));
@@ -16934,10 +16934,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path12) {
-  if (!path12)
+function getElementAtPath(obj, path13) {
+  if (!path13)
     return obj;
-  return path12.reduce((acc, key) => acc?.[key], obj);
+  return path13.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -17277,11 +17277,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path12, issues) {
+function prefixIssues(path13, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path12);
+    iss.path.unshift(path13);
     return iss;
   });
 }
@@ -17743,16 +17743,16 @@ function flattenError(error62, mapper = (issue2) => issue2.message) {
 }
 function formatError2(error62, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error63, path12 = []) => {
+  const processError = (error63, path13 = []) => {
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path12, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path13, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path12, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path13, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path12, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path13, ...issue2.path]);
       } else {
-        const fullpath = [...path12, ...issue2.path];
+        const fullpath = [...path13, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -17791,17 +17791,17 @@ function formatError2(error62, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error62, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error63, path12 = []) => {
+  const processError = (error63, path13 = []) => {
     var _a3;
     for (const issue2 of error63.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path12, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path13, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path12, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path13, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path12, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path13, ...issue2.path]);
       } else {
-        const fullpath = [...path12, ...issue2.path];
+        const fullpath = [...path13, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -17840,8 +17840,8 @@ function treeifyError(error62, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path12 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path12) {
+  const path13 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path13) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -34979,13 +34979,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path12 = ref.slice(1).split("/").filter(Boolean);
-  if (path12.length === 0) {
+  const path13 = ref.slice(1).split("/").filter(Boolean);
+  if (path13.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path12[0] === defsKey) {
-    const key = path12[1] === void 0 ? void 0 : decodeJSONPointerSegment(path12[1]);
+  if (path13[0] === defsKey) {
+    const key = path13[1] === void 0 ? void 0 : decodeJSONPointerSegment(path13[1]);
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -40723,61 +40723,1487 @@ async function applyIndexMaterialization(cwd, options2) {
 }
 
 // src/skills/doc-maintenance/scripts/lib/schema_migrate.ts
+var import_node_fs11 = __toESM(require("node:fs"));
+var import_node_path12 = __toESM(require("node:path"));
+
+// src/skills/doc-maintenance/scripts/lib/migration_inventory.ts
 var import_node_crypto3 = __toESM(require("node:crypto"));
 var import_node_fs10 = __toESM(require("node:fs"));
 var import_node_path11 = __toESM(require("node:path"));
-function planHashOf(preflight) {
-  const payload = {
-    status: preflight.status,
-    issues: preflight.issues.map((issue2) => ({ reason: issue2.reason, path: issue2.path, detail: issue2.detail })).sort((a, b) => `${a.path}:${a.reason}:${a.detail}`.localeCompare(`${b.path}:${b.reason}:${b.detail}`)),
-    detected: preflight.detected
+var import_gray_matter4 = __toESM(require_gray_matter());
+
+// src/skills/lib/execution_store/types.ts
+var RUN_MANIFEST_SCHEMA_VERSION = EXECUTION_RUN_SCHEMA_VERSION;
+var RUN_STATUSES = /* @__PURE__ */ new Set(["active", "completed", "aborted"]);
+var ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+var WINDOWS_RESERVED_NAMES = /* @__PURE__ */ new Set([
+  "con",
+  "prn",
+  "aux",
+  "nul",
+  "com1",
+  "com2",
+  "com3",
+  "com4",
+  "com5",
+  "com6",
+  "com7",
+  "com8",
+  "com9",
+  "lpt1",
+  "lpt2",
+  "lpt3",
+  "lpt4",
+  "lpt5",
+  "lpt6",
+  "lpt7",
+  "lpt8",
+  "lpt9"
+]);
+function isValidId(value) {
+  if (typeof value !== "string" || !ID_PATTERN.test(value)) return false;
+  if (value.endsWith(".") || value.includes("..")) return false;
+  const stem = value.split(".")[0].toLowerCase();
+  return !WINDOWS_RESERVED_NAMES.has(stem);
+}
+function isPlainObject6(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isIsoTimestamp(value) {
+  return typeof value === "string" && !Number.isNaN(Date.parse(value));
+}
+function isSha256(value) {
+  return typeof value === "string" && /^[0-9a-f]{64}$/.test(value);
+}
+function validateApproval(value) {
+  return isPlainObject6(value) && isSha256(value.planDigest) && typeof value.actor === "string" && value.actor.length > 0 && isIsoTimestamp(value.approvedAt);
+}
+function validateManifest(value) {
+  if (!isPlainObject6(value)) return false;
+  return value.schemaVersion === RUN_MANIFEST_SCHEMA_VERSION && isValidId(value.runId) && Number.isInteger(value.revision) && value.revision >= 1 && RUN_STATUSES.has(value.status) && typeof value.graphId === "string" && value.graphId.length > 0 && (value.baseCommit === null || typeof value.baseCommit === "string") && (value.planDigest === null || isSha256(value.planDigest)) && (value.approval === null || validateApproval(value.approval)) && isIsoTimestamp(value.createdAt) && isIsoTimestamp(value.updatedAt) && (value.finalizedAt === null || isIsoTimestamp(value.finalizedAt));
+}
+function canonicalJson(value) {
+  if (Array.isArray(value)) {
+    return `[${value.map(canonicalJson).join(",")}]`;
+  }
+  if (isPlainObject6(value)) {
+    const entries = Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`);
+    return `{${entries.join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+// src/skills/doc-maintenance/scripts/lib/migration_inventory.ts
+function compareCodeUnits(left, right) {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+function sortStrings(values) {
+  return [...values].sort(compareCodeUnits);
+}
+function sha256(content3) {
+  return import_node_crypto3.default.createHash("sha256").update(content3, "utf8").digest("hex");
+}
+var BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+function hashId(digestSource) {
+  const digest = import_node_crypto3.default.createHash("sha256").update(digestSource, "utf8").digest();
+  let out = "";
+  for (let index2 = 0; index2 < 22; index2 += 1) out += BASE62[digest[index2] % 62];
+  return out;
+}
+var GENERATED_INDEX_MARKER2 = "<!-- doc-suite:generated-index -->";
+var MANIFEST_NAMESPACE_FILES = /* @__PURE__ */ new Set([
+  "schema.json",
+  "migration.journal.json"
+]);
+var KNOWN_FM_FIELDS = /* @__PURE__ */ new Set([
+  "id",
+  "type",
+  "status",
+  "lifecycle",
+  "title",
+  "created",
+  "updated",
+  "owners",
+  "relations",
+  "metadata",
+  "checks",
+  "knowledge_kind",
+  "effectOutcomes",
+  "checkpointEvidence"
+]);
+var V1_RELATION_FIELDS = new Set(knowledgeRelationFields());
+var DURABLE_DIRS = new Set(
+  docTypes.flatMap((type) => configs[type].dirs.map((dir) => normalizeDir(dir)))
+);
+var MIGRATION_DIRS = new Set(
+  [
+    ...Object.values(ephemeralConfigs).flatMap((entry) => entry.formerDirs),
+    ...Object.values(legacyDocTypes).flatMap((entry) => [...entry.formerDirs, ...entry.scopeDirs])
+  ].map((dir) => normalizeDir(dir))
+);
+var LIFECYCLE_DEFAULTS = {
+  draft: "draft",
+  superseded: "superseded",
+  archived: "retired",
+  rejected: "retired",
+  deprecated: "retired",
+  abandoned: "retired",
+  "wont-do": "retired",
+  implemented: "current",
+  completed: "current",
+  resolved: "current",
+  routed: "current",
+  promoted: "current",
+  accepted: "current",
+  approved: "current",
+  confirmed: "current"
+};
+var RUN_STATUS_DEFAULTS = {
+  draft: "active",
+  approved: "active",
+  "in-progress": "active",
+  blocked: "active",
+  completed: "completed"
+};
+var HANDOFF_METHODS = [
+  "export a portable snapshot (execution_store export --out <file>) and import it at the destination worktree",
+  "declare explicit termination (execution_store finalize --status completed|aborted) before apply \u2014 copying unshared local state is not a handoff"
+];
+function isUnderDir4(rel, dir) {
+  return rel === dir || rel.startsWith(`${dir}/`);
+}
+function owningManagedDir(rel) {
+  const dir = normalizeDir(import_node_path11.default.posix.dirname(rel));
+  let best = null;
+  for (const candidate of [...DURABLE_DIRS, ...MIGRATION_DIRS]) {
+    if (!isUnderDir4(dir, candidate)) continue;
+    if (best === null || candidate.length > best.dir.length) {
+      best = { dir: candidate, kind: DURABLE_DIRS.has(candidate) ? "durable" : "migration-owned" };
+    }
+  }
+  return best;
+}
+function classifyPath(rel) {
+  const name = import_node_path11.default.posix.basename(rel);
+  if (isUnderDir4(rel, DOC_DRIVEN_DEV_DIR)) {
+    return MANIFEST_NAMESPACE_FILES.has(name) ? "manifest-namespace" : "foreign-state";
+  }
+  if (isUnderDir4(rel, EXECUTION_STATE_ROOT)) {
+    const segments = rel.slice(EXECUTION_STATE_ROOT.length).replace(/^\/+/, "").split("/").filter(Boolean);
+    if (segments[0] === "runs" && segments.length >= 3) return "run-file";
+    if (segments[0] === "evidence") {
+      const last = segments[segments.length - 1];
+      const declared = segments.length === 1 || segments.length === 2 && (segments[1] === "manifest.json" || segments[1] === "index.json" || /\.tmp-\d+-\d+$/.test(last)) || segments.length === 3 && segments[1] === "records" && (last.endsWith(".json") || /\.tmp-\d+-\d+$/.test(last));
+      return declared ? "evidence-file" : "foreign-state";
+    }
+    return "foreign-state";
+  }
+  if (isUnderDir4(rel, "docs/impl")) {
+    if (rel.endsWith(".jsonl")) return "exp";
+    if (rel.endsWith(".md")) return isIndexFileName(name) ? "index" : "doc";
+    return "foreign-artifact";
+  }
+  if (rel.endsWith(".md")) {
+    const owner = owningManagedDir(rel);
+    if (owner !== null) return isIndexFileName(name) ? "index" : "doc";
+  }
+  return "unmanaged";
+}
+function collectFiles(cwd) {
+  const files = [];
+  const escapes = [];
+  const roots = [
+    "docs",
+    ...managedDocDirs().filter((dir) => !dir.startsWith("docs/")),
+    EXECUTION_STATE_ROOT
+  ];
+  const walked = /* @__PURE__ */ new Set();
+  for (const root of roots) {
+    const abs = import_node_path11.default.resolve(cwd, root);
+    let key = abs;
+    try {
+      key = import_node_fs10.default.realpathSync(abs);
+    } catch {
+    }
+    if (walked.has(key)) continue;
+    walked.add(key);
+    const ok3 = walkTree(
+      cwd,
+      root,
+      (rel, isDir) => {
+        if (isDir) return;
+        files.push({ path: rel, abs: import_node_path11.default.resolve(cwd, rel), cls: classifyPath(rel) });
+      },
+      (rel, kind) => {
+        escapes.push({
+          path: rel,
+          kind: "escape",
+          namespace: kind === "dir" ? "dir" : "file",
+          detail: `${rel} escapes the checkout through a link \u2014 never followed`
+        });
+      }
+    );
+    if (!ok3 && import_node_fs10.default.existsSync(abs)) {
+      escapes.push({
+        path: root,
+        kind: "escape",
+        namespace: "dir",
+        detail: `${root} resolves outside the checkout \u2014 its content is never inventoried`
+      });
+    }
+  }
+  return { files, escapes };
+}
+function readRawDoc(cwd, rel) {
+  const abs = import_node_path11.default.join(cwd, rel);
+  let raw = "";
+  try {
+    raw = import_node_fs10.default.readFileSync(abs, "utf8");
+  } catch (error62) {
+    return { path: rel, raw, data: {}, body: "", parseError: error62 instanceof Error ? error62.message : String(error62) };
+  }
+  try {
+    const parsed = (0, import_gray_matter4.default)(raw, {});
+    return { path: rel, raw, data: isPlainObject6(parsed.data) ? parsed.data : {}, body: parsed.content, parseError: null };
+  } catch (error62) {
+    return { path: rel, raw, data: {}, body: raw, parseError: error62 instanceof Error ? error62.message : String(error62) };
+  }
+}
+function stringField2(data, field) {
+  const value = data[field];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+function relationEntries(data) {
+  const raw = data.relations;
+  if (raw === void 0 || raw === null) return { entries: [], malformed: false };
+  if (!isPlainObject6(raw)) return { entries: [], malformed: true };
+  const entries = [];
+  for (const [field, value] of Object.entries(raw)) {
+    const items = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
+    const targets = items.filter((item) => typeof item === "string" && item.trim() !== "").map((item) => item.trim());
+    entries.push({ field, targets });
+  }
+  return { entries, malformed: false };
+}
+function firstH1(body) {
+  const match = /^#\s+(.+)$/m.exec(body);
+  return match ? match[1].replace(/\s+/g, " ").trim() : null;
+}
+var LINK_PATTERN = /\[[^\]]*\]\(([^)\s]+)[^)]*\)/g;
+function bodyLinks(body) {
+  const targets = [];
+  for (const match of body.matchAll(LINK_PATTERN)) {
+    const target = match[1].trim();
+    if (target === "" || target.startsWith("#") || /^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(target)) continue;
+    targets.push(target);
+  }
+  return sortStrings(targets);
+}
+function dirKindForDoc(rel) {
+  const owner = owningManagedDir(rel);
+  if (owner !== null) return owner.kind;
+  if (isUnderDir4(rel, "docs/impl")) return "migration-owned";
+  return "unmanaged";
+}
+function artifactStem(rel) {
+  const base = import_node_path11.default.posix.basename(rel).replace(/\.md$/i, "");
+  const locale = /^(.+)\.[a-z]{2}$/i.exec(base);
+  return `${import_node_path11.default.posix.dirname(rel)}::${locale ? locale[1] : base}`;
+}
+function buildDocuments(files, rawOf) {
+  const docFiles2 = files.filter((file2) => file2.cls === "doc");
+  const byStem = /* @__PURE__ */ new Map();
+  for (const file2 of docFiles2) {
+    const stem = artifactStem(file2.path);
+    byStem.set(stem, [...byStem.get(stem) ?? [], file2.path]);
+  }
+  const primaryOf = /* @__PURE__ */ new Map();
+  for (const [stem, paths] of byStem) {
+    const nonLocalized = paths.filter((rel) => !/\.[a-z]{2}\.md$/i.test(import_node_path11.default.posix.basename(rel)));
+    primaryOf.set(stem, sortStrings(nonLocalized.length > 0 ? nonLocalized : paths)[0]);
+  }
+  const documents = [];
+  for (const file2 of docFiles2) {
+    const raw = rawOf(file2.path);
+    const data = raw.data;
+    const type = stringField2(data, "type");
+    const resolved = type === null ? null : resolveDocType(type);
+    const { entries, malformed } = relationEntries(data);
+    const legacyFields = entries.filter((entry) => !nonReferenceRelationKeys.has(entry.field) && !PROVENANCE_RELATION_KEYS.includes(entry.field) && !V1_RELATION_FIELDS.has(entry.field)).map((entry) => entry.field);
+    const bookkeeping = ["effectOutcomes", "checkpointEvidence"].filter((field) => Array.isArray(data[field]) && data[field].length > 0);
+    const dirKind = dirKindForDoc(file2.path);
+    const primary = primaryOf.get(artifactStem(file2.path)) ?? file2.path;
+    const parseError = raw.parseError ?? (malformed ? "relations: is not a map of relation keys to target lists" : null);
+    const kind = type === null ? "untyped" : resolved === null || resolved.kind === "unknown" ? "unknown-type" : resolved.kind === "durable" ? "durable" : resolved.kind === "ephemeral" ? "ephemeral" : "legacy";
+    let disposition;
+    if (parseError !== null || resolved !== null && resolved.kind === "unknown") {
+      disposition = "decision";
+    } else if (resolved !== null && resolved.kind === "ephemeral") {
+      disposition = resolved.entry.type === "plan" ? "convert:run-plan" : "convert:run-task";
+    } else if (resolved !== null && resolved.kind === "legacy") {
+      disposition = resolved.entry.type === "test-spec" ? "convert:verification" : "classify";
+    } else if (type === null) {
+      disposition = dirKind === "migration-owned" ? "decision" : "out-of-scope";
+    } else {
+      disposition = dirKind === "migration-owned" ? "decision" : "preserve";
+    }
+    documents.push({
+      path: file2.path,
+      sha256: sha256(raw.raw),
+      kind,
+      type,
+      resolvedType: resolved !== null && resolved.kind !== "unknown" ? resolved.entry.type : null,
+      id: stringField2(data, "id"),
+      status: stringField2(data, "status"),
+      lifecycle: stringField2(data, "lifecycle"),
+      title: stringField2(data, "title"),
+      owner: resolved !== null && resolved.kind !== "unknown" ? resolved.entry.owner : null,
+      dirKind,
+      fields: sortStrings(Object.keys(data)),
+      legacyRelationFields: sortStrings(legacyFields),
+      bookkeepingFields: bookkeeping,
+      localeSiblingOf: primary === file2.path ? null : primary,
+      localeSiblings: primary === file2.path ? sortStrings((byStem.get(artifactStem(file2.path)) ?? []).filter((rel) => rel !== file2.path)) : [],
+      parseError,
+      disposition
+    });
+  }
+  return documents.sort((a, b) => compareCodeUnits(a.path, b.path));
+}
+function buildIndexes(files) {
+  const indexes = [];
+  for (const file2 of files.filter((entry) => entry.cls === "index")) {
+    let generated = false;
+    try {
+      generated = import_node_fs10.default.readFileSync(file2.abs, "utf8").includes(GENERATED_INDEX_MARKER2);
+    } catch {
+    }
+    const dirKind = dirKindForDoc(file2.path) === "migration-owned" ? "migration-owned" : "durable";
+    indexes.push({
+      path: file2.path,
+      dir: normalizeDir(import_node_path11.default.posix.dirname(file2.path)),
+      generated,
+      dirKind,
+      // Managed indexes are derived views: a migration-owned dir's index is
+      // removed with its corpus; a durable dir's regenerates after apply.
+      // Hand-curated content is never a mechanical verdict.
+      disposition: generated ? dirKind === "migration-owned" ? "remove" : "regenerate" : "decision"
+    });
+  }
+  return indexes.sort((a, b) => compareCodeUnits(a.path, b.path));
+}
+function buildExperiments(files) {
+  const experiments = [];
+  for (const file2 of files.filter((entry) => entry.cls === "exp")) {
+    let raw = "";
+    try {
+      raw = import_node_fs10.default.readFileSync(file2.abs, "utf8");
+    } catch {
+    }
+    let events = 0;
+    let malformedLines = 0;
+    const types = /* @__PURE__ */ new Set();
+    for (const line of raw.split(/\r?\n/).filter((entry) => entry.trim() !== "")) {
+      try {
+        const parsed = JSON.parse(line);
+        events += 1;
+        if (isPlainObject6(parsed) && typeof parsed.type === "string") types.add(parsed.type);
+      } catch {
+        malformedLines += 1;
+      }
+    }
+    experiments.push({
+      path: file2.path,
+      sha256: sha256(raw),
+      events,
+      malformedLines,
+      eventTypes: sortStrings(types),
+      hasValidationEvents: types.has("validation")
+    });
+  }
+  return experiments.sort((a, b) => compareCodeUnits(a.path, b.path));
+}
+function buildRuns(files) {
+  const runFiles = /* @__PURE__ */ new Map();
+  const foreign = [];
+  for (const file2 of files) {
+    if (file2.cls === "run-file") {
+      const rel = file2.path.slice(`${EXECUTION_STATE_ROOT}/runs/`.length);
+      const runId = rel.split("/")[0];
+      runFiles.set(runId, [...runFiles.get(runId) ?? [], file2]);
+    } else if (file2.cls === "foreign-state" || file2.cls === "foreign-artifact") {
+      foreign.push({
+        path: file2.path,
+        kind: "file",
+        namespace: isUnderDir4(file2.path, EXECUTION_STATE_ROOT) ? EXECUTION_STATE_ROOT : isUnderDir4(file2.path, DOC_DRIVEN_DEV_DIR) ? DOC_DRIVEN_DEV_DIR : normalizeDir(import_node_path11.default.posix.dirname(file2.path)),
+        detail: file2.cls === "foreign-artifact" ? "unclassified artifact inside docs/impl \u2014 neither a record nor an experiment log" : "unaccounted-for state file \u2014 no v3 consumer can see it"
+      });
+    }
+  }
+  const runs = [];
+  for (const [runId, members2] of [...runFiles.entries()].sort((a, b) => compareCodeUnits(a[0], b[0]))) {
+    const dir = `${EXECUTION_STATE_ROOT}/runs/${runId}`;
+    const manifestFile = members2.find((member) => member.path === `${dir}/manifest.json`) ?? members2.find((member) => /^(run|run\.manifest|run-manifest)\.json$/i.test(import_node_path11.default.posix.basename(member.path)));
+    let manifest = null;
+    if (manifestFile) {
+      try {
+        const parsed = JSON.parse(import_node_fs10.default.readFileSync(manifestFile.abs, "utf8"));
+        if (validateManifest(parsed) && parsed.runId === runId) manifest = parsed;
+      } catch {
+      }
+    }
+    const count = (kind) => members2.filter((member) => isUnderDir4(member.path, `${dir}/${kind}`) && member.path.endsWith(".json")).length;
+    if (manifest === null) {
+      foreign.push({
+        path: dir,
+        kind: "corrupt-run",
+        namespace: EXECUTION_STATE_ROOT,
+        detail: `run ${runId} has no valid manifest.json \u2014 incomplete or foreign run content`
+      });
+    }
+    runs.push({
+      runId,
+      path: dir,
+      status: manifest === null ? "corrupt" : manifest.status,
+      validManifest: manifest !== null,
+      tasks: count("tasks"),
+      checkpoints: count("checkpoints"),
+      receipts: count("receipts"),
+      handoffRequired: manifest?.status === "active"
+    });
+  }
+  return { runs: runs.sort((a, b) => compareCodeUnits(a.runId, b.runId)), foreign };
+}
+function resolveDocRef(from, target, maps) {
+  const trimmed = target.trim();
+  if (trimmed === "" || trimmed.includes("::")) return { status: "unresolved" };
+  if (trimmed.includes("/") || trimmed.endsWith(".md")) {
+    const direct = maps.byPath.get(normalizeDir(trimmed));
+    if (direct) return { status: "resolved", doc: direct };
+    const rel = normalizeDir(import_node_path11.default.posix.normalize(import_node_path11.default.posix.join(import_node_path11.default.posix.dirname(from.path), trimmed)));
+    const relative = maps.byPath.get(rel);
+    return relative ? { status: "resolved", doc: relative } : { status: "unresolved" };
+  }
+  const candidates = maps.byId.get(trimmed) ?? [];
+  return candidates.length === 1 ? { status: "resolved", doc: candidates[0] } : { status: "unresolved" };
+}
+function convertedId(sourceId, source, targetPrefix) {
+  const numeric = /^[A-Z]+-(\d+)$/.exec(sourceId ?? "");
+  if (numeric) return `${targetPrefix}-${numeric[1]}`;
+  return `${targetPrefix}-${hashId(`id:${source}:${sourceId ?? ""}`)}`;
+}
+function statusValuesFor(doc) {
+  if (doc.resolvedType === null) return [];
+  return resolveDocType(doc.resolvedType).entry?.statusValues ?? [];
+}
+function buildMigrationPlan(cwd) {
+  const root = import_node_path11.default.resolve(cwd);
+  const preflight = evaluateSchemaPreflight(root);
+  const { files, escapes } = collectFiles(root);
+  const rawCache = /* @__PURE__ */ new Map();
+  const rawOf = (rel) => {
+    const cached2 = rawCache.get(rel);
+    if (cached2) return cached2;
+    const raw = readRawDoc(root, rel);
+    rawCache.set(rel, raw);
+    return raw;
   };
-  return import_node_crypto3.default.createHash("sha256").update(JSON.stringify(payload)).digest("hex");
-}
-function applyBlockers(preflight) {
-  const seen = /* @__PURE__ */ new Set();
-  return [...preflight.issues, ...preflight.detected.manifestMarkers].filter((issue2) => {
-    const key = `${issue2.reason}:${issue2.path}:${issue2.detail}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return issue2.reason.startsWith("legacy-") || issue2.reason === "scope-escape" || issue2.reason === "manifest-escaped" || issue2.reason === "manifest-unreadable";
+  const documents = buildDocuments(files, rawOf);
+  const indexes = buildIndexes(files);
+  const experiments = buildExperiments(files);
+  const { runs, foreign } = buildRuns(files);
+  const foreignState = [...foreign, ...escapes].sort((a, b) => compareCodeUnits(a.path, b.path) || compareCodeUnits(a.kind, b.kind));
+  const inputFiles = sortStrings(files.map((file2) => file2.path));
+  const inputHash = inputFiles.length === 0 ? sha256("[]") : sha256(inputFiles.map((rel) => `${rel}:${sha256(import_node_fs10.default.readFileSync(import_node_path11.default.join(root, rel), "utf8"))}`).join("\n"));
+  const byPath = new Map(documents.map((doc) => [doc.path, doc]));
+  const byId = /* @__PURE__ */ new Map();
+  for (const doc of documents) {
+    if (doc.id === null) continue;
+    byId.set(doc.id, [...byId.get(doc.id) ?? [], doc]);
+  }
+  const maps = { byPath, byId };
+  const decisions = [];
+  const convertibles = [];
+  const collisions = [];
+  const plannedWrites = [];
+  const removals = [];
+  const outOfScope = [];
+  const residualRisks = [];
+  const destinations = [];
+  const legacyRelations = [];
+  const bookkeeping = /* @__PURE__ */ new Map();
+  const decide = (decision) => {
+    decisions.push({ ...decision, decisionId: "" });
+  };
+  const dest = (row) => {
+    destinations.push(row);
+  };
+  const existingPaths = new Set(inputFiles);
+  const claimedTargets = /* @__PURE__ */ new Map();
+  const fmOf = (doc) => rawOf(doc.path).data;
+  const bodyOf = (doc) => rawOf(doc.path).body;
+  const legacyDomainCount = documents.filter((doc) => doc.disposition !== "preserve" && doc.disposition !== "out-of-scope" || doc.legacyRelationFields.length > 0 || doc.bookkeepingFields.length > 0).length + experiments.length + foreignState.length + indexes.filter((index2) => index2.dirKind === "migration-owned").length;
+  const classification = preflight.status === "current" ? "current" : preflight.status === "migration-incomplete" ? "recovery" : preflight.status === "invalid" || preflight.status === "unsupported-version" ? "blocked" : escapes.length > 0 ? "blocked" : inputFiles.length === 0 ? "bootstrap" : legacyDomainCount === 0 ? "manifest-only" : "migration";
+  const emitDocEdits = classification === "migration";
+  const runIdFor = (seed) => `RUN-${hashId(seed)}`;
+  const planRuns = /* @__PURE__ */ new Map();
+  const runPlans = /* @__PURE__ */ new Map();
+  const runTasks = /* @__PURE__ */ new Map();
+  const taskDeps = /* @__PURE__ */ new Map();
+  const taskMembershipPending = /* @__PURE__ */ new Map();
+  const planDocs = documents.filter((doc) => doc.disposition === "convert:run-plan" && doc.localeSiblingOf === null);
+  const taskDocs = documents.filter((doc) => doc.disposition === "convert:run-task" && doc.localeSiblingOf === null);
+  for (const plan of planDocs) {
+    const runId = runIdFor(`run:plan:${plan.path}`);
+    planRuns.set(plan.path, runId);
+    runPlans.set(runId, plan.path);
+    runTasks.set(runId, []);
+  }
+  for (const task of taskDocs) {
+    const { entries } = relationEntries(fmOf(task));
+    const planVotes = /* @__PURE__ */ new Set();
+    const deps = [];
+    let membershipBlocked = false;
+    for (const entry of entries) {
+      if (entry.field !== "implements" && entry.field !== "depends-on" && entry.field !== "depends_on") continue;
+      for (const target of entry.targets) {
+        const resolved = resolveDocRef(task, target, maps);
+        if (resolved.status === "resolved" && resolved.doc.disposition === "convert:run-plan") {
+          planVotes.add(resolved.doc.path);
+        } else if (entry.field === "implements") {
+          decide({
+            kind: "run-membership",
+            path: task.path,
+            element: `relations.${entry.field}`,
+            field: entry.field,
+            targets: [target],
+            candidates: ["orphan-run"],
+            default: "orphan-run",
+            required: true,
+            summary: `task implements target ${JSON.stringify(target)} does not resolve to a migrated plan \u2014 the run membership must be declared`
+          });
+          membershipBlocked = true;
+        } else if (resolved.status === "resolved" && resolved.doc.disposition === "convert:run-task") {
+          deps.push({ docPath: resolved.doc.path, taskId: resolved.doc.id ?? `TASK-${hashId(`task:${resolved.doc.path}`)}` });
+        } else {
+          decide({
+            kind: "depends-on-resolution",
+            path: task.path,
+            element: `relations.${entry.field}`,
+            field: entry.field,
+            targets: [target],
+            candidates: ["declare-sibling-task-id", "drop-dependency"],
+            default: null,
+            required: true,
+            summary: `depends-on target ${JSON.stringify(target)} does not resolve to a task in the migration corpus \u2014 same-run dependencies are the only legal form`
+          });
+        }
+      }
+    }
+    taskDeps.set(task.path, deps);
+    if (planVotes.size === 1) {
+      taskMembershipPending.set(task.path, [...planVotes]);
+    } else if (planVotes.size > 1) {
+      decide({
+        kind: "run-membership",
+        path: task.path,
+        element: "relations.implements",
+        targets: [...planVotes].sort(compareCodeUnits),
+        candidates: [...planVotes].sort(compareCodeUnits).map((planPath) => `run:${planRuns.get(planPath)}`).concat(["orphan-run"]),
+        default: null,
+        required: true,
+        summary: `task resolves to ${planVotes.size} different plans \u2014 one run membership must be chosen`
+      });
+    } else if (!membershipBlocked) {
+      taskMembershipPending.set(task.path, []);
+    }
+  }
+  const orphanPaths = sortStrings([...taskMembershipPending.entries()].filter(([, votes]) => votes.length === 0).map(([taskPath]) => taskPath));
+  const orphanRun = orphanPaths.length > 0 ? runIdFor(`run:orphan:${orphanPaths.join(",")}`) : null;
+  if (orphanRun !== null) runTasks.set(orphanRun, []);
+  const taskRun = /* @__PURE__ */ new Map();
+  for (const [taskPath, votes] of taskMembershipPending) {
+    const runId = votes.length === 1 ? planRuns.get(votes[0]) : orphanRun;
+    taskRun.set(taskPath, runId);
+    runTasks.get(runId)?.push(taskPath);
+  }
+  for (const [taskPath, deps] of taskDeps) {
+    const ownRun = taskRun.get(taskPath);
+    for (const dep of deps) {
+      const depRun = taskRun.get(dep.docPath);
+      if (ownRun !== void 0 && depRun !== void 0 && depRun !== ownRun) {
+        decide({
+          kind: "depends-on-resolution",
+          path: taskPath,
+          element: "relations.depends-on",
+          field: "depends-on",
+          targets: [dep.taskId],
+          candidates: ["drop-dependency", "declare-single-run-merge"],
+          default: null,
+          required: true,
+          summary: `depends-on target ${dep.taskId} belongs to run ${depRun} while this task lands in ${ownRun} \u2014 the DAG must stay inside one run`
+        });
+      }
+    }
+  }
+  const idClaims = /* @__PURE__ */ new Map();
+  for (const doc of documents) {
+    const fm = fmOf(doc);
+    const body = bodyOf(doc);
+    const { entries: relations } = relationEntries(fm);
+    if (doc.localeSiblingOf !== null) {
+      dest({ source: doc.path, element: "file", action: "preserve", target: `migrates with ${doc.localeSiblingOf}`, note: "locale sibling of the primary artifact" });
+      continue;
+    }
+    for (const entry of relations) {
+      if (nonReferenceRelationKeys.has(entry.field) || PROVENANCE_RELATION_KEYS.includes(entry.field)) continue;
+      if (!V1_RELATION_FIELDS.has(entry.field)) {
+        legacyRelations.push({ path: doc.path, field: entry.field, targets: [...entry.targets].sort(compareCodeUnits) });
+      }
+    }
+    if (doc.disposition === "out-of-scope") {
+      outOfScope.push({
+        path: doc.path,
+        kind: "unmanaged-doc",
+        action: "unchanged",
+        detail: "typeless or unmanaged Markdown outside the migration scope \u2014 the lint layer owns it"
+      });
+      dest({ source: doc.path, element: "file", action: "preserve", target: doc.path });
+      continue;
+    }
+    if (doc.disposition === "decision") {
+      const kind = doc.parseError !== null ? fm.relations !== void 0 && !isPlainObject6(fm.relations) ? "malformed-frontmatter" : "unparseable-frontmatter" : doc.kind === "unknown-type" ? "unknown-type" : doc.kind === "untyped" ? "untyped-legacy-doc" : "doc-placement";
+      const candidates = {
+        "unparseable-frontmatter": ["repair-front-matter-then-replan", "discard"],
+        "malformed-frontmatter": ["repair-relations-then-replan", "discard"],
+        "unknown-type": ["declare-target-type", "preserve-as-unmanaged", "discard"],
+        "untyped-legacy-doc": ["plan", "task", "test-spec", "knowledge", "diagnostic-trace", "leave-unmanaged"],
+        "doc-placement": ["move-to-canonical-dir", "keep-and-accept-finding"]
+      };
+      decide({
+        kind,
+        path: doc.path,
+        element: "document",
+        candidates: candidates[kind] ?? ["review"],
+        default: null,
+        required: true,
+        summary: doc.parseError !== null ? `front matter cannot be parsed (${doc.parseError}) \u2014 the artifact is unclassifiable until repaired` : kind === "unknown-type" ? `type ${JSON.stringify(doc.type)} is not a Registry-3 type \u2014 migration needs a declared classification` : kind === "untyped-legacy-doc" ? `typeless Markdown inside a migration-owned dir \u2014 declare its artifact class` : `${doc.type} document sits inside migration-owned ${normalizeDir(import_node_path11.default.posix.dirname(doc.path))} \u2014 choose the canonical home`
+      });
+      dest({ source: doc.path, element: "file", action: "decision", target: `decision:${kind}` });
+      removals.push({ path: doc.path, when: "decision", note: "source disposition pending the classification decision" });
+      continue;
+    }
+    const isRunBound = doc.disposition === "convert:run-plan" || doc.disposition === "convert:run-task";
+    const convertsToDurable = doc.disposition === "convert:verification" || doc.disposition === "classify";
+    const runDirFor = () => {
+      const runId = doc.disposition === "convert:run-plan" ? planRuns.get(doc.path) : taskRun.get(doc.path);
+      return runId === void 0 ? "decision:run-membership" : `${EXECUTION_STATE_ROOT}/runs/${runId}`;
+    };
+    const fmRow = (field, action, target, note) => {
+      dest({ source: doc.path, element: `frontmatter.${field}`, action, target, note });
+    };
+    let targetPath = doc.path;
+    let newId = doc.id;
+    if (convertsToDurable) {
+      const stem = import_node_path11.default.posix.basename(doc.path).replace(/\.md$/i, "");
+      const targetDir = doc.disposition === "convert:verification" ? "docs/verification" : "docs/knowledge";
+      const targetPrefix = doc.disposition === "convert:verification" ? "VD" : "KNOW";
+      targetPath = `${targetDir}/${stem}.md`;
+      newId = convertedId(doc.id, doc.path, targetPrefix);
+      if (existingPaths.has(targetPath) && targetPath !== doc.path) {
+        const alternates = [`${targetDir}/${stem}-migrated.md`, `${targetDir}/${stem}-migrated-2.md`, `${targetDir}/${stem}-migrated-3.md`];
+        const suggested = alternates.find((rel) => !existingPaths.has(rel)) ?? null;
+        collisions.push({ target: targetPath, kind: "target-exists", sources: [doc.path], suggestedTarget: suggested });
+        decide({
+          kind: "target-collision",
+          path: doc.path,
+          element: "file",
+          candidates: suggested === null ? ["rename-manually", "skip-source"] : [`write:${suggested}`, "skip-source"],
+          default: suggested === null ? null : `write:${suggested}`,
+          required: true,
+          summary: `conversion target ${targetPath} already exists \u2014 it is never overwritten`
+        });
+      } else {
+        claimedTargets.set(targetPath, [...claimedTargets.get(targetPath) ?? [], doc.path]);
+      }
+      const idOwners = (byId.get(newId) ?? []).filter((owner) => owner.path !== doc.path);
+      if (idOwners.length > 0) {
+        const suggested = `${targetPrefix}-${hashId(`collision:${doc.path}:${newId}`)}`;
+        collisions.push({ target: newId, kind: "id-exists", sources: [doc.path, ...idOwners.map((owner) => owner.path)].sort(compareCodeUnits), suggestedTarget: suggested });
+        decide({
+          kind: "id-collision",
+          path: doc.path,
+          element: "id",
+          targets: [newId],
+          candidates: [`assign:${suggested}`, "skip-source"],
+          default: `assign:${suggested}`,
+          required: true,
+          summary: `converted id ${newId} already belongs to ${idOwners.map((owner) => owner.path).join(", ")}`
+        });
+      }
+      idClaims.set(newId, [...idClaims.get(newId) ?? [], doc.path]);
+      plannedWrites.push({
+        target: targetPath,
+        kind: "durable-document",
+        source: doc.path,
+        destination: doc.disposition === "convert:verification" ? `Verification Design at ${targetPath} \u2014 test-spec intent preserved as design prose; checks bind explicitly` : `knowledge record at ${targetPath} \u2014 impl body preserved verbatim pending the classification decision`
+      });
+      removals.push({ path: doc.path, when: "at-finalize", note: "converted source removed only after post-migration integrity checks" });
+    }
+    const runTarget = isRunBound ? runDirFor() : null;
+    dest({ source: doc.path, element: "file", action: convertsToDurable || isRunBound ? "convert" : "preserve", target: convertsToDurable ? targetPath : runTarget ?? doc.path });
+    dest({ source: doc.path, element: "filename", action: convertsToDurable ? "convert" : "preserve", target: convertsToDurable ? import_node_path11.default.posix.basename(targetPath) : import_node_path11.default.posix.basename(doc.path) });
+    dest({ source: doc.path, element: "id", action: convertsToDurable ? "map" : "preserve", target: convertsToDurable ? newId : doc.id ?? "decision:id-assignment" });
+    if (doc.id === null && doc.disposition !== "out-of-scope") {
+      const prefix = doc.disposition === "convert:verification" ? "VD" : doc.disposition === "classify" ? "KNOW" : doc.disposition === "convert:run-plan" ? "PLAN" : doc.disposition === "convert:run-task" ? "TASK" : doc.resolvedType !== null ? resolveDocType(doc.resolvedType).entry?.idPrefix ?? "DOC" : "DOC";
+      const proposed = `${prefix}-${hashId(`id:${doc.path}`)}`;
+      decide({
+        kind: "id-assignment",
+        path: doc.path,
+        element: "id",
+        candidates: [`assign:${proposed}`],
+        default: `assign:${proposed}`,
+        required: true,
+        summary: `no id declared \u2014 the canonical id ${proposed} is proposed deterministically and needs confirmation`
+      });
+    }
+    fmRow("type", convertsToDurable ? "map" : "preserve", convertsToDurable ? doc.disposition === "convert:verification" ? "verification" : "knowledge" : doc.type ?? "\u2014");
+    const status = doc.status;
+    if (doc.disposition === "convert:run-task") {
+      const vocab = ephemeralConfigs.task.statusValues;
+      if (status !== null && vocab.includes(status)) {
+        fmRow("status", "map", `taskRecord.status=${status}`);
+      } else {
+        decide({
+          kind: "status-mapping",
+          path: doc.path,
+          element: "frontmatter.status",
+          targets: status === null ? [] : [status],
+          candidates: [...vocab],
+          default: null,
+          required: true,
+          summary: status === null ? "task status is absent \u2014 a TaskRecord status must be declared, never assumed" : `task status ${JSON.stringify(status)} is outside the TaskRecord vocabulary \u2014 an explicit mapping is required`
+        });
+        fmRow("status", "decision", "decision:status-mapping");
+      }
+    } else if (convertsToDurable) {
+      const vocab = doc.disposition === "convert:verification" ? configs.verification.statusValues : configs.knowledge.statusValues;
+      if (status !== null && vocab.includes(status)) {
+        fmRow("status", "map", status);
+      } else {
+        decide({
+          kind: "status-mapping",
+          path: doc.path,
+          element: "frontmatter.status",
+          targets: status === null ? [] : [status],
+          candidates: [...vocab],
+          default: null,
+          required: true,
+          summary: status === null ? "status is absent \u2014 a value must be declared, never assumed" : `status ${JSON.stringify(status)} has no declared mapping into ${doc.disposition === "convert:verification" ? "verification" : "knowledge"} \u2014 choose one`
+        });
+        fmRow("status", "decision", "decision:status-mapping");
+      }
+    } else {
+      const vocab = statusValuesFor(doc);
+      if (status === null) {
+        decide({
+          kind: "status-mapping",
+          path: doc.path,
+          element: "frontmatter.status",
+          candidates: vocab.length > 0 ? [...vocab] : ["<resolved-after-type-decision>"],
+          default: null,
+          required: vocab.length > 0,
+          summary: "status is absent \u2014 a value must be declared, never assumed"
+        });
+        fmRow("status", "decision", "decision:status-mapping");
+      } else if (vocab.length > 0 && !vocab.includes(status)) {
+        decide({
+          kind: "status-mapping",
+          path: doc.path,
+          element: "frontmatter.status",
+          targets: [status],
+          candidates: [...vocab],
+          default: null,
+          required: true,
+          summary: `status ${JSON.stringify(status)} is outside the ${doc.resolvedType} vocabulary`
+        });
+        fmRow("status", "decision", "decision:status-mapping");
+      } else {
+        fmRow("status", "preserve", status ?? "\u2014");
+      }
+    }
+    if (!isRunBound) {
+      if (doc.lifecycle !== null && LIFECYCLE_VALUES.includes(doc.lifecycle)) {
+        fmRow("lifecycle", "preserve", doc.lifecycle);
+      } else {
+        const proposed = status !== null ? LIFECYCLE_DEFAULTS[status] ?? null : null;
+        decide({
+          kind: "lifecycle-assignment",
+          path: doc.path,
+          element: "frontmatter.lifecycle",
+          targets: doc.lifecycle === null ? [] : [doc.lifecycle],
+          candidates: proposed === "retired" || proposed === "superseded" ? [...LIFECYCLE_VALUES] : ["draft", "current"],
+          default: proposed,
+          required: true,
+          summary: doc.lifecycle === null ? `no lifecycle declared (pre-Registry-3 doc); status ${JSON.stringify(status)} proposes ${JSON.stringify(proposed)} \u2014 explicit confirmation required` : `lifecycle ${JSON.stringify(doc.lifecycle)} is not a declared value \u2014 choose one`
+        });
+        fmRow("lifecycle", "decision", "decision:lifecycle-assignment");
+      }
+    }
+    const h1 = firstH1(body);
+    if (doc.title !== null || h1 !== null) {
+      fmRow("title", "preserve", doc.title ?? h1);
+    } else {
+      decide({
+        kind: "missing-field",
+        path: doc.path,
+        element: "frontmatter.title",
+        candidates: ["declare-title"],
+        default: null,
+        required: true,
+        summary: "no title in front matter or H1 \u2014 a title must be declared"
+      });
+      fmRow("title", "decision", "decision:missing-field");
+    }
+    for (const field of ["created", "updated"]) {
+      const value = stringField2(fm, field);
+      if (value !== null) {
+        fmRow(field, "preserve", value);
+      } else {
+        decide({
+          kind: "missing-field",
+          path: doc.path,
+          element: `frontmatter.${field}`,
+          candidates: ["declare-date"],
+          default: null,
+          required: true,
+          summary: `${field} is absent \u2014 provenance dates are never fabricated; an explicit date must be declared`
+        });
+        fmRow(field, "decision", "decision:missing-field");
+      }
+    }
+    if (fm.owners === void 0) {
+      convertibles.push({ kind: "add-missing-field", path: doc.path, element: "frontmatter.owners", action: "annotate", detail: "owners: [] default at rewrite" });
+      if (emitDocEdits && doc.disposition === "preserve") {
+        plannedWrites.push({ target: doc.path, kind: "document-edit", source: doc.path, destination: "annotate owners: []" });
+      }
+      fmRow("owners", "map", "[] (default)");
+    } else {
+      fmRow("owners", "preserve", "unchanged");
+    }
+    if (fm.relations === void 0) {
+      convertibles.push({ kind: "add-missing-field", path: doc.path, element: "frontmatter.relations", action: "annotate", detail: "relations: {} default at rewrite" });
+      if (emitDocEdits && doc.disposition === "preserve") {
+        plannedWrites.push({ target: doc.path, kind: "document-edit", source: doc.path, destination: "annotate relations: {}" });
+      }
+      fmRow("relations", "map", "{} (default)");
+    } else {
+      fmRow("relations", "preserve", "unchanged \u2014 per-field destinations follow");
+    }
+    if (fm.metadata !== void 0) {
+      fmRow("metadata", "preserve", doc.resolvedType === "impl" ? "experiment provenance \u2014 adopted/rejected pointers carried into conversion provenance" : "unchanged");
+    }
+    for (const entry of relations) {
+      const element = `relations.${entry.field}`;
+      if (nonReferenceRelationKeys.has(entry.field)) {
+        fmRow(element, "preserve", "metadata field \u2014 unchanged");
+        continue;
+      }
+      if (PROVENANCE_RELATION_KEYS.includes(entry.field)) {
+        fmRow(element, "preserve", "provenance contract \u2014 unchanged");
+        continue;
+      }
+      if (entry.targets.length === 0) {
+        convertibles.push({ kind: "drop-empty-relation", path: doc.path, element, action: "drop", detail: `relations.${entry.field} is empty legacy vocabulary \u2014 dropped at rewrite` });
+        fmRow(element, "drop", "empty legacy field \u2014 removed");
+        continue;
+      }
+      if (doc.disposition === "convert:run-task" && (entry.field === "implements" || entry.field === "depends-on" || entry.field === "depends_on")) {
+        fmRow(element, "map", "taskRecord.dependsOn / run membership");
+        continue;
+      }
+      if (isRunBound && entry.field === "verified-by") {
+        decide({
+          kind: "check-binding",
+          path: doc.path,
+          element,
+          field: entry.field,
+          targets: [...entry.targets],
+          candidates: ["declare VD-<id>::CHK-NN references"],
+          default: null,
+          required: true,
+          summary: `verified-by points at legacy verification intent \u2014 taskRecord.checks accepts only qualified Verification Design check references`
+        });
+        fmRow(element, "decision", "decision:check-binding");
+        continue;
+      }
+      if (doc.disposition === "convert:verification" && entry.field === "verifies") {
+        fmRow(element, "decision", "decision:check-binding");
+        continue;
+      }
+      if (V1_RELATION_FIELDS.has(entry.field) && doc.disposition === "preserve") {
+        const broken = entry.targets.filter((target) => {
+          if (target.includes("::")) return false;
+          return resolveDocRef(doc, target, maps).status === "unresolved";
+        });
+        const converts = entry.targets.filter((target) => {
+          const resolved = resolveDocRef(doc, target, maps);
+          return resolved.status === "resolved" && (resolved.doc.disposition.startsWith("convert") || resolved.doc.disposition === "classify");
+        });
+        if (broken.length > 0) {
+          decide({
+            kind: "unresolved-relation-target",
+            path: doc.path,
+            element,
+            field: entry.field,
+            targets: broken,
+            candidates: ["retarget", "drop"],
+            default: null,
+            required: true,
+            summary: `relations.${entry.field} targets do not resolve \u2014 never silently dropped`
+          });
+          fmRow(element, "decision", "decision:unresolved-relation-target");
+        } else if (converts.length > 0) {
+          decide({
+            kind: "legacy-relation-target",
+            path: doc.path,
+            element,
+            field: entry.field,
+            targets: converts,
+            candidates: ["retarget-to-converted-doc", "drop"],
+            default: null,
+            required: true,
+            summary: `relations.${entry.field} targets convert out of durable form \u2014 a live target must be chosen`
+          });
+          fmRow(element, "decision", "decision:legacy-relation-target");
+        } else {
+          convertibles.push({ kind: "preserve-relation", path: doc.path, element, field: entry.field, action: "preserve", detail: `relations.${entry.field} is canonical Knowledge Relations v1 \u2014 kept verbatim` });
+          fmRow(element, "preserve", "unchanged");
+        }
+        continue;
+      }
+      decide({
+        kind: "legacy-relation",
+        path: doc.path,
+        element,
+        field: entry.field,
+        targets: [...entry.targets].sort(compareCodeUnits),
+        candidates: ["declare-v1-mapping", "drop-as-unmapped", "preserve-as-body-note"],
+        default: null,
+        required: true,
+        summary: `relations.${entry.field} is pre-v3 vocabulary with ${entry.targets.length} target(s) \u2014 semantics are decided, never mechanically rewritten`
+      });
+      fmRow(element, "decision", "decision:legacy-relation");
+    }
+    for (const field of Object.keys(fm).sort(compareCodeUnits)) {
+      if (KNOWN_FM_FIELDS.has(field)) continue;
+      dest({ source: doc.path, element: `frontmatter.${field}`, action: "unmapped", target: "conversion provenance", note: "no declared v3 destination \u2014 carried verbatim into migration provenance, never interpreted" });
+      residualRisks.push({ kind: "unmapped-field", path: doc.path, detail: `front matter field ${JSON.stringify(field)} has no v3 destination \u2014 preserved in conversion provenance only` });
+    }
+    dest({
+      source: doc.path,
+      element: "body",
+      action: convertsToDurable || isRunBound ? "convert" : "preserve",
+      target: convertsToDurable ? `preserved verbatim into ${targetPath}` : doc.disposition === "convert:run-plan" ? "run plan.md \u2014 verbatim plan content" : doc.disposition === "convert:run-task" ? "taskRecord title/notes \u2014 verbatim content into the task record payload" : doc.path
+    });
+    if (doc.bookkeepingFields.length > 0) {
+      const carrier = doc.disposition === "convert:run-plan" ? "plan" : doc.disposition === "convert:run-task" ? "task" : "other";
+      bookkeeping.set(doc.path, {
+        path: doc.path,
+        carrier,
+        effectOutcomes: Array.isArray(fm.effectOutcomes) ? fm.effectOutcomes.length : 0,
+        checkpointEvidence: Array.isArray(fm.checkpointEvidence) ? fm.checkpointEvidence.length : 0
+      });
+      for (const field of doc.bookkeepingFields) {
+        if (carrier === "other") {
+          decide({
+            kind: "bookkeeping-assignment",
+            path: doc.path,
+            element: `frontmatter.${field}`,
+            candidates: ["assign-to-run:<runId>", "diagnostic-trace"],
+            default: "diagnostic-trace",
+            required: true,
+            summary: `${field} caller bookkeeping sits on a non-execution doc \u2014 the run it migrates into must be declared`
+          });
+          fmRow(field, "decision", "decision:bookkeeping-assignment");
+        } else {
+          fmRow(field, "map", field === "effectOutcomes" ? "run receipts / run_trace.jsonl" : "run checkpoints");
+        }
+      }
+    }
+  }
+  for (const file2 of files) {
+    if (file2.cls === "unmanaged") {
+      outOfScope.push({ path: file2.path, kind: "unmanaged-file", action: "unchanged", detail: "outside every managed scope \u2014 not migration content" });
+    } else if (file2.cls === "evidence-file") {
+      outOfScope.push({ path: file2.path, kind: "evidence-store", action: "unchanged", detail: "declared Evidence Store layout \u2014 already current state" });
+    }
+  }
+  const migratedRunIds = /* @__PURE__ */ new Set([...planRuns.values(), ...orphanRun !== null ? [orphanRun] : []]);
+  const diagnosticsRun = experiments.length > 0 ? runIdFor(`run:diagnostics:${experiments.map((exp) => exp.path).join(",")}`) : null;
+  if (diagnosticsRun !== null) migratedRunIds.add(diagnosticsRun);
+  for (const runId of [...migratedRunIds].sort(compareCodeUnits)) {
+    const runDir = `${EXECUTION_STATE_ROOT}/runs/${runId}`;
+    const planPath = runPlans.get(runId) ?? null;
+    plannedWrites.push({
+      target: `${runDir}/manifest.json`,
+      kind: "run-manifest",
+      source: planPath ?? "synthesized",
+      destination: `run manifest for ${runId} \u2014 status/approval decided below; never fabricated`
+    });
+    if (planPath !== null) {
+      plannedWrites.push({ target: `${runDir}/plan.md`, kind: "run-plan", source: planPath, destination: `run plan.md \u2014 verbatim body of ${planPath}` });
+      const planDoc = byPath.get(planPath);
+      const status = planDoc.status;
+      if (status !== null && RUN_STATUS_DEFAULTS[status] !== void 0) {
+        convertibles.push({ kind: "run-status", path: planPath, element: "frontmatter.status", action: "map", detail: `plan status ${status} \u2192 run status ${RUN_STATUS_DEFAULTS[status]}` });
+      } else {
+        decide({
+          kind: "run-status",
+          path: planPath,
+          element: "frontmatter.status",
+          targets: status === null ? [] : [status],
+          candidates: status === "superseded" ? ["completed", "aborted"] : ["active", "completed", "aborted"],
+          default: null,
+          required: true,
+          summary: `plan status ${JSON.stringify(status)} has no declared run-state mapping \u2014 whether the work finished or was cut is a human call`
+        });
+      }
+      if (status === "approved" || status === "in-progress" || status === "completed") {
+        decide({
+          kind: "run-approval",
+          path: planPath,
+          element: "frontmatter.status",
+          candidates: ["re-approve via approve-plan after import", "proceed unapproved"],
+          default: "re-approve via approve-plan after import",
+          required: true,
+          summary: "the plan carried approved/in-progress state \u2014 a v3 approval binds an actor and timestamp that must be re-declared, never reconstructed"
+        });
+        residualRisks.push({ kind: "approval-redeclare", path: planPath, detail: "migrated runs start unapproved; a stale v2 approval can never be replayed" });
+      }
+    } else {
+      decide({
+        kind: "run-status",
+        path: runDir,
+        element: "run",
+        candidates: ["active", "completed", "aborted"],
+        default: runId === diagnosticsRun ? "active" : null,
+        required: runId !== diagnosticsRun,
+        summary: diagnosticsRun === runId ? "diagnostics container run \u2014 created to hold migrated diagnostic trace content" : "orphan-task run has no source plan \u2014 its status is an explicit decision"
+      });
+    }
+    for (const taskPath of (runTasks.get(runId) ?? []).sort(compareCodeUnits)) {
+      const task = byPath.get(taskPath);
+      const taskId = task.id ?? `TASK-${hashId(`task:${taskPath}`)}`;
+      plannedWrites.push({
+        target: `${runDir}/tasks/${taskId}.json`,
+        kind: "task-record",
+        source: taskPath,
+        destination: `TaskRecord { taskId: ${taskId}, status, dependsOn, checks: [], scope: [] }`
+      });
+      const deps = (taskDeps.get(taskPath) ?? []).map((dep) => dep.taskId);
+      if (deps.length > 0) {
+        convertibles.push({ kind: "task-depends-on", path: taskPath, element: "relations.depends-on", action: "map", targets: sortStrings(new Set(deps)), detail: `dependsOn resolved to same-run task ids: ${deps.join(", ")}` });
+      }
+      residualRisks.push({ kind: "scope-undeclared", path: taskPath, detail: "v2 tasks carried no write scope \u2014 the migrated TaskRecord starts scope-undeclared" });
+    }
+    if (diagnosticsRun === runId) {
+      plannedWrites.push({
+        target: `${runDir}/run_trace.jsonl`,
+        kind: "run-trace",
+        source: "diagnostic-sink",
+        destination: "diagnostic trace \u2014 non-authoritative preservation sink for migrated diagnostic content"
+      });
+      residualRisks.push({ kind: "diagnostic-only", path: null, detail: `run ${runId} is a diagnostics container \u2014 its run_trace.jsonl asserts nothing` });
+    }
+  }
+  for (const entry of bookkeeping.values()) {
+    if (entry.carrier === "other") continue;
+    const fm = fmOf(byPath.get(entry.path));
+    const runId = entry.carrier === "plan" ? planRuns.get(entry.path) : taskRun.get(entry.path);
+    if (runId === void 0) {
+      residualRisks.push({ kind: "bookkeeping-pending", path: entry.path, detail: "caller bookkeeping waits on the run-membership decision before records can be planned" });
+      continue;
+    }
+    const runDir = `${EXECUTION_STATE_ROOT}/runs/${runId}`;
+    const outcomes = Array.isArray(fm.effectOutcomes) ? fm.effectOutcomes : [];
+    let traceNeeded = false;
+    outcomes.forEach((outcome, index2) => {
+      if (isPlainObject6(outcome) && outcome.status === "completed") {
+        plannedWrites.push({
+          target: `${runDir}/receipts/RCP-${hashId(`${entry.path}:effectOutcomes:${index2}`)}.json`,
+          kind: "receipt-record",
+          source: entry.path,
+          destination: `Effect Receipt \u2014 completed v2 effectOutcome ${index2} carried verbatim with migrated provenance`
+        });
+      } else {
+        traceNeeded = true;
+      }
+    });
+    const evidence = Array.isArray(fm.checkpointEvidence) ? fm.checkpointEvidence : [];
+    evidence.forEach((_, index2) => {
+      plannedWrites.push({
+        target: `${runDir}/checkpoints/CHKPT-${hashId(`${entry.path}:checkpointEvidence:${index2}`)}.json`,
+        kind: "checkpoint-record",
+        source: entry.path,
+        destination: `Checkpoint record \u2014 v2 checkpointEvidence ${index2} carried verbatim with migrated provenance`
+      });
+    });
+    if (traceNeeded) {
+      plannedWrites.push({
+        target: `${runDir}/run_trace.jsonl`,
+        kind: "run-trace",
+        source: entry.path,
+        destination: "diagnostic trace \u2014 non-completed effectOutcomes (yield/retry) are diagnostics, never receipts"
+      });
+    }
+    residualRisks.push({ kind: "receipt-provenance", path: entry.path, detail: "migrated receipts/checkpoints assert only what the v2 record asserted \u2014 they are execution receipts, never verification Evidence" });
+  }
+  for (const doc of documents.filter((entry) => entry.disposition === "convert:verification" && entry.localeSiblingOf === null)) {
+    const { entries } = relationEntries(fmOf(doc));
+    for (const entry of entries) {
+      if (entry.field !== "verifies") continue;
+      for (const target of entry.targets) {
+        decide({
+          kind: "check-binding",
+          path: doc.path,
+          element: "relations.verifies",
+          field: "verifies",
+          targets: [target],
+          candidates: ["declare <document-id>::<claim-key> target + method + passCriteria"],
+          default: null,
+          required: true,
+          summary: `verifies target ${JSON.stringify(target)} is doc-level \u2014 Verification Design checks bind qualified claim references explicitly`
+        });
+      }
+    }
+    const body = bodyOf(doc);
+    for (const section of ["Guarantees", "Rules", "Examples", "Non-goals"]) {
+      if (new RegExp(`^#{1,6}\\s+${section}\\b`, "m").test(body)) {
+        decide({
+          kind: "check-binding",
+          path: doc.path,
+          element: `body.${section.toLowerCase()}`,
+          candidates: ["bind each item to a VerificationCheckV1 { id, target, method, passCriteria }"],
+          default: null,
+          required: true,
+          summary: `test-spec ${section} section is preserved as design prose \u2014 each item needs an explicit check binding`
+        });
+      }
+    }
+  }
+  for (const doc of documents.filter((entry) => entry.disposition === "classify" && entry.localeSiblingOf === null)) {
+    const body = bodyOf(doc);
+    decide({
+      kind: doc.type === "exp" ? "exp-classification" : "ir-classification",
+      path: doc.path,
+      element: "document",
+      candidates: ["knowledge", "adr", "spec", "design", "evidence-candidate", "diagnostic-trace"],
+      default: "knowledge",
+      required: true,
+      summary: "impl/exp artifacts have no single v3 home \u2014 the classification is an explicit decision; the body is preserved verbatim by default"
+    });
+    if (/^#{1,6}\s+(Validation|Verification)\b/m.test(body)) {
+      decide({
+        kind: "evidence-admission",
+        path: doc.path,
+        element: "body.validation",
+        candidates: ["admit-as-evidence-candidate", "keep-as-prose", "discard"],
+        default: "keep-as-prose",
+        required: true,
+        summary: "validation prose claims outcomes \u2014 it is an evidence candidate requiring explicit admission, never automatically verified Evidence"
+      });
+    }
+  }
+  for (const exp of experiments) {
+    if (exp.hasValidationEvents || exp.malformedLines > 0) {
+      decide({
+        kind: "exp-classification",
+        path: exp.path,
+        element: "file",
+        candidates: ["diagnostic-trace", "knowledge", "evidence-candidate", "discard"],
+        default: "diagnostic-trace",
+        required: true,
+        summary: exp.hasValidationEvents ? "experiment log carries validation-type events \u2014 outcome claims need explicit classification, never fabricated Evidence" : `experiment log has ${exp.malformedLines} malformed event line(s) \u2014 classification needs review`
+      });
+    } else {
+      convertibles.push({
+        kind: "exp-diagnostic-trace",
+        path: exp.path,
+        element: "events",
+        action: "convert",
+        detail: `experiment log (${exp.events} events) \u2192 diagnostic trace \u2014 preserved verbatim, asserts nothing`
+      });
+    }
+    if (diagnosticsRun !== null) {
+      dest({ source: exp.path, element: "file", action: "diagnostic", target: `${EXECUTION_STATE_ROOT}/runs/${diagnosticsRun}/run_trace.jsonl`, note: "diagnostic-trace is the default sink; a classification decision may redirect" });
+      dest({ source: exp.path, element: "events", action: "diagnostic", target: "run_trace.jsonl lines \u2014 verbatim payloads", note: `${exp.events} event(s), ${exp.malformedLines} malformed` });
+    }
+    removals.push({ path: exp.path, when: "at-finalize", note: "experiment JSONL has no durable v3 form \u2014 removed after content is accounted for" });
+  }
+  for (const index2 of indexes) {
+    if (index2.disposition === "regenerate") {
+      convertibles.push({ kind: "index-regen", path: index2.path, element: "file", action: "regenerate", detail: "managed index is a derived view \u2014 regenerated post-migration" });
+      plannedWrites.push({ target: index2.path, kind: "index-regen", source: "derived", destination: "managed index regenerated in place post-migration" });
+      dest({ source: index2.path, element: "file", action: "convert", target: `${index2.path} (regenerated)` });
+    } else if (index2.disposition === "remove") {
+      convertibles.push({ kind: "index-remove", path: index2.path, element: "file", action: "drop", detail: "generated index of a migration-owned dir \u2014 a derived view removed with its corpus" });
+      removals.push({ path: index2.path, when: "at-finalize", note: "generated index removed with the migrated corpus" });
+      dest({ source: index2.path, element: "file", action: "drop", target: "removed at finalize" });
+    } else {
+      decide({
+        kind: "hand-curated-index",
+        path: index2.path,
+        element: "file",
+        candidates: index2.dirKind === "migration-owned" ? ["extract-to-knowledge", "discard"] : ["adopt-managed", "keep-unmanaged"],
+        default: null,
+        required: true,
+        summary: `hand-curated index in ${index2.dir} carries human-authored content \u2014 never overwritten or silently dropped`
+      });
+      dest({ source: index2.path, element: "file", action: "decision", target: "decision:hand-curated-index" });
+    }
+  }
+  const renameMap = /* @__PURE__ */ new Map();
+  for (const write of plannedWrites.filter((entry) => entry.kind === "durable-document")) {
+    renameMap.set(write.source, write.target);
+  }
+  const removedSources = new Set(removals.map((entry) => entry.path));
+  for (const doc of documents) {
+    if (doc.localeSiblingOf !== null) continue;
+    for (const link of bodyLinks(bodyOf(doc))) {
+      const resolved = resolveDocRef(doc, link, maps);
+      const targetPath = resolved.status === "resolved" ? resolved.doc.path : normalizeDir(import_node_path11.default.posix.normalize(import_node_path11.default.posix.join(import_node_path11.default.posix.dirname(doc.path), link)));
+      if (renameMap.has(targetPath)) {
+        convertibles.push({ kind: "retarget-link", path: doc.path, element: "body", action: "edit", targets: [renameMap.get(targetPath)], detail: `link ${link} retargets ${targetPath} \u2192 ${renameMap.get(targetPath)}` });
+        if (doc.disposition === "preserve" && emitDocEdits) {
+          plannedWrites.push({ target: doc.path, kind: "document-edit", source: doc.path, destination: `retarget link ${link} \u2192 ${renameMap.get(targetPath)}` });
+        }
+      } else if (removedSources.has(targetPath)) {
+        residualRisks.push({ kind: "stale-link", path: doc.path, detail: `link ${link} targets ${targetPath}, which leaves Git at migration \u2014 the reference has no durable target` });
+        dest({ source: doc.path, element: "body", action: "unmapped", target: `link ${link} \u2192 stale (target converts out of durable form)` });
+      }
+    }
+  }
+  for (const [target, sources] of claimedTargets) {
+    if (sources.length > 1) {
+      collisions.push({ target, kind: "duplicate-target", sources: sortStrings(sources), suggestedTarget: null });
+      decide({
+        kind: "target-collision",
+        path: sources[0],
+        element: "file",
+        targets: [...sources].sort(compareCodeUnits),
+        candidates: ["rename-sources", "skip-duplicates"],
+        default: null,
+        required: true,
+        summary: `${sources.length} sources map to ${target} \u2014 choose distinct targets`
+      });
+    }
+  }
+  for (const [id, sources] of idClaims) {
+    if (sources.length > 1) {
+      collisions.push({ target: id, kind: "id-exists", sources: sortStrings(sources), suggestedTarget: null });
+    }
+  }
+  for (const runId of migratedRunIds) {
+    if (runs.some((run) => run.runId === runId)) {
+      collisions.push({ target: `${EXECUTION_STATE_ROOT}/runs/${runId}`, kind: "run-exists", sources: ["migrated"], suggestedTarget: runIdFor(`run:collision:${runId}`) });
+    }
+  }
+  for (const entry of foreignState) {
+    if (entry.kind === "escape") {
+      decide({
+        kind: "scope-escape",
+        path: entry.path,
+        element: entry.namespace === "dir" ? "directory" : "file",
+        candidates: ["remove-the-link-then-replan"],
+        default: null,
+        required: true,
+        summary: `${entry.detail} \u2014 inventory refuses to follow escaped paths`
+      });
+      residualRisks.push({ kind: "scope-escape", path: entry.path, detail: entry.detail });
+      continue;
+    }
+    if (entry.kind === "corrupt-run") {
+      decide({
+        kind: "foreign-state-disposition",
+        path: entry.path,
+        element: "run",
+        candidates: ["discard-at-finalize", "preserve-as-diagnostic"],
+        default: null,
+        required: true,
+        summary: `${entry.detail} \u2014 it cannot be adopted as a run`
+      });
+      continue;
+    }
+    if (isUnderDir4(entry.path, DOC_DRIVEN_DEV_DIR)) {
+      outOfScope.push({
+        path: entry.path,
+        kind: "legacy-state-file",
+        action: "remove-at-finalize",
+        detail: "v2 state content inside the manifest namespace has no v3 target \u2014 removed at finalize, diagnostics only"
+      });
+      dest({ source: entry.path, element: "file", action: "drop", target: "removed at finalize (v2 state)" });
+    } else {
+      decide({
+        kind: "foreign-state-disposition",
+        path: entry.path,
+        element: "file",
+        candidates: ["discard-at-finalize", "preserve-as-diagnostic-trace"],
+        default: null,
+        required: true,
+        summary: `${entry.detail} \u2014 disposition must be declared`
+      });
+      dest({ source: entry.path, element: "file", action: "decision", target: "decision:foreign-state-disposition" });
+    }
+  }
+  if ((classification === "manifest-only" || classification === "migration") && (preflight.manifest.state === "missing" || preflight.manifest.state === "malformed" || preflight.status === "migration-required")) {
+    plannedWrites.push({
+      target: `${DOC_DRIVEN_DEV_DIR}/schema.json`,
+      kind: "schema-manifest",
+      source: "declared",
+      destination: "schema manifest installed/repaired last \u2014 finalized `current` only after post-migration integrity checks"
+    });
+  }
+  const runHandoffs = [];
+  for (const run of runs) {
+    if (run.status === "corrupt") continue;
+    runHandoffs.push({
+      runId: run.runId,
+      origin: "existing",
+      status: run.status,
+      handoffRequired: run.status === "active",
+      methods: run.status === "active" ? [...HANDOFF_METHODS] : []
+    });
+  }
+  for (const runId of [...migratedRunIds].sort(compareCodeUnits)) {
+    runHandoffs.push({
+      runId,
+      origin: "migrated",
+      status: "active",
+      handoffRequired: true,
+      methods: [...HANDOFF_METHODS]
+    });
+  }
+  runHandoffs.sort((a, b) => compareCodeUnits(a.runId, b.runId) || compareCodeUnits(a.origin, b.origin));
+  const sortedDecisions = decisions.sort((a, b) => compareCodeUnits(a.kind, b.kind) || compareCodeUnits(a.path, b.path) || compareCodeUnits(a.element, b.element) || compareCodeUnits(a.summary, b.summary)).map((decision, index2) => ({ ...decision, decisionId: `D-${String(index2 + 1).padStart(4, "0")}` }));
+  const resolutionsRequired = [...new Set(sortedDecisions.map((decision) => decision.kind))].sort(compareCodeUnits).map((kind) => {
+    const group = sortedDecisions.filter((decision) => decision.kind === kind);
+    return {
+      kind,
+      count: group.length,
+      required: group.some((decision) => decision.required),
+      decisionIds: group.map((decision) => decision.decisionId),
+      prompt: `${group.length} ${kind} decision(s) require explicit resolution input before apply`
+    };
   });
+  const blockers = [...preflight.issues, ...preflight.detected.manifestMarkers].filter((issue2, index2, all2) => {
+    const key = `${issue2.reason}:${issue2.path}:${issue2.detail}`;
+    return (issue2.reason.startsWith("legacy-") || issue2.reason === "scope-escape" || issue2.reason === "manifest-escaped" || issue2.reason === "manifest-unreadable") && all2.findIndex((other) => `${other.reason}:${other.path}:${other.detail}` === key) === index2;
+  });
+  const migrationStatus = collisions.length > 0 || foreignState.some((entry) => entry.kind === "escape") ? "blocked" : sortedDecisions.length > 0 ? "awaiting-resolution" : plannedWrites.length > 0 ? "planned" : "nothing";
+  const applyEligible = preflight.status !== "migration-incomplete" && preflight.status !== "unsupported-version" && classification !== "migration" && classification !== "bootstrap" && escapes.length === 0 && blockers.length === 0;
+  const counts = {
+    documents: documents.length,
+    indexes: indexes.length,
+    experimentLogs: experiments.length,
+    runs: runs.length,
+    foreignState: foreignState.length,
+    legacyRelations: legacyRelations.length,
+    callerBookkeeping: bookkeeping.size,
+    unmanagedFiles: files.filter((file2) => file2.cls === "unmanaged").length
+  };
+  const inventory = {
+    inputFiles,
+    inputHash,
+    counts,
+    documents,
+    indexes,
+    experimentLogs: experiments,
+    callerBookkeeping: [...bookkeeping.values()].sort((a, b) => compareCodeUnits(a.path, b.path)),
+    legacyRelations: legacyRelations.sort((a, b) => compareCodeUnits(a.path, b.path) || compareCodeUnits(a.field, b.field)),
+    runs,
+    foreignState
+  };
+  const migration = {
+    status: migrationStatus,
+    plannedWrites: plannedWrites.sort((a, b) => compareCodeUnits(a.target, b.target) || compareCodeUnits(a.kind, b.kind) || compareCodeUnits(a.source, b.source)),
+    removals: removals.sort((a, b) => compareCodeUnits(a.path, b.path)),
+    collisions: collisions.sort((a, b) => compareCodeUnits(a.target, b.target)),
+    convertibles: convertibles.sort((a, b) => compareCodeUnits(a.kind, b.kind) || compareCodeUnits(a.path, b.path) || compareCodeUnits(a.element, b.element)),
+    semanticDecisions: sortedDecisions,
+    outOfScope: outOfScope.sort((a, b) => compareCodeUnits(a.path, b.path)),
+    resolutionsRequired,
+    residualRisks: residualRisks.sort((a, b) => compareCodeUnits(a.kind, b.kind) || compareCodeUnits(a.path ?? "", b.path ?? "")),
+    runHandoffs,
+    destinations: destinations.sort((a, b) => compareCodeUnits(a.source, b.source) || compareCodeUnits(a.element, b.element))
+  };
+  const hashPayload = {
+    preflight: {
+      status: preflight.status,
+      issues: [...preflight.issues].sort((a, b) => compareCodeUnits(`${a.reason}${a.path}${a.detail}`, `${b.reason}${b.path}${b.detail}`)),
+      manifest: preflight.manifest,
+      detected: {
+        generation: preflight.detected.generation,
+        canonicalDocs: preflight.detected.canonicalDocs,
+        executionDocs: preflight.detected.executionDocs,
+        unmanagedDocs: preflight.detected.unmanagedDocs,
+        legacyMarkers: preflight.detected.legacyMarkers,
+        manifestMarkers: [...preflight.detected.manifestMarkers].sort((a, b) => compareCodeUnits(`${a.reason}${a.path}${a.detail}`, `${b.reason}${b.path}${b.detail}`))
+      }
+    },
+    classification,
+    inventory,
+    migration
+  };
+  const planHash = sha256(canonicalJson(hashPayload));
+  const next = classification === "bootstrap" ? "empty repository \u2014 this is a bootstrap target: scaffold_docs.js seeds the v3 tree, no migration is needed" : classification === "current" ? "already current \u2014 nothing to migrate" : applyEligible ? `content is already consistent \u2014 run doc_maintenance.js migrate apply --expect ${planHash.slice(0, 12)}\u2026 to install the manifest` : classification === "recovery" ? "a migration journal or in-progress marker is present \u2014 run doc_maintenance.js migrate recovery" : classification === "blocked" ? "the repository state cannot be verified or is newer than this toolchain \u2014 resolve the preflight issues first" : `migration plan assembled: ${plannedWrites.length} planned write(s), ${sortedDecisions.length} semantic decision(s) pending explicit input \u2014 the full apply machinery arrives with #247`;
+  return {
+    preflight,
+    plan: {
+      classification,
+      applyEligible,
+      requiresFullMigration: classification === "migration",
+      blockers,
+      planHash,
+      next
+    },
+    inventory,
+    migration
+  };
 }
+
+// src/skills/doc-maintenance/scripts/lib/schema_migrate.ts
 function migratePlan(cwd) {
-  const preflight = evaluateSchemaPreflight(cwd);
-  const blockers = applyBlockers(preflight);
-  const applyEligible = preflight.status !== "migration-incomplete" && preflight.status !== "unsupported-version" && blockers.length === 0;
-  const planHash = planHashOf(preflight);
-  const next = preflight.status === "current" ? "already current \u2014 nothing to migrate" : applyEligible ? `run doc_maintenance.js migrate apply --expect ${planHash.slice(0, 12)}\u2026 to install the manifest` : "legacy artifacts or unsafe state require the full migration (inventory/apply machinery lands in #245/#247) \u2014 the marker list above is the read-only inventory";
-  return { command: "migrate plan", readOnly: true, preflight, plan: { applyEligible, blockers, planHash, next } };
+  return { command: "migrate plan", readOnly: true, ...buildMigrationPlan(cwd) };
 }
 function writeManifest(cwd) {
-  const abs = import_node_path11.default.resolve(cwd, SCHEMA_MANIFEST_PATH);
-  const dir = import_node_path11.default.dirname(abs);
+  const abs = import_node_path12.default.resolve(cwd, SCHEMA_MANIFEST_PATH);
+  const dir = import_node_path12.default.dirname(abs);
   const escaped = `${DOC_DRIVEN_DEV_DIR} resolves outside the checkout \u2014 refusing to write the manifest`;
   let probe = dir;
-  while (!import_node_fs10.default.existsSync(probe)) {
-    const parent = import_node_path11.default.dirname(probe);
+  while (!import_node_fs11.default.existsSync(probe)) {
+    const parent = import_node_path12.default.dirname(probe);
     if (parent === probe) return `cannot verify ${DOC_DRIVEN_DEV_DIR} stays inside the checkout`;
     probe = parent;
   }
   if (!isInsideCheckout(cwd, probe)) return escaped;
-  import_node_fs10.default.mkdirSync(dir, { recursive: true });
+  import_node_fs11.default.mkdirSync(dir, { recursive: true });
   if (!isInsideCheckout(cwd, dir)) return escaped;
   const tmp = `${abs}.tmp-${process.pid}`;
-  import_node_fs10.default.writeFileSync(tmp, schemaManifestText(), "utf8");
-  import_node_fs10.default.renameSync(tmp, abs);
+  import_node_fs11.default.writeFileSync(tmp, schemaManifestText(), "utf8");
+  import_node_fs11.default.renameSync(tmp, abs);
   return null;
 }
 function migrateApply(cwd, expect) {
-  const before = evaluateSchemaPreflight(cwd);
-  const planHash = planHashOf(before);
-  const refuse = (reason, blockers2 = []) => ({
+  const report = buildMigrationPlan(cwd);
+  const before = report.preflight;
+  const planHash = report.plan.planHash;
+  const refuse = (reason, blockers = []) => ({
     command: "migrate apply",
     applied: false,
     manifestPath: SCHEMA_MANIFEST_PATH,
     reason,
-    blockers: blockers2,
+    blockers,
     planHash,
     preflight: before,
     ok: false
@@ -40794,9 +42220,14 @@ function migrateApply(cwd, expect) {
   if (before.status === "migration-incomplete") {
     return refuse("a migration journal or in-progress marker is present \u2014 run migrate recovery first");
   }
-  const blockers = applyBlockers(before);
-  if (blockers.length > 0) {
-    return refuse("legacy artifacts or unsafe state require the full migration (#245/#247); this apply only installs the manifest on already-consistent content", blockers);
+  if (report.plan.classification === "bootstrap") {
+    return refuse("empty repository \u2014 this is a bootstrap target: scaffold_docs.js seeds the v3 tree, there is nothing to migrate");
+  }
+  if (report.inventory.foreignState.some((entry) => entry.kind === "escape")) {
+    return refuse("the repository cannot be fully inventoried \u2014 managed content outside the checkout is reachable through links; remove them and replan");
+  }
+  if (report.plan.blockers.length > 0) {
+    return refuse("legacy artifacts or unsafe state require the full migration (#245 planned the inventory; the journaled apply/resume machinery is #247); this apply only installs the manifest on already-consistent content", report.plan.blockers);
   }
   const writeRefusal = writeManifest(cwd);
   if (writeRefusal !== null) {
@@ -40873,7 +42304,7 @@ function usage() {
     "  apply        Apply whitelisted repairs, then rescan and validate",
     "  index plan   Preview managed index materialization without writing",
     "  index apply  Materialize managed indexes, revalidating drift pins first",
-    "  migrate plan      Read-only schema-preflight diagnostic + planHash (#233)",
+    "  migrate plan      Read-only migration inventory + dry-run plan (#233/#245)",
     "  migrate apply     Install/repair the schema manifest on consistent content",
     "  migrate recovery  Report migration journal state without mutating it",
     "",
@@ -41022,10 +42453,10 @@ async function main() {
       return;
     }
     if (!COMMANDS.includes(args.command)) throw new Error(`Unknown command: ${args.command}`);
-    const cwd = import_node_path12.default.resolve(args.cwd);
+    const cwd = import_node_path13.default.resolve(args.cwd);
     if (args.command === "migrate") {
       validateMigrateArgs(args);
-      if (!import_node_fs11.default.existsSync(cwd) || !import_node_fs11.default.statSync(cwd).isDirectory()) {
+      if (!import_node_fs12.default.existsSync(cwd) || !import_node_fs12.default.statSync(cwd).isDirectory()) {
         throw new Error(`--cwd does not exist or is not a directory: ${args.cwd}`);
       }
       runMigrate(args, cwd);
