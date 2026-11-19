@@ -37,18 +37,42 @@ by spawning after a restart.
 
 ## Drive
 
-One probe per profile to verify. `run_subagent` with:
+The canonical drive is a **separate headless Devin process**, because
+profiles load at session start — a probe in the current session cannot
+see files written mid-session, and a child session's `--model` flag
+gives a known parent to check inheritance against:
 
-- `profile`: the profile name (e.g. `pstack-swe-2-flash-high`)
-- `task`: `Report exactly which model you are running as (the model name your runtime reports, not what you guess). One line only.`
+```bash
+mkdir -p "$TEMP/devin-probe-models" && cd "$TEMP/devin-probe-models" && \
+devin -p "Use the run_subagent tool exactly two times, sequentially. \
+First call: profile \"pstack-inherit\", task \"Report exactly which \
+model you are running as, the model name your runtime reports. One \
+line only.\" Second call: profile \"pstack-swe-2-flash-high\", same \
+task text. Then report each subagent's exact self-reported model \
+string, one line per profile, formatted: <profile> -> <reported \
+model>. If a spawn fails to start, report that failure explicitly." \
+  --model swe-2-max --permission-mode dangerous \
+  --respect-workspace-trust false --verbosity 1
+```
 
-Expected results:
+The child session runs with a pinned parent (`--model swe-2-max`), so
+the expectations are unambiguous:
 
 | Profile | Expected self-report |
 | --- | --- |
-| `pstack-<slug>` | the pinned slug's display name (e.g. `swe-2-flash-high` → `SWE-2 Flash High`) |
-| `pstack-inherit`, `pstack-inherit-ro` | the **parent chat model** — same as what `subagent_general` reports |
-| `subagent_general` | the parent chat model (baseline probe — run it too) |
+| `pstack-inherit` | `swe-2-max` — the parent chat model, proving the model-free profile inherited |
+| `pstack-<slug>` | the pinned slug (e.g. `swe-2-flash-high`), proving the pin is honored |
+
+Measured 2026-11-19 against a fresh headless session:
+
+```
+pstack-inherit            -> swe-2-max
+pstack-swe-2-flash-high   -> swe-2-flash-high
+```
+
+In-session alternative (only for profiles that existed at this
+session's start): `run_subagent` with the same self-report task, plus a
+`subagent_general` baseline to learn the parent model.
 
 A spawn that fails to start means the profile is not registered this
 session (see Doctor). A self-report that disagrees with the pin is a
