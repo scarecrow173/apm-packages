@@ -7,7 +7,7 @@ description: Configure which models pstack uses per role and at what reasoning b
 
 If this skill arrived via the pstack plugin, read [the Devin adapter](../../docs/harness/devin.md) once per session before you follow this skill — it is the adapter of record.
 
-Write `~/.devin/rules/pstack-models.md`, a Devin rule with `trigger: always_on` frontmatter that sets pstack's model per role, plus one `pstack-<slug>` custom subagent profile and one `pstack-<slug>-ro` read-only variant per used slug under the Devin agents dir — `~/.config/devin/agents/` (Windows: `%APPDATA%\devin\agents\` `[unverified]`).
+Write `~/.devin/rules/pstack-models.md`, a Devin rule with `trigger: always_on` frontmatter that sets pstack's model per role, plus one `pstack-<slug>` custom subagent profile and one `pstack-<slug>-ro` read-only variant per used slug under the Devin agents dir — `~/.config/devin/agents/` (Windows: `%APPDATA%\devin\agents\` `[unverified]`). Setup also always emits `pstack-inherit` and `pstack-inherit-ro`, profiles with no `model:` pin: they are the mechanical spawn target when a role resolves to `inherit-parent`/`auto`, because `run_subagent` takes the model only from the profile's `model:` field and a model-free profile inherits the parent chat model.
 
 All arithmetic and file writes are deterministic: `scripts/setup.mjs` in this skill's directory does them (`<skill>` below names that directory). Never edit a generated file by hand — each carries a `# pstack-generated:` sha256 marker the script uses to tell its own output from user edits.
 
@@ -51,7 +51,7 @@ Tell the user the rule and profiles were written and that they load at session s
 
 Explain the model semantics once:
 
-- With `sidekick` (a Fusion plan), one hands-on delegate goes to `sidekick`. Every fan-out role — arena runners, swarm workers, reviewers, poteto-mode delegates — spawns one `run_subagent` per entry on the generated `pstack-*` profiles: `pstack-<slug>` for write work, `pstack-<slug>-ro` for review.
+- With `sidekick` (a Fusion plan), one hands-on delegate goes to `sidekick`. Every fan-out role — arena runners, swarm workers, reviewers, poteto-mode delegates — spawns one `run_subagent` per entry on the generated `pstack-*` profiles: `pstack-<slug>` for write work, `pstack-<slug>-ro` for review. A role resolved to `inherit-parent`/`auto` spawns `pstack-inherit`/`pstack-inherit-ro`, not `poteto-agent` — `poteto-agent`'s own `model:` pin would override the alias.
 - A `-ro` profile is read-only intent declared through `allowed-tools` — for a hard read-only guarantee spawn `subagent_explore` instead.
 - An unknown model fails closed — the skill never guesses a slug.
 

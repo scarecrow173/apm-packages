@@ -244,7 +244,7 @@ export function rulesFile(choices, budget) {
     "trigger: always_on\n" +
     "---\n" +
     "# pstack model configuration. One line per role. Delete a line to fall back to the skill default.\n" +
-    "# `inherit-parent` or `auto` as a value: the role runs on the parent chat model (omit `model` — `run_subagent` inherits the parent). Alias entries in a panel list still count toward its fan-out.\n" +
+    "# `inherit-parent` or `auto` as a value: the role runs on the parent chat model — spawn profile `pstack-inherit` (or `pstack-inherit-ro` for read-only fan-out), which carries no model pin so `run_subagent` inherits the parent. Alias entries in a panel list still count toward its fan-out.\n" +
     `# defaults: ${ROLES_DOC.schema}\n` +
     `# budget: ${budget} (${effort})\n` +
     ROLES.filter(
@@ -278,6 +278,37 @@ export function profileFile(model, { ro }) {
     `# ${name}\n` +
     "\n" +
     `You are a pstack delegate subagent pinned to model \`${model}\`. ` +
+    "Read the `SKILL.md` of the pstack skill that spawned you in full " +
+    "before doing any work — your parent names it in the task brief.\n" +
+    (ro
+      ? "\nread-only intent enforced via allowed-tools — for a hard " +
+        "guarantee spawn `subagent_explore` instead\n"
+      : "");
+  return stamp(body, "<!-- pstack-generated: sha256:<sha> -->\n");
+}
+
+/** Profile content for `pstack-inherit.md` (`ro: false`) or
+ *  `pstack-inherit-ro.md` (`ro: true`): the mechanical spawn target for
+ *  `inherit-parent`/`auto` role values. It carries NO `model:` line —
+ *  model-free profiles inherit the parent chat model (same resolution
+ *  path as `subagent_general`). Emitting it unconditionally keeps the
+ *  alias valid even when a role is switched to `inherit-parent` without
+ *  re-running setup. */
+export function inheritProfileFile({ ro }) {
+  const name = `pstack-inherit${ro ? "-ro" : ""}`;
+  const body =
+    "---\n" +
+    `name: ${name}\n` +
+    `description: 'pstack delegate subagent with no model pin${
+      ro ? " for read-only fan-out entries" : ""
+    } — inherits the parent chat model. Spawn with \`run_subagent\` \`profile: "${name}"\` when a pstack skill or \`~/.devin/rules/pstack-models.md\` resolves a role to \`inherit-parent\` or \`auto\`.'\n` +
+    (ro ? "allowed-tools: read, grep, glob\n" : "") +
+    "---\n" +
+    "\n" +
+    `# ${name}\n` +
+    "\n" +
+    "You are a pstack delegate subagent with no model pin — you inherit " +
+    "the parent chat model. " +
     "Read the `SKILL.md` of the pstack skill that spawned you in full " +
     "before doing any work — your parent names it in the task brief.\n" +
     (ro
@@ -520,6 +551,10 @@ function cmdPlan(flags, env, out) {
     desiredProfiles[`pstack-${slug}.md`] = profileFile(slug, { ro: false });
     desiredProfiles[`pstack-${slug}-ro.md`] = profileFile(slug, { ro: true });
   }
+  // The inherit target is always emitted — `inherit-parent`/`auto` stays
+  // valid without re-running setup.
+  desiredProfiles["pstack-inherit.md"] = inheritProfileFile({ ro: false });
+  desiredProfiles["pstack-inherit-ro.md"] = inheritProfileFile({ ro: true });
 
   const fsRules = {};
   if (fs.existsSync(rulesPath)) {

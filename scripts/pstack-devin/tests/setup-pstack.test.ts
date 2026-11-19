@@ -5,6 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir as osTmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { load as yamlLoad } from "js-yaml";
 
 // setup.mjs is plain Node ESM shipped with the skill; import it directly so
 // these are real logic tests, not content greps. tsx compiles this file to
@@ -33,6 +34,7 @@ interface SetupModule {
   ): { resolved: Record<string, string>; needsChoice: string[] };
   rulesFile(choices: Record<string, string>, budget: string): string;
   profileFile(model: string, opts: { ro: boolean }): string;
+  inheritProfileFile(opts: { ro: boolean }): string;
   planChanges(
     fsState: Record<string, string>,
     desired: Record<string, string>,
@@ -260,6 +262,64 @@ test("ro profile restricts allowed-tools and stays honest about guarantees", () 
   assert.doesNotMatch(p, /allowed-tools[^\n]*(exec|write|edit)/i);
   assert.doesNotMatch(p, /完全read-only|fully read-only/i);
   assert.match(p, /subagent_explore/);
+});
+
+test("inherit profile carries no model pin and parses as YAML", () => {
+  // Regression: generated `description:` once shipped a plain scalar
+  // containing `profile: "<name>"` — the colon+space broke the frontmatter
+  // parse and every pstack-* profile failed to register (devin doctor
+  // CFG005). Parse every emitted frontmatter, not just this one.
+  for (const p of [
+    M.inheritProfileFile({ ro: false }),
+    M.inheritProfileFile({ ro: true }),
+    M.profileFile("swe-2-max", { ro: false }),
+    M.profileFile("swe-2-max", { ro: true }),
+  ]) {
+    const fm = /^---\n([\s\S]*?)\n---\n/.exec(p)?.[1] ?? "";
+    assert.ok(fm.length > 0, "missing frontmatter block");
+    const data = yamlLoad(fm) as Record<string, unknown>;
+    assert.equal(typeof data.name, "string");
+    assert.equal(typeof data.description, "string");
+  }
+  const plain = M.inheritProfileFile({ ro: false });
+  assert.match(plain, /^name: pstack-inherit$/m);
+  assert.doesNotMatch(plain, /^model:/m);
+  const ro = M.inheritProfileFile({ ro: true });
+  assert.match(ro, /^name: pstack-inherit-ro$/m);
+  assert.doesNotMatch(ro, /^model:/m);
+  assert.match(ro, /^allowed-tools:/m);
+});
+
+test("plan always emits the inherit target, alias or not", async () => {
+  // `inherit-parent`/`auto` must stay valid without re-running setup, so
+  // the profile is unconditional — not only when a role uses the alias.
+  const dir = tmpdir();
+  const { plan } = await runPlan(
+    dir,
+    { "bug-fix": "swe-2-high" },
+    "  swe-2-high\n  swe-2-xhigh\n",
+  );
+  const names = Object.keys(plan.files).map((f) => f.replace(/\\/g, "/"));
+  assert.ok(names.some((f) => f.endsWith("pstack-inherit.md")));
+  assert.ok(names.some((f) => f.endsWith("pstack-inherit-ro.md")));
+  const dir2 = tmpdir();
+  const { plan: plan2 } = await runPlan(
+    dir2,
+    { "bug-fix": "inherit-parent" },
+    "  swe-2-high\n",
+  );
+  const names2 = Object.keys(plan2.files).map((f) => f.replace(/\\/g, "/"));
+  // an alias produces no slug-pinned profile — only the inherit pair
+  const profiles2 = names2
+    .filter((f) => /pstack-[^/]*\.md$/.test(f) && !f.endsWith("pstack-models.md"))
+    .map((f) => f.split("/").pop())
+    .sort();
+  assert.deepEqual(profiles2, ["pstack-inherit-ro.md", "pstack-inherit.md"].sort());
+});
+
+test("rulesFile names the mechanical inherit spawn target", () => {
+  const a = M.rulesFile({ "bug-fix": "inherit-parent" }, "large");
+  assert.match(a, /pstack-inherit/);
 });
 
 test("planChanges: own output unchanged -> skip; user-edited -> flagged diff", () => {
