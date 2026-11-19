@@ -15,7 +15,7 @@ delegate または audit への宣言済みエッジを最大 1 つ、または�
 - `discovery-doc`、`adr-doc`、`spec-doc`: 意図と判断の記録。
 - `design-doc` は durable な設計ベースラインを定義し、`plan-doc` と
   `task-doc` は Document Registry 3 の execution-bound レコードを扱います
-  （`persistence: ephemeral` — creator は durable な Git 書き込みを拒否）。
+  （`persistence: ephemeral` — durable な creator は配布されません）。
 - `verification-doc` は `docs/verification` に durable な検証証跡を記録し、
   `test-spec-doc` はレガシーの migration-only 形式です。
 - `knowledge-doc` は `docs/knowledge` に durable な知識を記録します。
@@ -80,9 +80,9 @@ binding は Graph Definition に宣言されています。
 
 - migration: `migrate_docs`; bootstrap: `scaffold_docs`。
 - briefing: `briefing-flow`; design: `design-doc`。
-- planning: `planning-flow`。`plan-doc` の approval 後に `test-spec-doc`、続いて
-  `task-doc` を順序付けます。
-- task projection: `build_task_graph`。`plan`/`task`/`test-spec` audit 後に
+- planning: `planning-flow`。run の `plan.md` approval を管理し、
+  Execution Store に task record を materialize します。
+- task projection: `build_task_graph`。`design` audit 後に
   `build_task_graph.js` が実行します。
 - implementation: `implementation-flow`; exit audit: `doc-status`。
 

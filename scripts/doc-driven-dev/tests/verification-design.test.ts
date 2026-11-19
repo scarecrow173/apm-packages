@@ -683,11 +683,15 @@ test("execution_store resolves task checks through the Check contract", () => {
 // Legacy test-spec boundary + schema preflight
 // ---------------------------------------------------------------------------
 
-test("test-spec creation is refused and legacy specs route to migration", () => {
+test("no test-spec creator ships and legacy specs route to migration", () => {
   const repo = tempRepo();
-  const refused = runScript("test-spec-doc", "new_test_spec.js", ["--title", "Legacy", "--verifies", "docs/specs/spec.md"], { cwd: repo });
-  assert.notEqual(refused.status, 0);
-  assert.match(refused.stderr, /legacy|migration/i);
+  // Issue #249: the legacy test-spec creator entrypoint is removed — there
+  // is nothing left to refuse at a gate.
+  assert.equal(
+    fs.existsSync(path.join(skillRoot, "test-spec-doc", "scripts", "new_test_spec.js")),
+    false,
+    "new_test_spec.js must not ship",
+  );
 
   // Under a declared manifest a test-spec file is migration-required, and
   // the repository model classifies it as legacy — never a verification doc.

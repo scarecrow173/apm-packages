@@ -1,6 +1,6 @@
 ---
 name: task-doc
-description: plan、spec、ADR、他 task にリンクした実装単位を YAML フロントマター + Markdown で管理するときに使います。
+description: Execution Store run の task レコード契約 — 承認済み run plan を実行可能な単位に分解するとき、task の依存関係と完了条件を定義するとき、または v3 以前の docs/tasks corpus を移行するときに使います。task は durable な Markdown 文書ではなく (runId, taskId) のレコードです。
 license: MIT
 ---
 
@@ -15,9 +15,9 @@ task は、それが実装する plan、spec、ADR にリンクし、完了条�
 Document Registry 3 では `task` は **execution-bound**
 (`persistence: ephemeral`)です。task の状態は durable な Git 文書ではなく
 Execution Store にあり、`docs/tasks` / `docs/work-items` は durable な
-書き込みを受け付けない *former* ディレクトリです。`new_task.js` は
-registry ゲートで拒否されます — TASK-DOC-GATE チェック、scope チェック、
-あらゆる書き込みより先に:
+書き込みを受け付けない *former* ディレクトリです。`new_task.js` creator は
+配布されていません(Issue #249 で削除) — `task` を解釈するのは registry
+だけであり、その型名は共有クエリ面で拒否します:
 
 `Document type "task" is execution-bound (persistence: ephemeral): it has no durable Git form under Document Registry 3 — plan/task state lives in the Execution Store`
 
@@ -68,8 +68,8 @@ task の同一性は `(runId, taskId)` です。レコードは自分の run の
    確認する。
 2. ひとまとまりの実装単位として task レコードを作成する。
 
-   Document Registry 3 では `new_task.js` が registry ゲートで拒否
-   されます(上記 *Document Registry v3 の位置づけ* 参照)。`task` は
+   Document Registry 3 では `new_task.js` creator は配布されていません
+   (上記 *Document Registry v3 の位置づけ* 参照)。`task` は
    execution-bound なので、レコードは `docs/tasks` のファイルではなく
    Execution Store に作成されます。
    `references/task-conventions.ja.md` がレコード契約を定義し、
@@ -133,8 +133,9 @@ task のステータス遷移は Execution Store の状態変更であり、Regi
 
 ## リソース
 
-- `scripts/new_task.js`: Registry 3 では registry ゲートで拒否されます。
-  `task` は execution-bound であり、durable な作成経路はありません。
+- `new_task.js`: Registry 3 で*削除*されました。`task` は
+  execution-bound であり、durable な作成経路はありません。run task は
+  `planning-flow` が Execution Store レコードとしてのみ mint します。
 - `references/task-conventions.ja.md`: task レコードのステータス値、
   依存関係、必須内容、規約です。
 - `assets/templates/task.ja.md`: task 本文テンプレートです。

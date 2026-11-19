@@ -22,8 +22,8 @@ effect: { kind: delegate, id: implementation-flow }
 inputs:
   - { kind: execution-task, runId: RUN-7QwErTyUiOpAsDfGhJkLmN, taskId: TASK-0H5nCkR2mW9xVbYqZeLp3s, version: 1 }
 outputs:
-  - { kind: durable-document, path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:evidence }
-proof: { kind: durable-document, path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:evidence }
+  - { kind: durable-document, path: docs/knowledge/example-finding.md, id: KNOW-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:evidence }
+proof: { kind: durable-document, path: docs/knowledge/example-finding.md, id: KNOW-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:evidence }
 ```
 
 ```yaml
@@ -48,7 +48,7 @@ effect: { kind: delegate, id: implementation-flow }
 inputs:
   - { kind: execution-task, runId: RUN-7QwErTyUiOpAsDfGhJkLmN, taskId: TASK-0H5nCkR2mW9xVbYqZeLp3s, version: 1 }
 outputs:
-  - { kind: durable-document, path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:checkpoint }
+  - { kind: durable-document, path: docs/knowledge/example-finding.md, id: KNOW-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:checkpoint }
 reason: authority-required
 ```
 

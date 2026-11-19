@@ -1,20 +1,16 @@
 "use strict";
 
-import fs from "node:fs";
-import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { scopeFromEntries, scopeKey, toScopeEntry, type ScopePattern } from "./scope_entry";
 import { loadRun, resolveStateRoot, type TaskRecord } from "../../../lib/execution_store";
-import { isInsideRealpath } from "../../../lib/document_utils";
 
 export type SliceOutcome = {
   taskId: string;
   declaredScope: string[];     // normalized paths from the task record's scope (files + dir prefixes)
   touchedPaths: string[];      // actual diff (from collectChangedPaths or supplied)
-  evidencePaths: string[];
 };
 export type MergeFinding = {
-  code: "scope-violation" | "write-collision" | "evidence-mismatch";
+  code: "scope-violation" | "write-collision";
   taskId?: string; path?: string; message: string;
 };
 export type MergeReport = { verdict: "merge" | "merge-review" | "blocked"; findings: MergeFinding[] };
@@ -154,49 +150,11 @@ export function collectChangedPaths(repo: string, baseRef = "HEAD"): string[] {
   return [...changed].sort();
 }
 
-/**
- * Evidence binding check: the evidence file must have a verifiable
- * repo-relative path, exist, be readable as UTF-8, and literally contain the
- * slice's own task ID (front matter or body). Any failure → false.
- */
-export function verifyEvidenceBinding(cwd: string, evidencePath: string, taskId: string): boolean {
-  // An empty task ID would pass `.includes("")` on any file — fail closed.
-  if (!taskId.trim()) return false;
-  const normalized = normalizeVerifiedPath(evidencePath);
-  if (normalized === null) return false;
-  try {
-    // A repo-relative path can still escape the checkout through a symlink
-    // (for example a docs/impl/ entry pointing outside the repo): resolve the
-    // real path and require it to stay under the resolved cwd — the shared
-    // realpath containment check fails closed.
-    if (!isInsideRealpath(cwd, path.join(cwd, normalized))) return false;
-    const resolved = fs.realpathSync(path.join(cwd, normalized));
-    return fs.readFileSync(resolved, "utf8").includes(taskId);
-  } catch {
-    return false;
-  }
-}
-
-/**
- * The accepted evidence-path surface: a declared evidence artifact must be
- * a verifiable repo-relative path under docs/impl/. Under Document
- * Registry 3 that subtree is a migration-owned container — the files bound
- * here are plain evidence artifacts that must name the slice's task ID,
- * never `impl` records. The v2 own-task-doc exemption is gone: under Issue
- * #237 task state lives in the Execution Store, which is not a writable
- * repo path at all.
- */
-function isAllowedEvidencePath(normalized: string): boolean {
-  const key = scopeKey(normalized);
-  return key.startsWith("docs/impl/");
-}
-
-// Severity ladder: evidence-mismatch and store-path scope violations are
-// blocked-severity (2); write-collision and other scope violations are
-// merge-review-severity (1). Unverifiable paths and malformed slice inputs
-// are also blocked-severity — bad input always fails closed. Findings sort
-// severity-descending so the worst kinds surface first; the sort is stable,
-// preserving discovery order.
+// Severity ladder: store-path scope violations, unverifiable paths, and
+// malformed slice inputs are blocked-severity (2); write-collision and
+// other scope violations are merge-review-severity (1). Bad input always
+// fails closed. Findings sort severity-descending so the worst kinds
+// surface first; the sort is stable, preserving discovery order.
 const BLOCKED_SEVERITY = 2;
 const REVIEW_SEVERITY = 1;
 
@@ -232,7 +190,7 @@ function bindRunTask(
   const record = tasksById.get(outcome.taskId);
   if (!record) {
     findings.push({
-      code: "evidence-mismatch",
+      code: "scope-violation",
       taskId: outcome.taskId,
       message: `${outcome.taskId} is not a task in run ${runId}; the slice cannot bind its declared scope`,
       severity: BLOCKED_SEVERITY,
@@ -249,12 +207,14 @@ function bindRunTask(
 
 /**
  * Deterministic merge verification over completed slices: the actual diff of
- * each slice must stay inside its task record's declared scope, no two slices
- * may touch the same path, and each evidence file must live in the slice's
- * evidence scope and bind to the slice's own task ID. The claimed `taskId`
+ * each slice must stay inside its task record's declared scope, and no two
+ * slices may touch the same path. The claimed `taskId`
  * binds to the run before it grants anything — a claim that does not verify
  * blocks. An empty slice list, duplicate task IDs, or unverifiable paths are
- * malformed input and fail closed to blocked.
+ * malformed input and fail closed to blocked. Verification evidence is an
+ * Evidence Store concern (Git-untracked records under `.apm/state/`) — it
+ * never appears in a merge diff, so this check has no repo-path evidence
+ * surface (Issue #249 removed the `docs/impl/` one).
  */
 export function verifyParallelMerge(
   cwd: string,
@@ -281,14 +241,14 @@ export function verifyParallelMerge(
   const findings: RankedFinding[] = [];
 
   // Slice identity must be unique — duplicated task IDs let one slice's diff
-  // or evidence masquerade as another's and would mask write-collisions.
+  // masquerade as another's and would mask write-collisions.
   const seenTaskIds = new Set<string>();
   for (const outcome of slices) {
     if (!outcome.taskId.trim()) {
       findings.push({
-        code: "evidence-mismatch",
+        code: "scope-violation",
         taskId: outcome.taskId,
-        message: "slice outcome has an empty task ID; evidence cannot be bound",
+        message: "slice outcome has an empty task ID; it cannot bind a task record's scope",
         severity: BLOCKED_SEVERITY,
       });
     } else if (seenTaskIds.has(outcome.taskId)) {
@@ -309,16 +269,6 @@ export function verifyParallelMerge(
 
   for (const [index, outcome] of slices.entries()) {
     const { docScope } = bound[index];
-    // Only the slice's declared evidence artifacts under docs/impl/ are
-    // contract-implied writes; undeclared docs/impl/ writes go through the
-    // normal scope check like any other path.
-    const declaredEvidenceKeys = new Set(
-      outcome.evidencePaths
-        .map((raw) => normalizeVerifiedPath(raw))
-        .filter((normalized): normalized is string => normalized !== null)
-        .map(scopeKey)
-        .filter((key) => key.startsWith("docs/impl/")),
-    );
     const patterns: ScopePattern[] = [];
     for (const rawScope of outcome.declaredScope) {
       const pattern = parseScopeEntry(rawScope);
@@ -380,11 +330,6 @@ export function verifyParallelMerge(
         });
         continue;
       }
-      // Contract-implied writes need no scope declaration: the slice's
-      // declared evidence artifacts under docs/impl/.
-      if (declaredEvidenceKeys.has(touchedKey)) {
-        continue;
-      }
       if (patterns.some((pattern) => scopeContains(pattern, touched))) continue;
       findings.push({
         code: "scope-violation",
@@ -415,41 +360,6 @@ export function verifyParallelMerge(
       message: `${touched} was touched by multiple slices (${taskIds.join(", ")}); refusing last-writer-win`,
       severity: REVIEW_SEVERITY,
     });
-  }
-
-  for (const outcome of slices) {
-    for (const raw of outcome.evidencePaths) {
-      const evidencePath = normalizeVerifiedPath(raw);
-      if (evidencePath === null) {
-        findings.push({
-          code: "evidence-mismatch",
-          taskId: outcome.taskId,
-          path: raw,
-          message: `${outcome.taskId} evidence path ${JSON.stringify(raw)} is not a verifiable repo-relative path`,
-          severity: BLOCKED_SEVERITY,
-        });
-        continue;
-      }
-      if (!isAllowedEvidencePath(evidencePath)) {
-        findings.push({
-          code: "evidence-mismatch",
-          taskId: outcome.taskId,
-          path: evidencePath,
-          message: `${outcome.taskId} evidence ${evidencePath} is outside the docs/impl/ evidence scope`,
-          severity: BLOCKED_SEVERITY,
-        });
-        continue;
-      }
-      if (!verifyEvidenceBinding(cwd, evidencePath, outcome.taskId)) {
-        findings.push({
-          code: "evidence-mismatch",
-          taskId: outcome.taskId,
-          path: evidencePath,
-          message: `${outcome.taskId} evidence ${evidencePath} is missing or does not reference the task ID`,
-          severity: BLOCKED_SEVERITY,
-        });
-      }
-    }
   }
 
   findings.sort((left, right) => right.severity - left.severity);

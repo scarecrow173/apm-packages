@@ -1,12 +1,27 @@
 "use strict";
 
+// ---------------------------------------------------------------------------
+// impl/exp legacy readers — migration-dedicated only (Issue #249)
+// ---------------------------------------------------------------------------
+//
+// `impl` and `exp` are legacy Registry-2 formats interpreted ONLY by
+// migration tooling and the read-only owner audits; they have no durable
+// Git form under Document Registry 3 and no creator/mutator entrypoint
+// ships. This module is deliberately read-mostly: it parses the legacy
+// front matter / JSONL corpus for `auditImplementationRecords` /
+// `auditExperimentLogs` (doc-status owner audits + `migrate_ids`
+// blockers), the strict managed-index row parser, and the impl-4col /
+// exp-1col index writer the migration-owned index engine
+// (`impl_index_sync.ts`, called by `migrate_ids` / `promote_index`) uses.
+// The pre-v3 record/event writers are removed — nothing in the normal
+// runtime mints or mutates impl/exp content.
+
 import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
-import { generateArtifactId } from "../../../lib/artifact_id";
-import { changeFields, GENERATED_INDEX_MARKER, GENERATED_SETTLED_MARKER, INDEX_TABLE_HEADER_1COL, INDEX_TABLE_HEADER_4COL, indexCell, isForeignDocType, isGeneratedIndex, mergeManagedIndex, parseDoc, renderIndexBody, sanitizeTitle } from "../../../lib/doc_suite_utils";
+import { changeFields, GENERATED_INDEX_MARKER, GENERATED_SETTLED_MARKER, INDEX_TABLE_HEADER_1COL, INDEX_TABLE_HEADER_4COL, indexCell, isForeignDocType, isGeneratedIndex, mergeManagedIndex, parseDoc, renderIndexBody } from "../../../lib/doc_suite_utils";
 import type { IndexRowEntry } from "../../../lib/doc_suite_utils";
-import { resolveContainedDir, slugify } from "../../../lib/document_utils";
+import { resolveContainedDir } from "../../../lib/document_utils";
 import { assertTypeScope } from "../../../lib/doc_ownership";
 import { isSettledStatus } from "../../../lib/doc_lifecycle";
 import { hasSection } from "../../../lib/markdown_sections";
@@ -73,9 +88,6 @@ type ChangeField = typeof changeFields[number];
 type RelationField = typeof relationFields[number];
 type ExperimentEventType = typeof experimentEventTypes[number];
 
-type RelationMap = Record<RelationField, string[]>;
-type ChangeMap = Record<ChangeField, ChangeEntry[]>;
-
 const changeEntrySchema = z.object({
   type: z.string().min(1),
 }).passthrough();
@@ -118,14 +130,6 @@ function posixRelative(from: string, to: string): string {
   return path.relative(from, to).replace(/\\/g, "/");
 }
 
-function ensureDir(dir: string): void {
-  fs.mkdirSync(dir, { recursive: true });
-}
-
-function quote(value: string): string {
-  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
-}
-
 function normalizeFilePath(input: string): string {
   return input.replace(/\\/g, "/");
 }
@@ -157,232 +161,8 @@ function listFiles(dir: string, ext: ".md" | ".jsonl"): string[] {
     .sort();
 }
 
-function renderTemplate(name: string, replacements: Record<string, string>): string {
-  const templatePath = path.join(__dirname, "../assets/templates", name);
-  let content = fs.readFileSync(templatePath, "utf8").trimEnd();
-  for (const [key, value] of Object.entries(replacements)) {
-    content = content.replaceAll(`{{${key}}}`, value);
-  }
-  return content;
-}
-
-function renderExperimentTemplate(replacements: Record<string, string>): Record<string, unknown> {
-  const escaped = Object.fromEntries(
-    Object.entries(replacements).map(([key, value]) => [key, JSON.stringify(value).slice(1, -1)]),
-  );
-  const content = renderTemplate("experiment-log.jsonl", escaped);
-  return JSON.parse(content);
-}
-
-function emptyChanges(): ChangeMap {
-  return Object.fromEntries(changeFields.map((field) => [field, [] as ChangeEntry[]])) as ChangeMap;
-}
-
-function emptyRelations(): RelationMap {
-  return Object.fromEntries(relationFields.map((field) => [field, [] as string[]])) as RelationMap;
-}
-
-function completeRelations(input?: Partial<RelationMap>): RelationMap {
-  const relations = emptyRelations();
-  for (const field of relationFields) {
-    relations[field] = input?.[field] || [];
-  }
-  return relations;
-}
-
-function completeChanges(input?: Partial<ChangeMap>): ChangeMap {
-  const changes = emptyChanges();
-  for (const field of changeFields) {
-    changes[field] = input?.[field] || [];
-  }
-  return changes;
-}
-
-function formatScalar(key: string, value: string | number | boolean): string {
-  if (typeof value === "string") return `${key}: ${quote(value)}`;
-  return `${key}: ${String(value)}`;
-}
-
-function formatValue(key: string, value: unknown): string[] {
-  if (Array.isArray(value)) {
-    if (value.length === 0) return [`${key}: []`];
-    return [`${key}:`, ...value.map((item) => `  - ${typeof item === "string" ? quote(item) : JSON.stringify(item)}`)];
-  }
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-    return [formatScalar(key, value)];
-  }
-  return [`${key}: ${quote(JSON.stringify(value))}`];
-}
-
-function formatChangeEntry(entry: ChangeEntry): string[] {
-  const preferred = ["type", "path", "from", "to", "source"];
-  const keys = [
-    ...preferred.filter((key) => key in entry),
-    ...Object.keys(entry).filter((key) => !preferred.includes(key)).sort(),
-  ];
-  return keys.flatMap((key) => formatValue(key, entry[key]));
-}
-
-function formatChanges(changes: ChangeMap): string[] {
-  return [
-    "  changes:",
-    ...changeFields.flatMap((field) => {
-      const entries = changes[field];
-      if (entries.length === 0) return [`    ${field}: []`];
-      return [
-        `    ${field}:`,
-        ...entries.flatMap((entry) => {
-          const lines = formatChangeEntry(entry);
-          return lines.length === 0
-            ? ["      - {}"]
-            : [
-              `      - ${lines[0]}`,
-              ...lines.slice(1).map((line) => `        ${line}`),
-            ];
-        }),
-      ];
-    }),
-  ];
-}
-
-function formatRelationBlock(field: RelationField, values: string[]): string[] {
-  if (values.length === 0) return [`  ${field}: []`];
-  return [`  ${field}:`, ...values.map((value) => `    - ${quote(value)}`)];
-}
-
-function implementationRecordFrontMatter(options: {
-  id: string;
-  title: string;
-  status: typeof implStatuses[number];
-  date: string;
-  relations?: Partial<RelationMap>;
-  changes?: Partial<ChangeMap>;
-  adopted?: string[];
-  rejected?: string[];
-}): string {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(options.date)) {
-    throw new Error(`Invalid date: ${options.date} (expected YYYY-MM-DD)`);
-  }
-  const relations = completeRelations(options.relations);
-  const changes = completeChanges(options.changes);
-  return [
-    "---",
-    `id: ${quote(options.id)}`,
-    `type: ${quote("impl")}`,
-    `status: ${quote(options.status)}`,
-    `title: ${quote(sanitizeTitle(options.title))}`,
-    `created: ${quote(options.date)}`,
-    `updated: ${quote(options.date)}`,
-    "owners: []",
-    "relations:",
-    ...formatRelationBlock("source", relations.source),
-    ...formatChanges(changes),
-    ...relationFields.filter((field) => field !== "source").flatMap((field) => formatRelationBlock(field, relations[field])),
-    "metadata:",
-    "  experiments:",
-    ...(options.adopted && options.adopted.length > 0
-      ? ["    adopted:", ...options.adopted.map((item) => `      - ${quote(item)}`)]
-      : ["    adopted: []"]),
-    ...(options.rejected && options.rejected.length > 0
-      ? ["    rejected:", ...options.rejected.map((item) => `      - ${quote(item)}`)]
-      : ["    rejected: []"]),
-    "---",
-  ].join("\n");
-}
-
-function buildImplementationRecordContent(options: {
-  id: string;
-  title: string;
-  status: typeof implStatuses[number];
-  date: string;
-  relations?: Partial<RelationMap>;
-  changes?: Partial<ChangeMap>;
-}): string {
-  const title = sanitizeTitle(options.title);
-  return `${implementationRecordFrontMatter({ ...options, title })}\n\n${renderTemplate("implementation-record.md", { title })}\n`;
-}
-
-function parseEventValue(raw: string): unknown {
-  const trimmed = raw.trim();
-  if (/^(true|false|null|-?\d+(\.\d+)?)$/.test(trimmed) || /^[\[{"]/.test(trimmed)) {
-    try {
-      return JSON.parse(trimmed);
-    } catch {
-      return raw;
-    }
-  }
-  return raw;
-}
-
-function parseSetArguments(items: string[]): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  for (const item of items) {
-    const pivot = item.indexOf("=");
-    if (pivot <= 0) throw new Error(`Invalid --set value: ${item}`);
-    const key = item.slice(0, pivot);
-    const value = item.slice(pivot + 1);
-    result[key] = parseEventValue(value);
-  }
-  return result;
-}
-
 function normalizeExperimentPath(cwd: string, filePath: string): string {
   return normalizeFilePath(posixRelative(cwd, path.resolve(filePath)));
-}
-
-function readExperimentEvents(filePath: string): Array<{ line: number; raw: string; value: Record<string, unknown> | null }> {
-  if (!fs.existsSync(filePath)) throw new Error(`Experiment Log not found: ${filePath}`);
-  const content = fs.readFileSync(filePath, "utf8");
-  if (!content.trim()) return [];
-  return content
-    .split(/\r?\n/)
-    .map((line, index) => ({ line, index }))
-    .filter((entry) => entry.line.trim())
-    .map((entry) => {
-      try {
-        return { line: entry.index + 1, raw: entry.line, value: JSON.parse(entry.line) as Record<string, unknown> };
-      } catch {
-        return { line: entry.index + 1, raw: entry.line, value: null };
-      }
-    });
-}
-
-function nextExperimentSeq(events: Array<{ value: Record<string, unknown> | null }>): number {
-  const seqs = events
-    .map((event) => event.value?.seq)
-    .filter((value): value is number => typeof value === "number" && Number.isInteger(value) && value > 0);
-  return seqs.length === 0 ? 1 : Math.max(...seqs) + 1;
-}
-
-function appendExperimentEvent(filePath: string, event: Record<string, unknown>): void {
-  const existing = fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf8") : "";
-  const prefix = existing.length > 0 && !existing.endsWith("\n") ? "\n" : "";
-  fs.appendFileSync(filePath, `${prefix}${JSON.stringify(event)}\n`, "utf8");
-}
-
-function writeExperimentEvents(filePath: string, events: Record<string, unknown>[]): void {
-  const content = events.length === 0 ? "" : `${events.map((event) => JSON.stringify(event)).join("\n")}\n`;
-  fs.writeFileSync(filePath, content, "utf8");
-}
-
-function buildExperimentEvent(options: {
-  cwd: string;
-  filePath: string;
-  seq: number;
-  type: ExperimentEventType;
-  ts?: string;
-  summary?: string;
-  extra?: Record<string, unknown>;
-}): Record<string, unknown> {
-  return {
-    schema: "experiment_event.v1",
-    experiment: normalizeExperimentPath(options.cwd, options.filePath),
-    seq: options.seq,
-    type: options.type,
-    ts: options.ts || new Date().toISOString(),
-    ...(options.summary ? { summary: options.summary } : {}),
-    ...(options.extra || {}),
-  };
 }
 
 type IndexUpdateResult = { written: boolean; reason: "hand-curated" | null };
@@ -733,23 +513,6 @@ function updateIndexForExperimentDir(cwd: string, relativeDir: string, options?:
   );
 }
 
-function buildNewFilePath(options: {
-  cwd: string;
-  kind: "ir" | "exp";
-  title: string;
-  explicitDir?: string;
-}): { outputPath: string; relativeDir: string } {
-  const relativeDir = implDir(options.cwd, options.kind, options.explicitDir);
-  const fullDir = path.join(options.cwd, relativeDir);
-  ensureDir(fullDir);
-  const ext = options.kind === "ir" ? ".md" : ".jsonl";
-  const filename = `${slugify(options.title, options.kind)}${ext}`;
-  return {
-    outputPath: path.join(fullDir, filename),
-    relativeDir,
-  };
-}
-
 function resolvesLocalTarget(cwd: string, fromFile: string, target: string): boolean {
   const candidates = [
     path.resolve(cwd, target),
@@ -937,29 +700,14 @@ function auditExperimentLogs(cwd: string, relativeDir: string): { directory: str
 }
 
 export {
-  appendExperimentEvent,
   auditExperimentLogs,
   auditImplementationRecords,
-  buildExperimentEvent,
-  buildImplementationRecordContent,
-  buildNewFilePath,
-  emptyChanges,
-  experimentEventTypes,
-  implementationRecordSections,
   implDir,
   implIndexEntries,
-  implStatuses,
   listFiles,
-  normalizeExperimentPath,
   parseImplIndexRows,
-  parseSetArguments,
-  posixRelative,
-  readExperimentEvents,
-  renderExperimentTemplate,
   updateIndexForExperimentDir,
   updateIndexForMarkdownDir,
-  writeExperimentEvents,
-  nextExperimentSeq,
 };
 
 export type {

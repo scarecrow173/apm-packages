@@ -4,8 +4,8 @@
 リンクする方法を定義します。
 
 Document Registry 3 では `test-spec` はレガシーの migration-only 種別です。
-durable な Registry v3 の形を持たず、`new_test_spec.js` は前提条件・スコープ
-検証・書き込みの前に registry gate で拒否します。以下のディレクトリは
+durable な Registry v3 の形を持たず、`new_test_spec.js` creator は配布されて
+いません（Issue #249）。以下のディレクトリは
 migration-owned scope です。この規約はマイグレーションが読み取る v3 以前の
 文書形状を記述します。durable な検証記録は `verification-doc` により
 `docs/verification` に置きます。

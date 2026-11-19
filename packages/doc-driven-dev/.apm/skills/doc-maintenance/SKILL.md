@@ -290,7 +290,7 @@ preview-first:
   zero writes. `apply` rewrites references, renames files, regenerates each
   touched index through its owning writer (the shared managed-index writer,
   the ADR writer for `docs/adr`, the impl safe sync library — called
-  directly, since `sync_impl_index` refuses — for
+  directly since the `sync_impl_index` CLI was removed — for
   `docs/impl/ir`/`docs/impl/exp`), then revalidates the repository with
   `doc-status` audits (duplicate ids, unresolved relations, broken links,
   index consistency). Each index reports `regenerated`, `skipped`, or
@@ -320,7 +320,7 @@ preview-first:
   for managed index materialization.
 - Owner-local explicit writers remain for their own durable directories:
   `update_index.js` (adr-doc) for `docs/adr`. `sync_impl_index.js`
-  (impl-doc) refuses at the registry gate under Registry 3 — impl indexes
+  (impl-doc) was removed under Registry 3 — impl indexes
   are migration-owned and reconcile only inside `migrate_ids`.
 - Migration is planned and applied through the same preview-first contract
   but is never performed implicitly by a repair command.

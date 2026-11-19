@@ -73,13 +73,12 @@ task 同士は引き続き並行実行できます。`decision` が `parallel` �
 - rename は source と destination の両方の path として報告されるため、
   保護された path からの rename が純粋な追加に偽装されることはありません。
 - 宣言された scope の外の touched path → `scope-violation`。
-- `evidencePaths` に宣言された `docs/impl/` 配下の evidence 成果物 —
-  merge verifier が受理する evidence path surface — は、contract 上
-  すでに必須なため scope 宣言を要しません。Document Registry 3 では
-  `docs/impl/` は migration 所有の container であり、束縛される
-  evidence ファイルは task ID を記した plain artifact であって
-  `impl` record ではありません。未宣言の `docs/impl/` への書き込みは
-  他の path と同様に通常の scope 検証を通ります。
+- 検証 evidence は merge diff に一切現れません: Git 未追跡の Evidence
+  Store（`.apm/state/doc-driven-dev/evidence/`）に置かれるため、merge
+  verifier に repo path の evidence surface はありません。`docs/impl/` への
+  書き込みは migration 所有領域であり、他の path と同様に通常の scope
+  検証を通ります — 通常の slice が contract 上暗黙に書き込める場所では
+  ありません。
 - Execution Store は repo diff 経由では一切書き込めません: 解決された
   state root（既定 `.apm/state/doc-driven-dev/`）内の touched path は、
   task status と scope を守る record CAS を迂回するため —
@@ -100,7 +99,7 @@ task record に束縛されます:
 | `focus` | slice 自身の task identity — `(runId, taskId)` |
 | `permissions.write` | task record が宣言した `scope` のみ — それ以外は不可 |
 | `acceptanceCriteria` | task record の `checks` |
-| `completion` | 完了した `EffectOutcome` と、slice 自身の task ID を参照する evidence |
+| `completion` | 完了した `EffectOutcome`。検証 evidence を生成する場合は run に束縛された Evidence Store レコード |
 
 ## Merge Verification
 
@@ -118,14 +117,11 @@ slice の結果を受理する前に、各 slice を検証します
   state root 内の touched path は `blocked` 相当、その他の scope 外 path は
   `merge-review` 相当です。
 - **Collision** — 同じ path を触った slice が 2 つ以上ないこと。
-- **Evidence binding** — すべての evidence path が `docs/impl/` 配下であり、
-  かつファイル内容が slice 自身の task ID を文字どおり含むこと
-  （`verifyEvidenceBinding`）。`evidence-mismatch` は `blocked` 相当
-  です — ある task の evidence を別の task に適用することはできません。
 
 merge verdict の ladder は `merge`（clean）→ `merge-review`（collision または
-state root 以外への scope 違反）→ `blocked`（evidence mismatch、state root への
-scope 違反、束縛できない task ID、不正な入力）です。
+state root 以外への scope 違反）→ `blocked`（state root への
+scope 違反、束縛できない・空の task ID、検証不能な path、不正な入力
+—— CLI が即座に拒否する旧 `evidencePaths` フィールドを含む）です。
 
 clean な merge の後、graph を再投影して gate を再評価します — `doc-status`、
 test、`requiredAudits` は通常どおり実行され、merge がそれらをスキップする
@@ -187,18 +183,17 @@ node scripts/check_parallel.js --verify-merge <slices.json> --run <run-id> [--cw
 | Field | 内容 |
 | --- | --- |
 | `verdict` | `merge` \| `merge-review` \| `blocked` |
-| `findings` | `[{ code, taskId?, path?, message }]` — code は `scope-violation`、`write-collision`、`evidence-mismatch` |
+| `findings` | `[{ code, taskId?, path?, message }]` — code は `scope-violation`、`write-collision` |
 
 slices ファイルは
-`[{ taskId, declaredScope, evidencePaths, touchedPaths?, baseRef? }]`
-です。supplied フィールドは**信頼されるのではなく主張として検証**されます:
+`[{ taskId, declaredScope, touchedPaths?, baseRef? }]` です —
+旧 `evidencePaths` フィールドは即座に拒否されます（repo path の
+evidence は撤去され、検証 evidence は Evidence Store にあります）。
+supplied フィールドは**信頼されるのではなく主張として検証**されます:
 `taskId` は権威として機能する前に run の task record へ束縛される必要が
 あり、`declaredScope` はその record の `scope` と照合され、
-`touchedPaths` は宣言 scope と contract が暗に許可する evidence 書き込みと
-照合され、`evidencePaths` は evidence subtree と task-ID binding と
-照合されます —
-`docs/impl/` の symlink が checkout 外の evidence を束縛できないよう
-realpath チェックも含みます。`touchedPaths` は省略して verifier が
+`touchedPaths` は宣言 scope と照合されます。
+`touchedPaths` は省略して verifier が
 `collectChangedPaths` で実際の diff を収集する方が望ましいです。
 slice 単位の `baseRef` は `--base-ref` より優先され（既定 `HEAD`）、
 slice より前の時点を指す必要があります — slice の変更以後の base では

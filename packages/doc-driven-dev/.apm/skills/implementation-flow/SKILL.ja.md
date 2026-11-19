@@ -23,7 +23,8 @@ Document Registry 3 では `task` は execution-bound（`persistence: ephemeral`
 で、以下の `task-doc` の作成手順は durable な Git 文書ではなく Execution
 Store のレコードを指します。`impl-doc` の Implementation Record と
 Experiment Log はレガシーの migration-only 種別で、`new_impl_record.js` /
-`new_experiment_log.js` は registry gate で拒否します。それらに言及する
+`new_experiment_log.js` writer は配布されていません（Issue #249 で削除）。
+それらに言及する
 フェーズは、マイグレーションが読み取る v3 以前の証跡契約を記述します。
 durable な検証証跡は `verification-doc` が `docs/verification` に記録し、
 durable な知見は `knowledge-doc` で条件付きに統合します。
@@ -199,8 +200,8 @@ skill の `SKILL.md` 本文だけを読み、references と scripts は active s
 
 Registry 3 では常時生成契約が廃止されました: **コード変更前に
 Implementation Record や Experiment Log は開きません** ——
-`new_impl_record.js` / `new_experiment_log.js` は registry gate で拒否
-し、通常の実装修正は IR も EXP も強制されるナレッジドキュメントもなく
+`new_impl_record.js` / `new_experiment_log.js` writer は配布されて
+おらず、通常の実装修正は IR も EXP も強制されるナレッジドキュメントもなく
 完了します。
 
 1. 既定ではドキュメントステップを実行しません —— 実行メモは durable な
@@ -359,7 +360,8 @@ legacy corpus 契約は [`impl-doc` SKILL](../impl-doc/SKILL.ja.md) を参照。
 このフローがドキュメントを強制することはありません —— ただし統合の
 決定は沈黙ではなく明示的に行います。
 - Implementation Record や Experiment Log は開きません; `impl`/`exp` の
-  mutator は registry gate で拒否します。
+  mutator は配布されておらず、registry は両方を migration-only 型として
+  扱います。
 - durable な知見がある場合、クローズアウト前に
   `node ../knowledge-doc/scripts/consolidate_knowledge.js assess` を実行し、
   ちょうど1つの決定を適用します; `none` が有効なのは条件を満たすものが

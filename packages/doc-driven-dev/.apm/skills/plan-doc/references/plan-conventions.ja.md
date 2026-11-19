@@ -4,8 +4,8 @@
 基準を定めます。
 
 Document Registry 3 では `plan` は execution-bound（`persistence: ephemeral`）
-で、durable な Git 上の形を持たず、`new_plan.js` は design gate・スコープ
-検証・書き込みの前に registry gate で拒否します。以下の `docs/plans/` などの
+で、durable な Git 上の形を持たず、`new_plan.js` creator は配布されていません
+（Issue #249）。以下の `docs/plans/` などの
 候補ディレクトリは former ディレクトリ — v3 以前のコーパスをマイグレーション
 が読み取るための owned scope です。この規約はそのレガシーな文書形状と、
 Execution Store の計画レコードが従う契約を記述します。
@@ -222,15 +222,14 @@ plan 作成前に次を満たします。
 - overview 以外の design file が少なくとも 1 つ存在し、front matter
   `status: "approved"` が exact match であること。
 
-gate に失敗した場合、`new_plan` は次を返します。
+v3 以前の runtime で gate に失敗した場合、`new_plan` は次を返していました。
 
 `PLAN-DOC-GATE-001: approved design-doc is required before creating a plan. Ensure docs/designs/overview.md exists and provide at least one design doc with front matter status: "approved".`
 
-推奨作成コマンド:
-
-```bash
-node scripts/new_plan.js --title "Implement checkout flow" --implements docs/specs/define-checkout-flow.md --design docs/designs/design-checkout-orchestration.md
-```
+v3 以前の `new_plan.js` creator コマンドは削除されました — run plan は
+run の Execution Store 内で `execution_store.js save-plan` を通じて書かれ、
+拘束する gate は creator フラグではなく Task Graph の `plan-not-approved`
+blocker（digest-bound 承認）です。
 
 plan は、既知なら具体的な file、module、command、ownership boundary を書きます。
 不明な detail は、実装可能であるふりをせず gap として明記します。

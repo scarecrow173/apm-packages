@@ -121,8 +121,8 @@ relations:
 ## 禁止事項
 
 - `test-spec` ドキュメントを作成しない —— Registry 3 では `test-spec` は
-  レガシーのマイグレーション専用型であり、`new_test_spec.js` はレジストリ
-  境界で拒否し、preflight はレガシーファイルをマイグレーションへ振り分けます
+  レガシーのマイグレーション専用型であり、`new_test_spec.js` は配布されず、
+  preflight はレガシーファイルをマイグレーションへ振り分けます
 - 合否の結果をこのドキュメントに記録しない —— 実行結果は揮発性の
   エビデンスであり、永続的な検証意図ではありません
 - Check→Claim リンクを `relations` に複写しない —— `checks[].target` が

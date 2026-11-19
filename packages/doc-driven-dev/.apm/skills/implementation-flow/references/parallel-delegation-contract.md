@@ -76,13 +76,12 @@ completes, collect its actual diff — `git diff --name-only` plus
 - Renames report both source and destination paths, so a rename out of a
   protected path cannot masquerade as a pure addition.
 - A touched path outside the declared scope → `scope-violation`.
-- The slice's declared evidence artifacts under `docs/impl/` — the
-  evidence-path surface the merge verifier accepts — need no scope
-  declaration because the contract already requires them. Under Document
-  Registry 3 `docs/impl/` is a migration-owned container: the bound
-  evidence files are plain artifacts naming the task ID, not `impl`
-  records. An undeclared `docs/impl/` write goes through normal scope
-  verification like any other path.
+- Verification evidence is never part of the merge diff: it lives in the
+  Git-untracked Evidence Store (`.apm/state/doc-driven-dev/evidence/`),
+  so the merge verifier has no repo-path evidence surface. A `docs/impl/`
+  write is migration-owned territory and goes through normal scope
+  verification like any other path — an ordinary slice has no
+  contract-implied write there.
 - The Execution Store is never writable via a repo diff: a touched path
   inside the resolved state root (`.apm/state/doc-driven-dev/` by default)
   would bypass the record CAS that guards task status and scope —
@@ -102,7 +101,7 @@ bound to its own task record in the selected run:
 | `focus` | The slice's own task identity — `(runId, taskId)` |
 | `permissions.write` | Exactly the task record's declared `scope` — nothing else |
 | `acceptanceCriteria` | The task record's `checks` |
-| `completion` | A completed `EffectOutcome` plus evidence that references the slice's own task ID |
+| `completion` | A completed `EffectOutcome`; verification evidence, when produced, is an Evidence Store record bound to the run |
 
 ## Merge Verification
 
@@ -120,14 +119,11 @@ Before slice results are accepted, verify each one
   inside the state root is `blocked`-severity; other out-of-scope paths are
   `merge-review`-severity.
 - **Collision** — no two slices touched the same path.
-- **Evidence binding** — every evidence path lives under `docs/impl/`, and
-  its file content literally contains the slice's own task ID
-  (`verifyEvidenceBinding`). `evidence-mismatch` is `blocked`-severity: one
-  task's evidence can never be applied to another.
 
 The merge verdict ladder is `merge` (clean) → `merge-review` (collisions or
-non-store scope violations) → `blocked` (evidence mismatch, store-path
-violation, unbound task ID, malformed input).
+non-store scope violations) → `blocked` (store-path violation, unbound or
+empty task ID, unverifiable paths, malformed input — including a stale
+`evidencePaths` field, which the CLI rejects outright).
 
 After a clean merge, re-project the graph and re-evaluate gates:
 `doc-status`, tests, and `requiredAudits` run as usual — a merge never skips
@@ -189,17 +185,16 @@ node scripts/check_parallel.js --verify-merge <slices.json> --run <run-id> [--cw
 | Field | Content |
 | --- | --- |
 | `verdict` | `merge` \| `merge-review` \| `blocked` |
-| `findings` | `[{ code, taskId?, path?, message }]` — codes are `scope-violation`, `write-collision`, `evidence-mismatch` |
+| `findings` | `[{ code, taskId?, path?, message }]` — codes are `scope-violation`, `write-collision` |
 
 A slices file is
-`[{ taskId, declaredScope, evidencePaths, touchedPaths?, baseRef? }]`.
+`[{ taskId, declaredScope, touchedPaths?, baseRef? }]` — a stale
+`evidencePaths` field is rejected outright (repo-path evidence was removed;
+verification evidence lives in the Evidence Store).
 Supplied fields are **asserted, not trusted**: `taskId` must bind to a task
 record in the run before it acts as authority, `declaredScope` is
-re-verified against that record's `scope`, `touchedPaths` against the
-declared scope plus the contract-implied evidence writes, and
-`evidencePaths` against the evidence subtree and task-ID binding —
-including a realpath check so a `docs/impl/` symlink cannot bind evidence
-outside the checkout. Prefer
+re-verified against that record's `scope`, and `touchedPaths` against the
+declared scope. Prefer
 omitting `touchedPaths` so the verifier collects the real diff with
 `collectChangedPaths`; a slice-level `baseRef` wins over `--base-ref`
 (default `HEAD`) and must predate the slice — a base at or after the slice's

@@ -16,8 +16,9 @@ Document Registry 3 では `plan` は **execution-bound**
 (`persistence: ephemeral`)です。plan の状態は durable な Git 文書ではなく
 Execution Store にあり、`docs/plans` / `docs/implementation-plans` は
 durable な書き込みを受け付けない *former* ディレクトリです。
-そのため `new_plan.js` は registry ゲートで拒否されます — design gate、
-scope チェック、あらゆる書き込みより先に:
+`new_plan.js` creator は配布されていません(Issue #249 で削除) —
+`plan` を解釈するのは registry だけであり、その型名は共有クエリ面で
+design gate・scope チェック・あらゆる書き込みより先に拒否します:
 
 `Document type "plan" is execution-bound (persistence: ephemeral): it has no durable Git form under Document Registry 3 — plan/task state lives in the Execution Store`
 
@@ -78,8 +79,8 @@ plan は分割します。1 つの plan にまとめるのは、同じクリテ�
    design gate を確認します。plan 本文はこれらの規約が正しいことに依存
    しています。
 
-   Document Registry 3 では `new_plan.js` が registry ゲートで拒否
-   されます(上記 *Document Registry v3 の位置づけ* 参照)。`plan` は
+   Document Registry 3 では `new_plan.js` creator は配布されていません
+   (上記 *Document Registry v3 の位置づけ* 参照)。`plan` は
    execution-bound なので、レコードは `docs/plans` のファイルではなく
    Execution Store に作成されます。`assets/templates/plan.ja.md` は
    レコードの参照となる本文構造です。
@@ -109,9 +110,9 @@ plan は分割します。1 つの plan にまとめるのは、同じクリテ�
 
 design gate は planning の契約のままです: `docs/designs/overview.md` が
 存在し、overview 以外の design が `status: "approved"` を持つまでは
-run plan を書くべきではありません。スクリプトはまず registry ゲートで
-拒否するため、このゲートは caller が適用する規約です — Task Graph の
-ゲートこそが拘束します: `plan.md` が欠落している、または digest-bound
+run plan を書くべきではありません。creator スクリプトは存在しないため
+このゲートは caller が適用する規約であり、Task Graph のゲートこそが
+拘束します: `plan.md` が欠落している、または digest-bound
 な承認を持たない run は `plan-not-approved` を投影し、どの task も
 実行へルーティングしません。
 
@@ -232,8 +233,9 @@ task をクローズするか新しい plan へ付け替えます。
 
 ## リソース
 
-- `scripts/new_plan.js`: Registry 3 では registry ゲートで拒否されます。
-  `plan` は execution-bound であり、durable な作成経路はありません。
+- `new_plan.js`: Registry 3 で*削除*されました。`plan` は
+  execution-bound であり、durable な作成経路はありません。run plan は
+  `planning-flow` が Execution Store レコードとしてのみ mint します。
 - `references/plan-conventions.ja.md`: plan レコードのステータス、
   relation、必須内容、規約です
   — plan 内容を記述する前に必ず読み込むこと。

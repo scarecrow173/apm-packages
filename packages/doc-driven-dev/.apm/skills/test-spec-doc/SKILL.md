@@ -21,8 +21,9 @@ spec or design changes, and whether a test is still necessary at all.
 interpreted only by migration tooling (`migrate_docs` / `migrate_ids` in
 doc-maintenance) and cannot be created or linted as a durable document.
 `docs/test-spec` and `docs/test-specs` are migration-owned scopes.
-`new_test_spec.js` refuses at the registry gate — before the TEST-SPEC-DOC
-gate checks, scope checks, or any write — with:
+No `new_test_spec.js` creator ships (Issue #249 removed it) — the only
+`test-spec` interpreter left is the registry, whose type name still refuses
+on the shared query surface with:
 
 `Document type "test-spec" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document`
 
@@ -53,8 +54,8 @@ without a verifiable upstream contract loses its purpose: do not create one.
    guarantee.
 2. Record the verification intent as a `verification` document.
 
-   Under Document Registry 3 `new_test_spec.js` refuses at the registry gate
-   (see *Document Registry v3 status* above). Durable verification intent
+   Under Document Registry 3 no `new_test_spec.js` creator ships (see
+   *Document Registry v3 status* above). Durable verification intent
    lives in `docs/verification` and is created by
    **verification-doc**:
 
@@ -127,9 +128,9 @@ Rules of thumb:
 
 ## Resources
 
-- `scripts/new_test_spec.js`: refuses at the registry gate under Registry 3 —
-  `test-spec` is a legacy, migration-only format. Create verification intent
-  via **verification-doc** (`new_verification.js`) instead.
+- `new_test_spec.js`: *removed* under Registry 3 — `test-spec` is a
+  legacy, migration-only format with no creator path. Create verification
+  intent via **verification-doc** (`new_verification.js`) instead.
 - `references/test-spec-conventions.md`: the legacy corpus contract —
   directory, filename, status, relations, and required content, used by
   migration tooling and for reading pre-v3 files.

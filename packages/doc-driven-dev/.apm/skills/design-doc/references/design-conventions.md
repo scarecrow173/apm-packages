@@ -115,8 +115,8 @@ Use these type-specific workflow statuses (distinct from `lifecycle`):
 
 ## Gate Rule for plan-doc
 
-Under Document Registry 3 `plan` is execution-bound and `new_plan.js`
-refuses at the registry gate before this gate is evaluated; the gate
+Under Document Registry 3 `plan` is execution-bound — `new_plan.js` was
+removed (Issue #249) so no creator ever reaches this gate; the gate
 remains the contract for Execution Store planning flows. It requires:
 
 - `docs/designs/overview.md` exists.

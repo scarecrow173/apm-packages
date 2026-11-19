@@ -40,20 +40,25 @@ test("impl-doc ships skill docs, references, and templates", () => {
   assert.equal(fs.existsSync(path.join(skillRoot, "assets", "templates", "experiment-log.ja.jsonl")), true);
 });
 
-test("new_impl_record refuses at the registry gate — legacy migration-only type", () => {
+test("the pre-v3 impl/exp creator and mutator entrypoints are not shipped", () => {
   const repo = tempRepo();
 
-  // Registry 3: `impl` is a legacy, migration-only type — the creator refuses
-  // before minting anything (Issue #234). Durable execution evidence is not a
-  // Git document anymore.
-  const result = runScript(
+  // Issue #249: `impl`/`exp` are legacy, migration-only types and their
+  // creator/mutator entrypoints were removed outright — nothing in the
+  // distribution can mint or mutate the legacy corpus.
+  for (const script of [
     "new_impl_record.js",
-    ["--title", "Extract foo service", "--task", "docs/tasks/0003-implement-foo-service.md", "--status", "completed"],
-    { cwd: repo },
-  );
-
-  assert.equal(result.status, 1, "new_impl_record must refuse under Registry 3");
-  assert.match(result.stderr, /legacy format|migration-only|migration tooling/);
+    "new_experiment_log.js",
+    "append_experiment_event.js",
+    "edit_experiment_log.js",
+    "sync_impl_index.js",
+  ]) {
+    assert.equal(
+      fs.existsSync(path.join(skillRoot, "scripts", script)),
+      false,
+      `${script} must not ship`,
+    );
+  }
   assert.equal(fs.existsSync(path.join(repo, "docs/impl")), false, "no impl record is minted");
 });
 
@@ -173,32 +178,23 @@ test("audit_impl_record reports front matter, shape, relation, and section issue
   assert.equal(secondReport.findings.some((finding: any) => finding.code === "missing-section"), true);
 });
 
-test("experiment log creation, append, and edit refuse at the registry gate; audit stays read-only", () => {
+test("experiment log corpus stays audit-only — inspection never writes", () => {
   const repo = tempRepo();
 
-  // Registry 3: `exp` is a legacy, migration-only type — the creator and both
-  // mutators refuse before touching the filesystem (Issue #234).
-  for (const [script, args] of [
-    ["new_experiment_log.js", ["--title", "Try foo service extraction", "--task", "docs/tasks/0003-implement-foo-service.md"]],
-    ["append_experiment_event.js", ["--file", "docs/impl/exp/x.jsonl", "--type", "hypothesis", "--summary", "s"]],
-    ["edit_experiment_log.js", ["--file", "docs/impl/exp/x.jsonl", "--seq", "1", "--set", "reason=y"]],
-    ["sync_impl_index.js", ["--kind", "exp", "--dir", "docs/impl/exp", "--apply"]],
-  ] as const) {
-    const refused = runScript(script, [...args], { cwd: repo });
-    assert.equal(refused.status, 1, `${script} must refuse under Registry 3`);
-    assert.match(refused.stderr, /legacy format|migration-only|migration tooling/);
-  }
-  assert.equal(fs.existsSync(path.join(repo, "docs/impl")), false, "nothing is minted or synced");
-
-  // Read-only inspection of existing logs is still available to migration.
+  // Issue #249: the exp creators/mutators are gone; read-only inspection of
+  // the existing legacy logs is the migration-dedicated surface.
+  assert.equal(fs.existsSync(path.join(repo, "docs/impl")), false);
   fs.mkdirSync(path.join(repo, "docs/impl/exp"), { recursive: true });
-  fs.writeFileSync(
-    path.join(repo, "docs/impl/exp/x.jsonl"),
-    '{"schema":"experiment_event.v1","experiment":"docs/impl/exp/x.jsonl","seq":1,"type":"hypothesis","ts":"2026-06-08T10:03:00+09:00"}\n',
-    "utf8",
-  );
+  const log =
+    '{"schema":"experiment_event.v1","experiment":"docs/impl/exp/x.jsonl","seq":1,"type":"hypothesis","ts":"2026-06-08T10:03:00+09:00"}\n';
+  fs.writeFileSync(path.join(repo, "docs/impl/exp/x.jsonl"), log, "utf8");
   const audit = runScript("audit_experiment_log.js", ["--json"], { cwd: repo });
   assert.equal(audit.status, 0, audit.stderr);
+  assert.equal(
+    fs.readFileSync(path.join(repo, "docs/impl/exp/x.jsonl"), "utf8"),
+    log,
+    "audit must not rewrite the legacy log",
+  );
 });
 
 test("audit_experiment_log reports invalid JSON, shape, seq, and type errors", () => {

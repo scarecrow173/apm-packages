@@ -1,6 +1,6 @@
 ---
 name: task-doc
-description: Use when tracking implementation slices as YAML front matter plus Markdown tasks linked to plans, specs, ADRs, or other tasks.
+description: Task record contract for Execution Store runs — use when decomposing an approved run plan into executable slices, defining task dependencies and done criteria, or migrating a pre-v3 docs/tasks corpus. Tasks are (runId, taskId) records, not durable Markdown files.
 license: MIT
 ---
 
@@ -15,8 +15,9 @@ should state concrete completion criteria.
 `task` is **execution-bound** (`persistence: ephemeral`) under Document
 Registry 3: task state lives in the Execution Store, not in a durable Git
 document, and `docs/tasks` / `docs/work-items` are *former* directories that
-accept no durable writes. `new_task.js` refuses at the registry gate — before
-the TASK-DOC-GATE checks, scope checks, or any write — with:
+accept no durable writes. No `new_task.js` creator ships (Issue #249 removed
+it) — the only `task` interpreter left is the registry, whose type name still
+refuses on the shared query surface with:
 
 `Document type "task" is execution-bound (persistence: ephemeral): it has no durable Git form under Document Registry 3 — plan/task state lives in the Execution Store`
 
@@ -64,8 +65,8 @@ derived reverse projection — never an independent field.
    creating the task.
 2. Create a task record for one coherent implementation slice.
 
-   Under Document Registry 3 `new_task.js` refuses at the registry gate (see
-   *Document Registry v3 status* above) — `task` is execution-bound, so the
+   Under Document Registry 3 no `new_task.js` creator ships (see *Document
+   Registry v3 status* above) — `task` is execution-bound, so the
    record is created in the Execution Store, not as a `docs/tasks` file.
    `references/task-conventions.md` defines the record contract and
    `assets/templates/task.md` remains the reference body structure.
@@ -128,8 +129,9 @@ Registry 3 index to regenerate.
 
 ## Resources
 
-- `scripts/new_task.js`: refuses at the registry gate under Registry 3 —
-  `task` is execution-bound and has no durable creation path.
+- `new_task.js`: *removed* under Registry 3 — `task` is
+  execution-bound and has no durable creation path; run tasks are minted
+  only as Execution Store records by `planning-flow`.
 - `references/task-conventions.md`: status values, relations, required
   content, and conventions for task records.
 - `assets/templates/task.md`: task body template — the reference structure

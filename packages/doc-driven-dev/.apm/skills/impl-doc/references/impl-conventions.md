@@ -2,8 +2,9 @@
 
 Under Document Registry 3 `impl` (Implementation Records) and `exp`
 (Experiment Logs) are legacy migration-only types: they cannot be created or
-linted as durable documents, `new_impl_record.js` / `new_experiment_log.js` /
-`sync_impl_index.js` refuse at the registry gate, and the directories below
+linted as durable documents, the `new_impl_record.js` /
+`new_experiment_log.js` / `sync_impl_index.js` entrypoints were removed
+(Issue #249), and the directories below
 are migration-owned scopes. These conventions describe the pre-v3 document
 shape that migration tooling reads and the index contract that
 `migrate_ids.js` reconciles.
@@ -117,8 +118,9 @@ Experiment Log files are JSONL.
 
 - One line equals one event.
 - `start` is optional at creation time.
-- The normal update path is `append_experiment_event`.
-- Exceptional correction uses `edit_experiment_log`.
+- Under the pre-v3 runtime the update path was `append_experiment_event`
+  (removed under Registry 3 — no event writer ships).
+- Exceptional correction used `edit_experiment_log` (likewise removed).
 
 Allowed event types:
 
@@ -183,10 +185,12 @@ Index rules:
   `abandoned`, `superseded`) move to a `## Settled` table below it, also
   filename-ordered. Settled rows stay linked — the tier de-emphasizes
   history without hiding it.
-- Reconcile the index whenever a record is added or its `status` changes —
-  materialization is explicit (creators never write indexes).
-  `sync_impl_index.js --kind ir` previews the reconcile (verdict
-  `in-sync` / `sync` / `create` / `rejected`); pass `--apply` to write it.
+- The pre-v3 contract reconciled the index whenever a record was added or
+  its `status` changed, materialization staying explicit (creators never
+  wrote indexes). Under Registry 3 the same safe sync engine
+  (`planImplIndexSync` / `applyImplIndexSync`, verdict
+  `in-sync` / `sync` / `create` / `rejected`) runs only inside
+  `migrate_ids` — there is no public `sync_impl_index.js` CLI.
   `audit_impl_record.js` reports the drift (`index-missing-entry`,
   `index-stale-entry`, `index-metadata-mismatch`, `index-tier-mismatch`,
   `index-ordering`) until it is applied. `doc_status` and the
@@ -211,10 +215,11 @@ links, in filename order:
 The matching Implementation Record links to each log via `metadata.experiments`
 and relations; the README provides a directory-level overview only.
 
-`sync_impl_index.js --kind exp` reconciles this index the same way: preview
-by default, `--apply` to write, `rejected` for hand-curated or malformed
-READMEs.
+The same sync engine reconciles the exp index the same way — verdict
+`in-sync` / `sync` / `create` / `rejected`, `rejected` for hand-curated or
+malformed READMEs — inside `migrate_ids` only.
 
-A new Experiment Log leaves the index deferred — the creator never writes
-it. Materialize with the same explicit sync (`--apply`) or
-`doc_maintenance.js index apply`.
+A new Experiment Log under the pre-v3 contract left the index deferred —
+the creator never wrote it. Under Registry 3 no Experiment Log can be
+minted at all; the index is reconciled only by the migration-owned sync
+engine inside `migrate_ids`.

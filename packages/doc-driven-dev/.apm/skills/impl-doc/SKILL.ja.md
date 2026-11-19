@@ -22,14 +22,16 @@ Log)は **legacy 形式**です。migration ツーリングのみが解釈し、
 文書としての作成・lint はできません。`docs/impl/ir`、`docs/impl/exp`、
 および `docs/impl` コンテナは migration-owned scope です。
 
-すべての書き込みエントリポイントが registry ゲートで拒否されます —
-あらゆるゲートチェック、scope チェック、書き込みより先に:
+書き込みエントリポイントは配布されていません(Issue #249 で v3 以前の
+creator・mutator を削除) — registry は引き続き `impl`/`exp` の型名を
+共有クエリ面で拒否します:
 
 `Document type "impl" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document`
 
-- **拒否される mutator**: `new_impl_record.js`、`new_experiment_log.js`、
+- **削除された mutator**: `new_impl_record.js`、`new_experiment_log.js`、
   `append_experiment_event.js`、`edit_experiment_log.js`、
-  `sync_impl_index.js`。
+  `sync_impl_index.js` は配布されていません — 配布物のどの要素も
+  legacy corpus を mint・変更できません。
 - **読み取り専用の監査は引き続き利用可能**: `audit_impl_record.js` と
   `audit_experiment_log.js` は既存 corpus を検査します(索引ドリフト
   finding を含む)。
@@ -91,11 +93,11 @@ Registry 2 以前の契約は task ごとにこれらのアーティファクト
 
 ## ワークフロー
 
-### 拒否される書き込み経路(Registry 3)
+### 削除された書き込み経路(Registry 3)
 
 `new_impl_record.js`、`new_experiment_log.js`、
-`append_experiment_event.js`、`edit_experiment_log.js` はすべて registry
-ゲートで拒否されます。`impl` と `exp` は legacy 形式であり、durable な
+`append_experiment_event.js`、`edit_experiment_log.js` は配布されていません。
+`impl` と `exp` は legacy 形式であり、durable な
 作成・変更経路はありません。durable な検証意図は `verification-doc` を、
 evidence relation は Evidence Store を使います。
 
@@ -110,8 +112,8 @@ node scripts/audit_experiment_log.js --json
 
 `docs/impl/ir/README.md` と `docs/impl/exp/README.md` は管理索引であり、
 Registry 3 ではその再同期は **migration-owned** です。
-`sync_impl_index.js` は他の impl writer と同様に registry ゲートで拒否
-されます。safe sync エンジン(`planImplIndexSync` /
+`sync_impl_index.js` は他の impl writer とともに削除されました。
+safe sync エンジン(`planImplIndexSync` /
 `applyImplIndexSync`)は `migrate_ids` の内部(ライブラリ直接呼び出し)
 でのみ動作します。
 
@@ -146,15 +148,15 @@ Registry 3 ではその再同期は **migration-owned** です。
 ## NEVER
 
 - NEVER Registry 3 で `impl`/`exp` ドキュメントを作成・変更しようとしない —
-  すべての mutator が registry ゲートで拒否します; 永続的な知見は
+  mutator は配布されていません; 永続的な知見は
   `knowledge-doc` で統合します
 - NEVER legacy corpus 表を通常実行の指示として扱わない — コード変更前に
   Implementation Record は開きません; 常時生成契約は廃止されました
 - NEVER 記録量の削減を検証結果の消去と混同しない —
   migration は corpus をそのまま読みます; 減量のために何も削除しません
 - NEVER migration や監査対象の corpus 内の JSONL ファイルを手動で編集する -
-  Registry 2 以前のツリーでは `append_experiment_event` または
-  `edit_experiment_log` を使うこと。直接編集すると `seq` の連続性が壊れる
+  v3 以前の `append_experiment_event` / `edit_experiment_log`
+  エントリポイントは削除されています。直接編集すると `seq` の連続性が壊れる
 - NEVER corpus の解釈で複数タスクを1つの ir にまとめる - タスク 1件 = ir 1件。
   追跡可能性はこの 1:1 対応に依存している
 - NEVER migration 向けに corpus を読み取れると報告する前に監査ステップを
@@ -169,8 +171,8 @@ Registry 3 ではその再同期は **migration-owned** です。
 - v1 では `metadata.validation` を使いません。
 - Experiment Log の `start` イベントは(legacy corpus において)作成時必須
   ではありません。
-- Registry 3 では `new_*`、`append_*`、`edit_*`、`sync_impl_index` の
-  すべてが registry ゲートで拒否されます。これらの形式に触れる
+- Registry 3 では `new_*`、`append_*`、`edit_*`、`sync_impl_index` は
+  すべて削除されました。これらの形式に触れる
   エントリポイントは監査と migration ツーリングだけです。
 
 ## リソース

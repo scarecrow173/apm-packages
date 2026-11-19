@@ -15,7 +15,7 @@ The package provides focused document skills and graph delegates:
 - `discovery-doc`, `adr-doc`, and `spec-doc` record intent and decisions.
 - `design-doc` defines the durable design baseline; `plan-doc` and `task-doc`
   model execution-bound records under Document Registry 3 (`persistence:
-  ephemeral` — their creators refuse durable Git writes).
+  ephemeral` — no durable creators ship for them).
 - `verification-doc` records durable verification evidence under
   `docs/verification`; `test-spec-doc` is the legacy migration-only form.
 - `knowledge-doc` records durable knowledge under `docs/knowledge`.
@@ -83,10 +83,10 @@ Bindings are declared in the Graph Definition:
 
 - migration: `migrate_docs`; bootstrap: `scaffold_docs`;
 - briefing: `briefing-flow`; design: `design-doc`;
-- planning: `planning-flow`, which sequences `plan-doc` approval, then
-  `test-spec-doc`, then `task-doc`;
+- planning: `planning-flow`, which owns the run's `plan.md` approval and
+  materializes task records in the Execution Store;
 - task projection: `build_task_graph`, executed by `build_task_graph.js` after
-  `plan`/`task`/`test-spec` audits;
+  the `design` audit;
 - implementation: `implementation-flow`; exit audit: `doc-status`.
 
 Delegated skills own their briefing, planning, or implementation subgraphs.

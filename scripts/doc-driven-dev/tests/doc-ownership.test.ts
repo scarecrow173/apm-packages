@@ -145,10 +145,12 @@ test("promote_index is a declared mutator for exactly the three owner index dirs
   }
 });
 
-test("sync_impl_index is a declared mutator for exactly the two impl index dirs", () => {
-  for (const row of DIRECTORY_CONTRACTS) {
-    const has = row.mutators.includes("sync_impl_index");
-    const expected = ["docs/impl/ir", "docs/impl/exp"].includes(row.dir);
-    assert.equal(has, expected, `${row.dir} sync_impl_index mutator`);
+test("impl dirs declare only the migration mutators migrate_ids/promote_index", () => {
+  for (const dir of ["docs/impl/ir", "docs/impl/exp"]) {
+    const row = DIRECTORY_CONTRACTS.find((contract) => contract.dir === dir);
+    assert.ok(row, `missing contract row for ${dir}`);
+    // Issue #249: the pre-v3 creator/mutator entrypoints were removed —
+    // only migration tooling may mutate the legacy corpus.
+    assert.deepEqual([...row.mutators].sort(), ["migrate_ids", "promote_index"], `${dir} mutators`);
   }
 });

@@ -4,8 +4,8 @@
 定義します。
 
 Document Registry 3 では `task` は execution-bound（`persistence: ephemeral`）
-で、durable な Git 上の形を持たず、`new_task.js` は task の前提条件・スコープ
-検証・書き込みの前に registry gate で拒否します。以下の `docs/tasks/` などの
+で、durable な Git 上の形を持たず、`new_task.js` creator は配布されていません
+（Issue #249）。以下の `docs/tasks/` などの
 候補ディレクトリは former ディレクトリ — v3 以前のコーパスをマイグレーション
 が読み取るための owned scope です。この規約はそのレガシーな文書形状と、
 Execution Store の task レコードが従う契約を記述します。

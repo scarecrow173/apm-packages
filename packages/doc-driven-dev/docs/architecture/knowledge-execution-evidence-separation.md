@@ -2,8 +2,12 @@
 
 Maintainer-facing architecture documentation for the `doc-driven-dev` redesign
 tracked by `#232` and its child issues `#233`–`#249`. This document organizes
-the agreed content of those issues into a single reference: the current (v2)
-architecture, the target (v3) architecture, and the mapping between them.
+the agreed content of those issues into a single reference: the landed (v3)
+architecture, the pre-v3 architecture it replaced, and the mapping between
+them. `#249` completed the program — the Knowledge / Execution / Evidence
+model is now the sole user-facing contract and the pre-v3 runtime described in
+§2 is removed from normal processing (its readers survive only inside
+migration tooling).
 
 Normative sources: `#232` (parent contract and acceptance criteria) and the
 child issues listed in §6. Where this document and an issue disagree, the
@@ -14,7 +18,7 @@ Definition (`graphs/doc-driven-dev.yaml`), the contracts under
 
 ## 1. Purpose
 
-The current `doc-driven-dev-graph` treats durable knowledge (Spec / Design /
+The pre-v3 `doc-driven-dev-graph` treated durable knowledge (Spec / Design /
 ADR / Discovery), transient execution state (Plan / Task / approvals /
 checkpoints), implementation history (IR / EXP), and verification intent and
 outcomes as one Git-tracked Markdown Artifact Graph. `#127` showed the cost:
@@ -40,7 +44,11 @@ Goals (from `#232`):
    directs to explicit Migration**. No backward-compat parsers, no v2 graph
    co-existence, no legacy document fallback in normal runs.
 
-## 2. Current architecture (v2)
+## 2. Pre-v3 architecture (removed)
+
+This section records the model the program replaced. It is retained as
+migration context only — under `#249` none of it is reachable from normal
+processing; `doc-maintenance` migration tooling is the sole remaining reader.
 
 ### 2.1 Four layers
 
@@ -177,7 +185,7 @@ or workspace state. IR/EXP bodies carry the narrative record.
 - **No schema gate.** Nothing distinguishes a current repo from a legacy
   one at the CLI boundary.
 
-## 3. Target architecture (v3)
+## 3. Current architecture (v3)
 
 ### 3.1 Three stores, everything else derived
 

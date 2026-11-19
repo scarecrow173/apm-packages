@@ -59,17 +59,10 @@ const writerClis: Array<[skill: string, script: string, extraArgs: string[]]> = 
   ["spec-doc", "new_spec.js", ["--title", "X"]],
 ];
 
-// Registry 3 (Issue #234): plan/task are execution-bound and impl/exp/
-// test-spec are legacy migration-only types — their creator CLIs refuse at
-// the registry gate before --dir resolution ever runs, so the containment
-// contract is vacuous for them (they can never write, inside or outside).
-const refusingClis: Array<[skill: string, script: string, extraArgs: string[]]> = [
-  ["plan-doc", "new_plan.js", ["--title", "X"]],
-  ["task-doc", "new_task.js", ["--title", "X"]],
-  ["test-spec-doc", "new_test_spec.js", ["--title", "X"]],
-  ["impl-doc", "new_impl_record.js", ["--title", "X"]],
-  ["impl-doc", "new_experiment_log.js", ["--title", "X"]],
-];
+// Registry 3 (Issue #234) + Issue #249: plan/task are execution-bound and
+// impl/exp/test-spec are legacy migration-only types — no creator CLIs
+// ship for them at all, so the containment contract is vacuous for them
+// (nothing can write, inside or outside the checkout).
 
 test("read-only scanners reject a --dir that escapes the checkout", () => {
   const repo = tempRepo();
@@ -112,15 +105,6 @@ test("write-target CLIs reject a --dir that escapes the checkout", () => {
       `${result.stdout}\n${result.stderr}`,
       /--dir escapes the checkout/,
       `${script} --dir ../outside must report the containment error`,
-    );
-  }
-  for (const [skill, script, extraArgs] of refusingClis) {
-    const result = runScript(skill, script, [...extraArgs, "--dir", "../outside"], { cwd: repo });
-    assert.notEqual(result.status, 0, `${script} --dir ../outside must refuse`);
-    assert.match(
-      `${result.stdout}\n${result.stderr}`,
-      /execution-bound|ephemeral|legacy format|migration-only|migration tooling/,
-      `${script} --dir ../outside refuses at the registry gate`,
     );
   }
   assert.equal(fs.existsSync(escapedTarget), false, "no CLI may write outside the checkout");

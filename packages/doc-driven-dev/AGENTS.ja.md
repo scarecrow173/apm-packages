@@ -100,10 +100,10 @@ Git で ignore されていない限り書き込みを拒否し、durable な知
 durable 文書生成 skill（`idea-doc`、`discovery-doc`、`adr-doc`、
 `spec-doc`、`design-doc`、`knowledge-doc`、`verification-doc`）が各
 document contract を担当します。`plan-doc` と `task-doc` は
-execution-bound — creator は registry gate で拒否し、その規約は
+execution-bound — durable な creator は配布されず、その規約は
 Execution Store レコードと v3 以前コーパスのマイグレーションを対象に
 します。`test-spec-doc` と `impl-doc` はレガシーの migration-only skill
-で、通常の作成はスクリプトが拒否し、その形式は migration tooling のみ
+で、writer スクリプトは削除済みであり、その形式は migration tooling のみ
 が読み取ります。`deep-dive` は interview skill であり、
 出力は confirmed intent summary であって文書ではありません。
 `doc-status` は read-only の inspection（`list` / `lint` / `audit` /

@@ -4,8 +4,8 @@ These conventions define how `task-doc` creates, audits, indexes, and routes
 implementation tasks.
 
 Under Document Registry 3 `task` is execution-bound (`persistence: ephemeral`):
-it has no durable Git form and `new_task.js` refuses at the registry gate
-before task preconditions, scope checks, or any write. `docs/tasks/` and the
+it has no durable Git form and no `new_task.js` creator ships (Issue #249).
+`docs/tasks/` and the
 candidate directories below are former directories — owned scopes kept for
 migration reading of pre-v3 corpora. These conventions describe that legacy
 document shape plus the contract Execution Store task records follow.

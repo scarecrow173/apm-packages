@@ -99,7 +99,7 @@ Every `audits:` name in the v3 definition is a durable scope — `spec`,
 Registry 3 the legacy `plan`, `task`, and `test-spec` audit names are
 *refused* scopes, not readers: `audit_docs.js --type <name>` fails at the
 registry gate because `plan`/`task` are execution-bound (their state lives
-in the Execution Store, their creators refuse durable Git writes) and
+in the Execution Store — no durable creators ship for them) and
 `test-spec` is a legacy migration-only format. Durable graph artifacts are
 `idea`, `brainstorm`, `discovery`, `spec`, `design`, `adr`, `knowledge`,
 and `verification`.

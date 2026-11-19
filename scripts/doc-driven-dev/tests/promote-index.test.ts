@@ -80,12 +80,14 @@ test("index apply appends rows to a promoted index without warnings", () => {
   const adr = runScript(adrRoot, "new_adr.js", ["--title", "Adopt MADR", "--cwd", repo], repo);
   assert.equal(adr.status, 0, adr.stderr);
   assert.match(adr.stdout, /Index deferred/);
-  // Registry 3: impl creators refuse at the registry gate — a promoted IR
-  // index is migration-owned, so a new row is seeded directly and synced
-  // through the owner engine (the API migration tooling calls).
-  const ir = runScript(implRoot, "new_impl_record.js", ["--title", "Extract foo", "--cwd", repo], repo);
-  assert.equal(ir.status, 1, "new_impl_record must refuse under Registry 3");
-  assert.match(ir.stderr, /legacy format|migration-only|migration tooling/);
+  // Issue #249: the impl creator entrypoint is removed entirely — a
+  // promoted IR index is migration-owned, so a new row is seeded directly
+  // and synced through the owner engine (the API migration tooling calls).
+  assert.equal(
+    fs.existsSync(path.join(implRoot, "scripts", "new_impl_record.js")),
+    false,
+    "new_impl_record.js must not ship",
+  );
   fs.writeFileSync(
     path.join(repo, "docs/impl/ir/extract-foo.md"),
     [

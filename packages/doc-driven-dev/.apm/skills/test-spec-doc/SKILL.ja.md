@@ -21,9 +21,9 @@ spec や design が変更されたときに「何を守るべきか」「その�
 Document Registry 3 では `test-spec` は **legacy 形式**です。migration
 ツーリング(doc-maintenance の `migrate_docs` / `migrate_ids`)のみが解釈
 し、durable 文書としての作成・lint はできません。`docs/test-spec` と
-`docs/test-specs` は migration-owned scope です。`new_test_spec.js` は
-registry ゲートで拒否されます — TEST-SPEC-DOC ゲート、scope チェック、
-あらゆる書き込みより先に:
+`docs/test-specs` は migration-owned scope です。`new_test_spec.js` creator は
+配布されていません(Issue #249 で削除) — `test-spec` を解釈するのは
+registry だけであり、その型名は共有クエリ面で拒否します:
 
 `Document type "test-spec" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document`
 
@@ -54,8 +54,8 @@ test spec を作成するには、少なくとも 1 つの upstream document を
    criteria を確認し、新しい test spec が既存の保証と重複しないようにします。
 2. 検証意図を `verification` 文書として記録します。
 
-   Document Registry 3 では `new_test_spec.js` が registry ゲートで拒否
-   されます(上記 *Document Registry v3 の位置づけ* 参照)。durable な
+   Document Registry 3 では `new_test_spec.js` creator は配布されていません
+   (上記 *Document Registry v3 の位置づけ* 参照)。durable な
    検証意図は `docs/verification` にあり、**verification-doc** が作成
    します:
 
@@ -128,8 +128,8 @@ plan に検証可能な振る舞いが無い場合は作成を skip し、plan �
 
 ## リソース
 
-- `scripts/new_test_spec.js`: Registry 3 では registry ゲートで拒否されます。
-  `test-spec` は legacy・migration 専用形式です。検証意図は代わりに
+- `new_test_spec.js`: Registry 3 で*削除*されました。`test-spec` は
+  legacy・migration 専用形式で、creator 経路はありません。検証意図は代わりに
   **verification-doc**(`new_verification.js`)で作成します。
 - `references/test-spec-conventions.ja.md`: legacy corpus の契約です。
   directory、filename、status、relations、必須コンテンツ —— migration

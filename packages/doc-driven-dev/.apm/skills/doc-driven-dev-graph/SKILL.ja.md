@@ -95,8 +95,8 @@ v3 定義の `audits:` 名はすべて durable な scope です —— `spec`、
 `design`、`verification`、`knowledge`、`all`。Document Registry 3 では、
 レガシーな `plan`、`task`、`test-spec` audit 名は読み取る scope ではなく
 *拒否される* scope です。`plan`/`task` は
-execution-bound（状態は Execution Store にあり、creator は durable な
-Git 書き込みを拒否）であり、`test-spec` は migration 専用のレガシー
+execution-bound（状態は Execution Store にあり、durable な creator は
+配布されていない）であり、`test-spec` は migration 専用のレガシー
 形式のため、`audit_docs.js --type <name>` は registry ゲートで失敗
 します。durable な
 graph artifact は `idea`、`brainstorm`、`discovery`、`spec`、`design`、

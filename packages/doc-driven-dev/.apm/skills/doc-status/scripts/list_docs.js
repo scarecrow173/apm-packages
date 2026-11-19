@@ -27017,10 +27017,10 @@ var legacyDocTypes = {
     settledStatuses: ["deprecated", "superseded"],
     owner: "doc-suite",
     indexFormat: "shared-4col",
-    mutators: ["new_test_spec", "doc_maintenance", "scaffold_docs", "migrate_docs", "migrate_ids"],
+    mutators: ["doc_maintenance", "scaffold_docs", "migrate_docs", "migrate_ids"],
     auditors: ["doc_status", "audit_docs", "list_docs"],
     requiredFields: [],
-    note: "Legacy verification-intent type, superseded by `verification` (#239); migration-only."
+    note: "Legacy verification-intent type, superseded by `verification` (#239); migration-only. Its pre-v3 creator was removed (#249) \u2014 no normal-path entrypoint writes a test-spec."
   },
   impl: {
     type: "impl",
@@ -27034,7 +27034,10 @@ var legacyDocTypes = {
     owner: "impl-doc",
     indexFormat: "impl-4col",
     indexTitle: "Implementation Records",
-    mutators: ["new_impl_record", "migrate_ids", "promote_index", "sync_impl_index"],
+    // Only migration tooling mutates the impl corpus: `migrate_ids` /
+    // `promote_index` drive the owned impl-4col index engine. The pre-v3
+    // creator/mutator entrypoints were removed (#249).
+    mutators: ["migrate_ids", "promote_index"],
     auditors: ["audit_impl_record"],
     requiredFields: ["metadata"],
     note: "Legacy implementation record; interpretation is migration-only (#240 extracts durable knowledge)."
@@ -27052,7 +27055,9 @@ var legacyDocTypes = {
     owner: "impl-doc",
     indexFormat: "exp-1col",
     indexTitle: "Experiment Logs",
-    mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", "promote_index", "sync_impl_index"],
+    // Same migration-only mutator set as `impl`; the JSONL event writers
+    // were removed with the other pre-v3 entrypoints (#249).
+    mutators: ["migrate_ids", "promote_index"],
     auditors: ["audit_experiment_log"],
     requiredFields: [],
     note: "Legacy experiment log (JSONL, no front matter); interpretation is migration-only."

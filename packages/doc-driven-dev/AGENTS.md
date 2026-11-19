@@ -103,11 +103,11 @@ separate contract: immutable Evidence Records under
 
 Durable document-generation skills (`idea-doc`, `discovery-doc`, `adr-doc`,
 `spec-doc`, `design-doc`, `knowledge-doc`, `verification-doc`) own their
-document contracts. `plan-doc` and `task-doc` are execution-bound — their
-creators refuse at the registry gate and their conventions govern
+document contracts. `plan-doc` and `task-doc` are execution-bound — no
+durable creators ship for them and their conventions govern
 Execution Store records and migration of pre-v3 corpora.
 `test-spec-doc` and `impl-doc` are legacy migration-only skills whose
-scripts refuse normal creation and whose formats only migration tooling
+writer scripts were removed and whose formats only migration tooling
 reads. `deep-dive` is an interview
 skill — its output is a confirmed intent summary, not a document.
 `doc-status` is read-only inspection (`list` / `lint` / `audit` /
