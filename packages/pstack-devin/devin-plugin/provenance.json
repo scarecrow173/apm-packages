@@ -36,7 +36,7 @@
       },
       {
         "path": "skills/setup-pstack-devin/scripts/setup.mjs",
-        "sha256": "611e4016f09d6551ec0bc5a3956b7ac23bddc769d34d90ccf0edc1be0c059521"
+        "sha256": "85ab21c6b3d818a070977db68d6f1f4465b35834829bf39f56f34377ad2474b6"
       }
     ],
     "overwrites": [

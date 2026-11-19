@@ -268,9 +268,9 @@ export function profileFile(model, { ro }) {
   const body =
     "---\n" +
     `name: ${name}\n` +
-    `description: pstack delegate subagent pinned to model \`${model}\`${
+    `description: 'pstack delegate subagent pinned to model \`${model}\`${
       ro ? " for read-only fan-out entries" : ""
-    }. Spawn with \`run_subagent\` \`profile: "${name}"\` when a pstack skill or \`~/.devin/rules/pstack-models.md\` names this model for a role or panel entry.\n` +
+    }. Spawn with \`run_subagent\` \`profile: "${name}"\` when a pstack skill or \`~/.devin/rules/pstack-models.md\` names this model for a role or panel entry.'\n` +
     `model: ${model}\n` +
     (ro ? "allowed-tools: read, grep, glob\n" : "") +
     "---\n" +
