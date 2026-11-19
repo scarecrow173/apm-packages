@@ -28,9 +28,15 @@ import type {
 } from "../../../src/skills/doc-driven-dev-graph/scripts/lib/run_trace";
 import { loadRun } from "../../../src/skills/lib/execution_store";
 import type { CheckpointRecord } from "../../../src/skills/lib/execution_store";
-import { E2E_RUN_ID } from "./fixture_manager";
+import { evaluateSchemaPreflight } from "../../../src/skills/lib/schema_preflight";
+import { validateEvidenceRecord } from "../../../src/skills/lib/evidence_store/types";
+import { E2E_RUN_ID, snapshotTree } from "./fixture_manager";
+import { onlyRunId, readEvidenceRecords } from "./evidence_ops";
+import type { CliOpResult } from "./cli_ops";
+import { resolveOpArg } from "./cli_ops";
 const TSX_CLI = path.resolve(__dirname, "../../../node_modules/tsx/dist/cli.mjs");
 const BRIEFING_AUDIT = path.resolve(__dirname, "../../../src/skills/briefing-flow/scripts/audit_briefing.ts");
+const EVIDENCE_STORE = path.resolve(__dirname, "../../../src/skills/doc-driven-dev-graph/scripts/evidence_store.ts");
 
 const RUN_YIELD_REASONS: readonly YieldReason[] = [
   "terminal", "single-step-complete", "budget-exhausted",
@@ -41,9 +47,10 @@ const RUN_YIELD_REASONS: readonly YieldReason[] = [
 export type CaseExpect = {
   /**
    * Final-leg run-yield reason — the LAST run-yield event in scope (for a
-   * leg-scoped check, that leg's run-yield).
+   * leg-scoped check, that leg's run-yield). Optional: pure-ops cases
+   * (`steps: []`) and expected-throw cases emit no run-yield event.
    */
-  yield: YieldReason;
+  yield?: YieldReason;
   /**
    * route-selected edgeIds of the LAST leg's trace partition in order
    * (nulls allowed as "blocked"/"terminal"). Earlier legs' routes are not
@@ -93,10 +100,11 @@ export type CaseExpect = {
   /**
    * Selected-task assertions: each entry's {id,status} must appear in the
    * `tasks` projection of the LAST route-selected in scope carrying the named
-   * edgeId. Edge-scoped because a completed run may legitimately mutate the
-   * task status after the asserted routing decision.
+   * edgeId — `null` targets a BLOCKED route (edgeId null), e.g. a wont-do
+   * task wedging `task-graph`. Edge-scoped because a completed run may
+   * legitimately mutate the task status after the asserted routing decision.
    */
-  tasksContain?: { edgeId: string; id: string; status: string }[];
+  tasksContain?: { edgeId: string | null; id: string; status: string }[];
   /** End-of-run repo state — re-read from disk at validation time. */
   finalFiles?: Record<string, { frontmatter?: Record<string, unknown>; bodyIncludes?: string[] }>;
   /**
@@ -106,7 +114,7 @@ export type CaseExpect = {
    */
   run?: {
     runId?: string;
-    tasks?: Record<string, { status?: string; title?: string }>;
+    tasks?: Record<string, { status?: string; title?: string; version?: number }>;
     planApproved?: boolean;
     planDigest?: string;
   };
@@ -114,11 +122,90 @@ export type CaseExpect = {
   briefingAudit?: { spec: string; adr: string; consistent: boolean };
   /** Counts of persisted edge checkpoints in the run's Execution Store. */
   checkpointReceipts?: { edgeId: string; count: number }[];
+  /**
+   * A refusal the caller raised — matched against the error message
+   * captured when runCaller threw (stale router payloads, unreadable
+   * state). Cases asserting refusal declare it here; an unexpected throw
+   * is a failure of its own.
+   */
+  throwMatch?: RegExp;
+  /**
+   * Assertions against recorded op results (`ops`/`postOps`). `index`
+   * selects the op result array position; `saveAs` selects by name
+   * (exactly one must be given). `exit` pins the process exit code,
+   * `jsonMatch` is a recursive subset match on parsed stdout JSON,
+   * `stdoutMatch`/`stderrMatch` are substring or RegExp checks.
+   */
+  cli?: {
+    index?: number;
+    saveAs?: string;
+    exit?: number;
+    jsonMatch?: Record<string, unknown>;
+    stdoutMatch?: string | RegExp;
+    stderrMatch?: string | RegExp;
+  }[];
+  /** Schema-preflight status at end of run — fresh evaluation, not the op's report. */
+  preflight?: string;
+  /**
+   * Verification Summary assertions through the real `evidence_store
+   * summary --json` CLI at validation time: verdict plus reason tokens
+   * collected across EVERY summary level — top-level `summary.reasons`,
+   * per-check `checks[].reasons`, per-claim `claims[].reasons`, and the
+   * assessment codes in `evidence[].reasons[].code` — so a case can pin
+   * a classification (`required-check-undetermined:<ref>`), an exemption
+   * refusal (`rejected-waiver:<ref>`), or the measured cause
+   * (`claim-revision-mismatch`, `artifact-unverified`) alike. Each entry
+   * is a verbatim token or a RegExp matched against any one reason.
+   * Subject defaults to `commit:HEAD`; a revspec string retargets it,
+   * and `args` passes extra CLI flags verbatim (`--waivers <file>`,
+   * `--waiver-authority <name>`, `--not-applicable <file>`,
+   * `--scope-check <ref>`, `--run-id <id>`) — `$`-placeholders resolve.
+   */
+  verification?: {
+    verdict: string;
+    reasonsContain?: (string | RegExp)[];
+    subject?: string;
+    args?: string[];
+  };
+  /** Recursive file counts under repo-relative dirs — "zero new Markdown". */
+  fileCount?: Record<string, number>;
+  /** Repo-relative paths that must NOT exist at end of run. */
+  absentFiles?: string[];
+  /** `git status --porcelain` empty (false) or non-empty (true). */
+  gitDirty?: boolean;
+  /**
+   * Task projection exclusion: the named task id must NOT appear in the
+   * tasks projection of the LAST route-selected for the edge (`null`
+   * targets a blocked route) — records from another run's plan never
+   * leak into the selected Task Graph.
+   */
+  tasksAbsent?: { edgeId: string | null; id: string }[];
+  /**
+   * Effect Receipt assertions re-loaded from the run's store (Issue #238):
+   * the receipt↔evidence distinction's receipt half. `edgeId` scopes by
+   * input.edgeId; `idempotencyKey` pins provider-receipt keys.
+   */
+  receiptsContain?: { edgeId?: string; stage?: string; idempotencyKey?: string; status?: string; runId?: string }[];
+  /**
+   * Evidence Store assertions re-read from the record files: record count
+   * plus per-record fields (the evidence half of receipt-vs-evidence).
+   */
+  evidence?: { count?: number; records?: { outcome?: string; check?: string; claim?: string }[] };
+  /**
+   * The current tree snapshot must deep-equal the snapshot the named
+   * `snapshot` op captured — proof a read-only or refused operation wrote
+   * ZERO bytes (migrate plan on current repo, a hash-mismatched apply).
+   */
+  treeSnapshotEquals?: string;
 };
 
 export type CaseRun = {
   result: CallerRunResult;
   traceEvents: TraceEvent[];
+  /** Recorded op (`ops`/`postOps`) results in execution order. */
+  cliResults?: CliOpResult[];
+  /** Error message when runCaller threw during a leg, else undefined. */
+  thrown?: string;
   repo: string;
   definition: GraphDefinition;
   /**
@@ -298,7 +385,7 @@ export function checkExpectations(run: CaseRun, expect: Partial<CaseExpect>): st
     }
   }
   if (expect.run !== undefined) {
-    const runId = expect.run.runId ?? E2E_RUN_ID;
+    const runId = expect.run.runId === "$run:only" ? onlyRunId(run.repo) : (expect.run.runId ?? E2E_RUN_ID);
     try {
       const snapshot = loadRun(run.repo, runId);
       for (const [taskId, spec] of Object.entries(expect.run.tasks ?? {})) {
@@ -312,6 +399,9 @@ export function checkExpectations(run: CaseRun, expect: Partial<CaseExpect>): st
         }
         if (spec.title !== undefined && record.title !== spec.title) {
           failures.push(`run ${runId} task ${taskId}: title expected ${JSON.stringify(spec.title)}, got ${JSON.stringify(record.title)}`);
+        }
+        if (spec.version !== undefined && record.version !== spec.version) {
+          failures.push(`run ${runId} task ${taskId}: version expected ${spec.version}, got ${record.version}`);
         }
       }
       if (expect.run.planApproved !== undefined && snapshot.planApproved !== expect.run.planApproved) {
@@ -349,7 +439,235 @@ export function checkExpectations(run: CaseRun, expect: Partial<CaseExpect>): st
       failures.push(`checkpointReceipts: failed to read the Execution Store: ${String(error)}`);
     }
   }
+
+  if (expect.throwMatch !== undefined) {
+    if (run.thrown === undefined) {
+      failures.push(`throwMatch: expected a thrown error matching ${String(expect.throwMatch)}, but nothing was thrown`);
+    } else if (!expect.throwMatch.test(run.thrown)) {
+      failures.push(`throwMatch: thrown error ${JSON.stringify(run.thrown)} does not match ${String(expect.throwMatch)}`);
+    }
+  }
+
+  for (const [cliIndex, spec] of (expect.cli ?? []).entries()) {
+    const label = `cli[${spec.saveAs ?? spec.index ?? cliIndex}]`;
+    const result = spec.saveAs !== undefined
+      ? (run.cliResults ?? []).find((entry) => "saveAs" in entry && entry.saveAs === spec.saveAs)
+      : (run.cliResults ?? [])[spec.index ?? -1];
+    const invocation = result !== undefined && (result.kind === "cli" || result.kind === "verificationSummary")
+      ? result.invocation
+      : undefined;
+    if (invocation === undefined) {
+      failures.push(`${label}: no recorded cli op result`);
+      continue;
+    }
+    if (spec.exit !== undefined && invocation.status !== spec.exit) {
+      failures.push(`${label}: expected exit ${spec.exit}, got ${invocation.status} (stderr: ${invocation.stderr.trim().slice(0, 200)})`);
+    }
+    if (spec.jsonMatch !== undefined) {
+      try {
+        matchJsonSubset(JSON.parse(invocation.stdout), spec.jsonMatch, `${label} stdout`, failures);
+      } catch {
+        failures.push(`${label}: stdout is not JSON: ${invocation.stdout.slice(0, 200)}`);
+      }
+    }
+    const streamChecks: [string, string, string | RegExp | undefined][] = [
+      ["stdoutMatch", invocation.stdout, spec.stdoutMatch],
+      ["stderrMatch", invocation.stderr, spec.stderrMatch],
+    ];
+    for (const [stream, text, expected] of streamChecks) {
+      if (expected === undefined) continue;
+      const found = typeof expected === "string" ? text.includes(expected) : expected.test(text);
+      if (!found) failures.push(`${label} ${stream}: does not match ${String(expected)}`);
+    }
+  }
+
+  if (expect.preflight !== undefined) {
+    const report = evaluateSchemaPreflight(run.repo);
+    if (report.status !== expect.preflight) {
+      failures.push(
+        `preflight: expected status "${expect.preflight}", got "${report.status}"`
+        + ` (issues: ${report.issues.map((issue) => issue.reason).join(", ") || "none"})`,
+      );
+    }
+  }
+
+  if (expect.verification !== undefined) {
+    const { verdict, reasonsContain = [], subject = "commit:HEAD", args = [] } = expect.verification;
+    const [kind, ref] = subject.split(":", 2);
+    const subjectArgs = kind === "workspace" || kind === "snapshot" ? ["--snapshot", ref] : ["--commit", ref];
+    const extraArgs = args.map((value) => resolveOpArg(value, run.cliResults ?? [], run.repo));
+    const result = spawnSync(
+      process.execPath,
+      [TSX_CLI, EVIDENCE_STORE, "summary", "--cwd", run.repo, "--json", ...subjectArgs, ...extraArgs],
+      { encoding: "utf8" },
+    );
+    try {
+      const report: unknown = JSON.parse(result.stdout);
+      if (!report || typeof report !== "object" || !("summary" in report)
+          || typeof report.summary !== "object" || report.summary === null) {
+        throw new Error("missing summary object");
+      }
+      const summary = report.summary as {
+        verdict?: unknown;
+        reasons?: unknown;
+        checks?: unknown;
+        claims?: unknown;
+        evidence?: unknown;
+      };
+      if (summary.verdict !== verdict) {
+        failures.push(`verification: expected verdict "${verdict}", got ${JSON.stringify(summary.verdict)} (reasons: ${JSON.stringify(summary.reasons)})`);
+      }
+      // Flatten every reason the summary emits — top-level classifications,
+      // per-check / per-claim rollups, and the per-record assessment codes.
+      const reasons: string[] = Array.isArray(summary.reasons) ? summary.reasons.map(String) : [];
+      const collect = (entries: unknown): void => {
+        if (!Array.isArray(entries)) return;
+        for (const entry of entries) {
+          if (!entry || typeof entry !== "object") continue;
+          const entryReasons = (entry as { reasons?: unknown }).reasons;
+          if (!Array.isArray(entryReasons)) continue;
+          for (const reason of entryReasons) {
+            if (typeof reason === "string") reasons.push(reason);
+            else if (reason && typeof reason === "object" && typeof (reason as { code?: unknown }).code === "string") {
+              reasons.push((reason as { code: string }).code);
+            }
+          }
+        }
+      };
+      collect(summary.checks);
+      collect(summary.claims);
+      collect(summary.evidence);
+      for (const needle of reasonsContain) {
+        const found = typeof needle === "string" ? reasons.includes(needle) : reasons.some((reason) => needle.test(reason));
+        if (!found) failures.push(`verification: reasons ${JSON.stringify(reasons)} do not contain ${String(needle)}`);
+      }
+    } catch (error) {
+      failures.push(`verification: invalid CLI result (exit=${result.status}, stderr=${result.stderr.trim().slice(0, 200)}): ${String(error)}`);
+    }
+  }
+
+  for (const [dir, count] of Object.entries(expect.fileCount ?? {})) {
+    const root = path.join(run.repo, dir);
+    let actual = 0;
+    const visit = (entry: string): void => {
+      if (!fs.existsSync(entry)) return;
+      const stat = fs.statSync(entry);
+      if (stat.isDirectory()) for (const child of fs.readdirSync(entry)) visit(path.join(entry, child));
+      else if (stat.isFile()) actual += 1;
+    };
+    visit(root);
+    if (actual !== count) failures.push(`fileCount ${dir}: expected ${count} file(s), got ${actual}`);
+  }
+
+  for (const rel of expect.absentFiles ?? []) {
+    if (fs.existsSync(path.join(run.repo, rel))) {
+      failures.push(`absentFiles ${rel}: path exists but must not`);
+    }
+  }
+
+  if (expect.gitDirty !== undefined) {
+    const dirty = gitStatus(run.repo).length > 0;
+    if (dirty !== expect.gitDirty) {
+      failures.push(`gitDirty: expected ${expect.gitDirty}, got ${dirty} (${gitStatus(run.repo).join(", ") || "clean"})`);
+    }
+  }
+
+  for (const entry of expect.tasksAbsent ?? []) {
+    const target = events.filter((event): event is RouteSelectedEvent => (
+      event.kind === "route-selected" && event.edgeId === entry.edgeId
+    )).at(-1);
+    if (!target) {
+      failures.push(`tasksAbsent: no route-selected for edge "${entry.edgeId}" in scope`);
+      continue;
+    }
+    if (target.tasks.some((task) => task.id === entry.id)) {
+      failures.push(
+        `tasksAbsent: route-selected "${entry.edgeId}" tasks ${JSON.stringify(target.tasks.map((task) => task.id))}`
+        + ` contain ${JSON.stringify(entry.id)} — a foreign run's record leaked into the projection`,
+      );
+    }
+  }
+
+  if (expect.receiptsContain !== undefined) {
+    try {
+      const receipts = new Set(run.runIds).size === 0 ? [] : [...new Set(run.runIds)].flatMap((runId) => {
+        try {
+          return loadRun(run.repo, runId).receipts;
+        } catch {
+          return [];
+        }
+      });
+      for (const spec of expect.receiptsContain) {
+        const found = receipts.some((record) => {
+          if (spec.runId !== undefined && record.runId !== spec.runId) return false;
+          if (spec.idempotencyKey !== undefined && record.idempotencyKey !== spec.idempotencyKey) return false;
+          if (spec.status !== undefined && record.status !== spec.status) return false;
+          const scope = typeof record.input === "object" && record.input !== null
+            ? record.input as Record<string, unknown>
+            : {};
+          if (spec.edgeId !== undefined && scope.edgeId !== spec.edgeId) return false;
+          if (spec.stage !== undefined && scope.stage !== spec.stage) return false;
+          return true;
+        });
+        if (!found) {
+          failures.push(
+            `receiptsContain: no Effect Receipt matching ${JSON.stringify(spec)}`
+            + ` (${receipts.length} receipt(s) re-read from the Execution Store)`,
+          );
+        }
+      }
+    } catch (error) {
+      failures.push(`receiptsContain: failed to read receipts — ${String(error)}`);
+    }
+  }
+
+  if (expect.evidence !== undefined) {
+    try {
+      const records = readEvidenceRecords(run.repo);
+      if (expect.evidence.count !== undefined && records.length !== expect.evidence.count) {
+        failures.push(`evidence.count: expected ${expect.evidence.count} record(s), got ${records.length}`);
+      }
+      for (const spec of expect.evidence.records ?? []) {
+        const found = records.some((record) => (
+          (spec.outcome === undefined || record.outcome === spec.outcome)
+          && (spec.check === undefined || record.check.ref === spec.check)
+          && (spec.claim === undefined || record.claim.ref === spec.claim)
+        ));
+        if (!found) {
+          failures.push(`evidence.records: no Evidence Record matching ${JSON.stringify(spec)}`);
+        }
+      }
+    } catch (error) {
+      failures.push(`evidence: failed to read the Evidence Store — ${String(error)}`);
+    }
+  }
+
+  if (expect.treeSnapshotEquals !== undefined) {
+    const saved = (run.cliResults ?? []).find((entry) => entry.kind === "snapshot" && entry.saveAs === expect.treeSnapshotEquals);
+    if (saved === undefined || saved.kind !== "snapshot") {
+      failures.push(`treeSnapshotEquals: no snapshot op named ${JSON.stringify(expect.treeSnapshotEquals)}`);
+    } else if (snapshotTree(run.repo) !== saved.snapshot) {
+      failures.push(`treeSnapshotEquals: tree changed since snapshot "${expect.treeSnapshotEquals}" — a read-only or refused operation wrote bytes`);
+    }
+  }
   return failures;
+}
+
+/** Recursive JSON subset match — objects pin keys, everything else deep-equals. */
+function matchJsonSubset(actual: unknown, expected: unknown, label: string, failures: string[]): void {
+  if (expected !== null && typeof expected === "object" && !Array.isArray(expected)) {
+    if (actual === null || typeof actual !== "object" || Array.isArray(actual)) {
+      failures.push(`${label}: expected object, got ${JSON.stringify(actual)}`);
+      return;
+    }
+    for (const [key, value] of Object.entries(expected as Record<string, unknown>)) {
+      matchJsonSubset((actual as Record<string, unknown>)[key], value, `${label}.${key}`, failures);
+    }
+    return;
+  }
+  if (!isDeepStrictEqual(actual, expected)) {
+    failures.push(`${label}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+  }
 }
 
 /** Universal invariants — hard gates over the run's trace + fresh file/git state. */
@@ -524,6 +842,42 @@ function validateUniversalInvariants(run: CaseRun): string[] {
         `dispatch-observed self-report on ${observed.edgeId} executed as "${observed.actual}"`
         + ` but the dispatch recorded "${producer.event.executionMode}" — a silent mode switch`,
       );
+    }
+  }
+
+  // 8. Receipt↔evidence separation (#238 vs #240): every file under the
+  //    fixture's Evidence Store parses as a VALID Evidence Record and every
+  //    file under a run's receipts/ dir does NOT — completion authority and
+  //    check-outcome authority can never be confused on disk, whichever
+  //    path a case drove writes through.
+  const evidenceDir = path.join(run.repo, ".apm", "state", "doc-driven-dev", "evidence", "records");
+  if (fs.existsSync(evidenceDir)) {
+    for (const name of fs.readdirSync(evidenceDir).filter((entry) => entry.endsWith(".json")).sort()) {
+      try {
+        const parsed: unknown = JSON.parse(fs.readFileSync(path.join(evidenceDir, name), "utf8"));
+        if (!validateEvidenceRecord(parsed)) {
+          failures.push(`evidence record ${name} fails EvidenceRecord validation — a non-evidence payload is in the Evidence Store`);
+        }
+      } catch (error) {
+        failures.push(`evidence record ${name} is unreadable — ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+  }
+  const runsDir = path.join(run.repo, ".apm", "state", "doc-driven-dev", "runs");
+  if (fs.existsSync(runsDir)) {
+    for (const runEntry of fs.readdirSync(runsDir, { withFileTypes: true }).filter((entry) => entry.isDirectory())) {
+      const receiptsDir = path.join(runsDir, runEntry.name, "receipts");
+      if (!fs.existsSync(receiptsDir)) continue;
+      for (const name of fs.readdirSync(receiptsDir).filter((entry) => entry.endsWith(".json")).sort()) {
+        try {
+          const parsed: unknown = JSON.parse(fs.readFileSync(path.join(receiptsDir, name), "utf8"));
+          if (validateEvidenceRecord(parsed)) {
+            failures.push(`receipt ${name} in run ${runEntry.name} validates as an Evidence Record — store confusion`);
+          }
+        } catch (error) {
+          failures.push(`receipt ${name} in run ${runEntry.name} is unreadable — ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
     }
   }
 

@@ -39236,6 +39236,7 @@ var STATE_FILE = "manifest.json";
 var PLAN_FILE = "plan.md";
 var TRACE_FILE = "run_trace.jsonl";
 var RUN_DIR = "runs";
+var STATE_SUBDIRS = ["tasks", "checkpoints", "receipts"];
 var systemClock = () => (/* @__PURE__ */ new Date()).toISOString();
 function sha256(content3) {
   return import_node_crypto2.default.createHash("sha256").update(content3, "utf8").digest("hex");
@@ -39397,6 +39398,9 @@ function mutateRun(cwd, runId, options2, expectedRevision, mutate) {
     const snapshot = loadSnapshot(resolved, runId);
     requireMutableManifest(snapshot.manifest);
     requireRevision(snapshot.manifest, expectedRevision);
+    for (const subdir of STATE_SUBDIRS) {
+      import_node_fs6.default.mkdirSync(import_node_path7.default.join(runDir, subdir), { recursive: true });
+    }
     return mutate({ runDir, manifest: snapshot.manifest, snapshot });
   } finally {
     release();

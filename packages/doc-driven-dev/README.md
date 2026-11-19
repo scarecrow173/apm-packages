@@ -141,7 +141,8 @@ To inspect the route from a consumer repository:
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
   [--graph <path>] [--current <node>] [--signal <condition-signal>] \
-  [--focus <artifact>] [--task-dir <path>] [--cwd <path>] --json
+  [--focus <artifact-or-run>] [--run <run-id> [--state-root <path>]] \
+  [--cwd <path>] --json
 ```
 
 ## Shared relations

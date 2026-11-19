@@ -37,10 +37,12 @@ import {
   approvePlan,
   loadRun,
   savePlan,
+  StoreError,
   updateRun,
   updateTask,
 } from "../../../src/skills/lib/execution_store";
 import { commitAll, E2E_RUN_ID, KNOWLEDGE_DOC, updateArtifact, VERIFICATION_DOC, writeArtifact } from "./fixture_manager";
+import { writeEvidenceRecord, type HarnessEvidenceInput } from "./evidence_ops";
 
 // The primary task doc remains the checkpoint-evidence declaration — corpus
 // content the run's checkpoint binds, never routing authority (receipts,
@@ -143,16 +145,30 @@ export type Mutator =
   | { write: { path: string; frontmatter?: Record<string, unknown>; body?: string } }
   | { set: { path: string; frontmatter: Record<string, unknown> } }
   | { append: { path: string; body: string } }
+  /** Create a directory (and parents) — the scaffold_docs delegate's work. */
+  | { mkdir: { path: string } }
+  /** Raw file write — no front-matter normalization (resolutions/summary JSON). */
+  | { writeFile: { path: string; content: string } }
+  /** Delete a file inside the repo — missing files are a no-op. */
+  | { remove: { path: string } }
   | { commit: true } // commitAll(repo) — git inside the fixture repo only
   // Execution Store mutators (Issue #237): the run's records are the task
   // authority — a `task` mutator patches the record via updateTask (create
-  // or CAS-less write), `plan` re-saves plan.md (invalidating approvals
-  // bound to the old digest), `approve` binds the current digest, and
-  // `runFocus` rewrites the manifest's chain binding.
-  | { task: { taskId: string; title?: string; status?: TaskStatus; dependsOn?: string[]; checks?: string[]; scope?: string[] } }
-  | { plan: { content: string } }
-  | { approve: { actor?: string } }
-  | { runFocus: { focus: string[] } };
+  // or CAS write), `plan` re-saves plan.md (invalidating approvals bound to
+  // the old digest), `approve` binds the current digest, and `runFocus`
+  // rewrites the manifest's chain binding. `runId` selects a non-default
+  // run; `expectedVersion` pins a STALE CAS precondition — the update's own
+  // "I read version N" claim — so the store's cas-conflict refusal is the
+  // behavior under test (a parallel writer lost the race).
+  | { task: { taskId: string; title?: string; status?: TaskStatus; dependsOn?: string[]; checks?: string[]; scope?: string[]; runId?: string; expectedVersion?: number } }
+  | { plan: { content: string; runId?: string } }
+  | { approve: { actor?: string; runId?: string } }
+  | { runFocus: { focus: string[]; runId?: string } }
+  /**
+   * Write one immutable Evidence Record through putImmutable (fixed clock).
+   * `resolve` pins live claim/check revisions; omit it for stale pins.
+   */
+  | { evidence: { input: HarnessEvidenceInput; resolve?: boolean } };
 
 /**
  * One adapter-internal sub-dispatch a composite delegate performs. This is
@@ -218,6 +234,37 @@ export type EdgeScript = {
    * attribution check must reject the dispatch.
    */
   reportActual?: ExecutionMode;
+  /**
+   * Proof override for this edge's completed outcomes — e.g. a provider
+   * reference `{kind:"provider", provider, idempotencyKey}` whose recorded
+   * Effect Receipt carries the idempotency key the resume path reuses.
+   * Resolved against live state like any other scripted reference.
+   */
+  proof?: ReferenceSpec;
+  /**
+   * The delegate's declared primary output, resolved in place of the
+   * authoritative output mapping. The migration-portability case binds the
+   * run's task records — under Registry 3 the delegate's honest produced
+   * state is an execution-task transition, never a durable impl doc (the
+   * migrated corpus carries none, and writing one would re-flag preflight).
+   */
+  output?: ReferenceSpec;
+  /**
+   * Declared checkpoint-bound refs for this edge, replacing runCase's
+   * default `[DEFAULT_TASK_DOC]` declaration — corpus-dependent fixtures
+   * (a migrated repo carries no `docs/tasks` durable file) name the
+   * artifacts that genuinely exist.
+   *
+   * An `execution-task` ref here (or in `output`) attests the leg's BOUND
+   * Execution Store run — `e2eCase.id` on leg 0 and resumed legs,
+   * `<id>-legN` on later fresh legs, or `options.runId` when the step
+   * binds one. That bound run differs from the fixture's PROJECTED run
+   * (e.g. a migration-imported run) unless the leg binds it via
+   * `$run:only` — e2e-18 does exactly that, so its checkpoint refs
+   * genuinely attest the migrated run. Do not read an `execution-task`
+   * checkpoint ref as evidence about a run the leg never bound.
+   */
+  checkpointEvidence?: ReferenceSpec[];
   /** runCase's evidence phase: declare the task doc + commitAll for the edge. */
   commitEvidence?: boolean;
 };
@@ -235,18 +282,31 @@ export function applyMutator(repo: string, mutator: Mutator, runId: string = E2E
     const file = path.join(repo, mutator.append.path);
     const parsed = matter(fs.readFileSync(file, "utf8"));
     fs.writeFileSync(file, matter.stringify(parsed.content + mutator.append.body, parsed.data), "utf8");
+  } else if ("mkdir" in mutator) {
+    fs.mkdirSync(path.join(repo, mutator.mkdir.path), { recursive: true });
+  } else if ("writeFile" in mutator) {
+    const file = path.join(repo, mutator.writeFile.path);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, mutator.writeFile.content, "utf8");
+  } else if ("remove" in mutator) {
+    fs.rmSync(path.join(repo, mutator.remove.path), { force: true });
   } else if ("task" in mutator) {
-    const { taskId, ...patch } = mutator.task;
+    const { taskId, runId: taskRunId, expectedVersion, ...patch } = mutator.task;
+    const target = taskRunId ?? runId;
     // CAS read-modify-write: updates pin the record's current version,
-    // creates pass no expectation (the store refuses either misuse).
-    const current = loadRun(repo, runId).tasks.find((task) => task.taskId === taskId);
-    updateTask(repo, runId, taskId, patch, { expectedVersion: current?.version });
+    // creates pass no expectation (the store refuses either misuse). An
+    // explicit `expectedVersion` overrides the fresh read — the declared
+    // stale pin the cas-conflict cases simulate.
+    const current = loadRun(repo, target).tasks.find((task) => task.taskId === taskId);
+    updateTask(repo, target, taskId, patch, { expectedVersion: expectedVersion ?? current?.version });
   } else if ("plan" in mutator) {
-    savePlan(repo, runId, mutator.plan.content);
+    savePlan(repo, mutator.plan.runId ?? runId, mutator.plan.content);
   } else if ("approve" in mutator) {
-    approvePlan(repo, runId, { actor: mutator.approve.actor ?? "e2e" });
+    approvePlan(repo, mutator.approve.runId ?? runId, { actor: mutator.approve.actor ?? "e2e" });
   } else if ("runFocus" in mutator) {
-    updateRun(repo, runId, { focus: mutator.runFocus.focus });
+    updateRun(repo, mutator.runFocus.runId ?? runId, { focus: mutator.runFocus.focus });
+  } else if ("evidence" in mutator) {
+    writeEvidenceRecord(repo, mutator.evidence.input, { resolve: mutator.evidence.resolve });
   } else {
     commitAll(repo);
   }
@@ -274,8 +334,9 @@ function outputReference(
   runId: string,
   route: GraphRoute,
   effect: CallerEffect,
+  outputSpec?: ReferenceSpec,
 ): EffectReference {
-  const reference = resolveReference(repo, storeView(repo, runId), standardResolveOutputPath(route, effect));
+  const reference = resolveReference(repo, storeView(repo, runId), outputSpec ?? standardResolveOutputPath(route, effect));
   if (reference === null) {
     throw new Error(`output spec does not resolve current state: ${effect.kind}:${effect.id}`);
   }
@@ -290,17 +351,29 @@ function completedOutcome(
   effect: CallerEffect,
   inputs: EffectReference[],
   output: EffectReference,
+  proofSpec?: ReferenceSpec,
 ): CompletedEffectOutcome {
   const outputs = effect.id === "planning-flow"
     // Registry 3 work product: the durable verification-intent document plus
     // the run's task records — never the pre-v3 plan/test-spec durable docs.
     ? resolveReferenceSpecs(repo, storeView(repo, runId), [VERIFICATION_DOC, ...taskRefSpecs(route)])
     : [output];
-  const proof: EffectProof = output.kind === "execution-task"
-    // An execution-task ref can never be a proof; the store attests the
-    // task-bound work through a provider-scoped idempotency key instead.
-    ? { kind: "provider", provider: "execution-store", idempotencyKey: `${output.runId}:${output.taskId}@${output.version}` }
-    : output;
+  let proof: EffectProof;
+  if (proofSpec !== undefined) {
+    // Scripted proof override (e.g. a provider idempotency receipt): resolved
+    // against the same live-state rules as any outcome reference.
+    const resolved = resolveReference(repo, storeView(repo, runId), proofSpec);
+    if (resolved === null || (resolved.kind !== "durable-document" && resolved.kind !== "provider")) {
+      throw new Error(`scripted proof for ${effect.kind}:${effect.id} does not resolve to a proof-shaped reference`);
+    }
+    proof = resolved;
+  } else {
+    proof = output.kind === "execution-task"
+      // An execution-task ref can never be a proof; the store attests the
+      // task-bound work through a provider-scoped idempotency key instead.
+      ? { kind: "provider", provider: "execution-store", idempotencyKey: `${output.runId}:${output.taskId}@${output.version}` }
+      : output;
+  }
   return {
     status: "completed",
     edgeId: route.edgeId as string,
@@ -316,12 +389,12 @@ function buildOutcome(
   spec: OutcomeSpec,
   ctx: {
     repo: string; runId: string; route: GraphRoute; stage: "audit" | "delegate"; effect: CallerEffect;
-    inputs: EffectReference[]; output: EffectReference;
+    inputs: EffectReference[]; output: EffectReference; proofSpec?: ReferenceSpec;
   },
 ): EffectOutcome {
-  const { repo, runId, route, stage, effect, inputs, output } = ctx;
+  const { repo, runId, route, stage, effect, inputs, output, proofSpec } = ctx;
   if (spec === "completed") {
-    return completedOutcome(repo, runId, route, stage, effect, inputs, output);
+    return completedOutcome(repo, runId, route, stage, effect, inputs, output, proofSpec);
   }
   if (spec === "retry") {
     const outcome: RetryEffectOutcome = {
@@ -381,6 +454,9 @@ function mutatorPath(mutator: Mutator): string | null {
   if ("write" in mutator) return mutator.write.path;
   if ("set" in mutator) return mutator.set.path;
   if ("append" in mutator) return mutator.append.path;
+  if ("mkdir" in mutator) return mutator.mkdir.path;
+  if ("writeFile" in mutator) return mutator.writeFile.path;
+  if ("remove" in mutator) return mutator.remove.path;
   return null;
 }
 
@@ -505,7 +581,17 @@ export function scriptedDispatcher(options: {
         observations.push({ target: sub.target, requested, actual: "unknown", method: "not-executed" });
         return { observations, failed: true };
       }
-      for (const mutator of mutators) applyMutator(repo, mutator);
+      try {
+        for (const mutator of mutators) applyMutator(repo, mutator);
+      } catch (error: unknown) {
+        // A store refusal inside the bounded path is a declined dispatch —
+        // the internal pipeline fails like an unauthorized write.
+        if (error instanceof StoreError) {
+          observations.push({ target: sub.target, requested, actual: "unknown", method: "not-executed" });
+          return { observations, failed: true };
+        }
+        throw error;
+      }
       observations.push({
         target: sub.target,
         requested,
@@ -566,7 +652,16 @@ export function scriptedDispatcher(options: {
         return refused();
       }
     }
-    for (const mutator of mutators) applyMutator(repo, mutator);
+    // A store boundary refusal mid-apply (e.g. a cas-conflict losing a
+    // parallel write race) means the work product the completed outcome
+    // would assert is incomplete — the adapter reports the failure
+    // honestly as authority-required instead of completing over it.
+    try {
+      for (const mutator of mutators) applyMutator(repo, mutator);
+    } catch (error: unknown) {
+      if (error instanceof StoreError) return refused();
+      throw error;
+    }
 
     const subObservations: DispatchObservation[] = [];
     let subFailed = false;
@@ -575,13 +670,14 @@ export function scriptedDispatcher(options: {
       subObservations.push(...subs.observations);
       subFailed = subs.failed;
     }
-    const output = outputReference(repo, ctx.runId, route, effect);
+    const output = outputReference(repo, ctx.runId, route, effect,
+      effect.kind === "delegate" ? options.script[edgeId]?.output : undefined);
     const outcome = subFailed
       ? buildOutcome(
           { yield: "authority-required" },
           { repo, runId: ctx.runId, route, stage, effect, inputs, output },
         )
-      : buildOutcome(spec, { repo, runId: ctx.runId, route, stage, effect, inputs, output });
+      : buildOutcome(spec, { repo, runId: ctx.runId, route, stage, effect, inputs, output, proofSpec: options.script[edgeId]?.proof });
     return {
       outcome,
       observations: [

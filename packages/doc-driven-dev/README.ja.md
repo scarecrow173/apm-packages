@@ -138,7 +138,8 @@ consumer repository で route を確認するには次を使います。
 ```bash
 node .apm/skills/doc-driven-dev-graph/scripts/route_graph.js \
   [--graph <path>] [--current <node>] [--signal <condition-signal>] \
-  [--focus <artifact>] [--task-dir <path>] [--cwd <path>] --json
+  [--focus <artifact-or-run>] [--run <run-id> [--state-root <path>]] \
+  [--cwd <path>] --json
 ```
 
 ## 共通 relation
