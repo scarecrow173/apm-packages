@@ -49,7 +49,10 @@ models, no wall-clock gates.
   for reproducibility checks). `durationMs` is reference-only.
 - `cases/` — declarative `E2ECase` objects, one export per case, registered
   in `cases/index.ts`.
-- `doc-driven-dev-graph-e2e.test.ts` — runs every registered case.
+- `doc-driven-dev-graph-e2e.test.ts` — runs every registered case; the
+  `DETERMINISM_SAMPLE` subset additionally re-runs inside its test and
+  deep-compares the second run's normalized trace against the first
+  (see "Determinism rules").
 
 ## Validator invariants (universal hard gates)
 
@@ -143,7 +146,18 @@ report); the aligned pass/fail table is emitted via test diagnostics.
   wall-clock values anywhere in asserted state.
 - No timestamps, PIDs, or random ids in assertions; `durationMs` is
   reported but never asserted. Trace comparison goes through
-  `normalizeForCompare` (`compareNormalizedTraces`).
+  `normalizeForCompare` (`compareNormalizedTraces`) — exercised
+  continuously by the determinism lane below.
+- **Determinism lane.** Full-suite determinism is pinned by the per-case
+  event shape/count expectations everywhere; on top of that, a small
+  representative subset (`DETERMINISM_SAMPLE` in the e2e driver — a
+  multi-leg yield/resume, an ops-only migration lane, a store-mutating
+  run, an evidence case, and a refusal) runs a SECOND time inside its
+  test and the re-run's normalized trace must deep-equal the first
+  run's. The subset stays bounded on purpose: doubling all 66 cases
+  would double a ~500s suite for no marginal signal, so the lane costs
+  < ~60s while still catching trace-level nondeterminism across the
+  major behavior families.
 - Assertions use fixture-relative paths only; temp dirs and the trace file
   (kept beside the repo so it cannot dirty the commit gate) are never
   asserted.
@@ -160,7 +174,7 @@ report); the aligned pass/fail table is emitted via test diagnostics.
 | >= 10 regression cases | 66 `E2ECase` entries in `cases/` (31 files; e2e-07/10/12/13/15/17/19/21/22/23/24/25/26/30 carry a/b/c/… siblings). |
 | Real CLI + filesystem + git + Markdown + fresh projection | Every case: real temp git repo, `route_graph` spawned via tsx once per hop, projection recomputed per invocation. |
 | Deterministic delegate/audit replacement incl. error/yield/resume/commit | `scriptedDispatcher` (completed/retry/yield/malformed); exercised by e2e-03/11 (retry), e2e-04 (resume), e2e-08 (resume after budget), e2e-09 (commit), e2e-10 (rejections), e2e-02 (input-required). |
-| Reproducible + contract-violation detection (hard gates) | Seven universal invariants + per-case expectation DSL; `compareNormalizedTraces` for reproducibility; e2e-05/07/10 target contract violations. |
+| Reproducible + contract-violation detection (hard gates) | Seven universal invariants + per-case expectation DSL; `compareNormalizedTraces` exercised by the determinism lane (`DETERMINISM_SAMPLE` re-runs); e2e-05/07/10 target contract violations. |
 | Per-case + aggregate report | `CaseReport` JSONL + `formatReport` table; `${os.tmpdir()}/e2e-report.jsonl`. |
 | Non-goals documented | "What this harness does NOT verify" below. |
 | Existing tests + lint green | Suite runs under `pnpm test`; this file is covered by `lint:md`. |

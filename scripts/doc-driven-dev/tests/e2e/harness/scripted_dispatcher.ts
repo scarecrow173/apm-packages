@@ -254,6 +254,15 @@ export type EdgeScript = {
    * default `[DEFAULT_TASK_DOC]` declaration — corpus-dependent fixtures
    * (a migrated repo carries no `docs/tasks` durable file) name the
    * artifacts that genuinely exist.
+   *
+   * An `execution-task` ref here (or in `output`) attests the leg's BOUND
+   * Execution Store run — `e2eCase.id` on leg 0 and resumed legs,
+   * `<id>-legN` on later fresh legs, or `options.runId` when the step
+   * binds one. That bound run differs from the fixture's PROJECTED run
+   * (e.g. a migration-imported run) unless the leg binds it via
+   * `$run:only` — e2e-18 does exactly that, so its checkpoint refs
+   * genuinely attest the migrated run. Do not read an `execution-task`
+   * checkpoint ref as evidence about a run the leg never bound.
    */
   checkpointEvidence?: ReferenceSpec[];
   /** runCase's evidence phase: declare the task doc + commitAll for the edge. */

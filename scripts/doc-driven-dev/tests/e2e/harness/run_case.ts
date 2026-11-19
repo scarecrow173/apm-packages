@@ -289,6 +289,10 @@ export function runCase(e2eCase: E2ECase): { run: CaseRun; report: CaseReport } 
   if (thrown !== undefined && e2eCase.expect.throwMatch === undefined) {
     failures.push(`runCaller threw unexpectedly: ${thrown instanceof Error ? thrown.message : String(thrown)}`);
   }
+  // Partitions close at each run-yield — a leg that threw WITHOUT a yield
+  // would leave an unclosed slice the NEXT leg's events would bleed into.
+  // No current case can do that: a captured throw breaks the leg loop
+  // above, and the only throwing cases emit zero trace events anyway.
   const partitions = partitionByLegs(traceEvents);
   legs.forEach((step, index) => {
     if (!step.expect) return;

@@ -1141,7 +1141,7 @@
         {
           "path": "doc-driven-dev-graph/scripts/execution_store.js",
           "exists": true,
-          "bytes": 1471758
+          "bytes": 1471974
         },
         {
           "path": "doc-driven-dev-graph/scripts/inspect_graph.js",
@@ -1191,7 +1191,7 @@
       ],
       "totals": {
         "directives": 51,
-        "referencedBytes": 8082890,
+        "referencedBytes": 8083106,
         "missing": 0
       }
     },
@@ -1331,7 +1331,7 @@
         {
           "path": "doc-maintenance/scripts/doc_maintenance.js",
           "exists": true,
-          "bytes": 1802505
+          "bytes": 1802723
         },
         {
           "path": "doc-maintenance/scripts/migrate_docs.js",
@@ -1361,7 +1361,7 @@
       ],
       "totals": {
         "directives": 21,
-        "referencedBytes": 6644073,
+        "referencedBytes": 6644291,
         "missing": 0
       }
     },
@@ -2993,7 +2993,7 @@
     "skillBytes": 209249,
     "alwaysOnChars": 202123,
     "directives": 337,
-    "referencedBytes": 56792371,
+    "referencedBytes": 56792805,
     "missing": 0
   }
 }
