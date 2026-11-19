@@ -96,17 +96,26 @@ and register it in `cases/index.ts`. Fields:
 | Field | Meaning |
 | --- | --- |
 | `id`, `description` | Case identity; tests are named `e2e <id>: <description>`. |
-| `fixture` | `createFixtureRepo` options: `files` overrides (`DocSpec` / raw `string` / `null` to delete), `taskStatuses`, `dependsOn`, `secondPlan`, `scaffoldDirs`. Defaults to the standard happy fixture. |
+| `fixture` | `createFixtureRepo` options: `files` overrides (`DocSpec` / raw `string` / `null` to delete), `taskStatuses`, `dependsOn`, `secondPlan`, `scaffoldDirs`, `v3Only` (drop the legacy corpus AND its dirs — a current Registry-3 tree), `schemaManifest` (write `docs/.doc-driven-dev/schema.json`), `omitIndexes` (no README index files), `extraRuns` (additional Execution Store runs), `runFiles` (raw files inside `runs/<runId>/` for state the write API refuses), `run:false` (no seeded run). Defaults to the standard happy fixture. |
 | `current` | Start node (default: graph entry). Use to start mid-graph. |
 | `focus`, `signals` | Caller focus ids and runtime signals. Routing past `focus-required` needs `focus`; the knowledge-consolidation gate needs `knowledge-consolidated` and the exit-audit gate needs `exit-audit-pass` (the verification gate reads the HEAD-bound Verification Summary, never a signal). |
 | `graph` | Custom graph YAML (repo-relative). |
+| `router` | Override the spawned router executable — e.g. `harness/fake_router.mjs` prints a fixture payload verbatim for the stale-route refusal cases. |
 | `maxHops`, `mode` | Hop budget; `run-until-yield` (default) or `single-step`. |
-| `script` | `Record<edgeId, EdgeScript>` — `audits`/`delegate` outcome specs (scalar repeats, queue consumed per dispatch), `mutate` document mutators applied when the delegate completes, `commitEvidence` to commit during evidence persistence, `subDispatches` internal dispatch plan, `reportActual` to simulate a dishonest self-report. Unscripted effects throw — no silent defaults. |
+| `ops`, `postOps` | `CliOp[]` run before/after the legs: `cli` (spawn a real production CLI — `route_graph`, `evidence_store`, `execution_store`, `doc_maintenance` — `--cwd` auto-appended), `evidence` (write an immutable Evidence Record via `putImmutable`, `resolve` pins live revisions), `mutate`, `writeFile`, `removeFile`, `approveRun`, `snapshot` (tree digest), `writeResolutions` (auto-resolve the live migration plan), `verificationSummary` (real `evidence_store summary` written OUTSIDE the repo). `saveAs` names a result for `$<name>`/`$<name>.path` placeholders; `$run:only` resolves the fixture's single run id. `steps: []` makes a case pure-ops. |
+| `script` | `Record<edgeId, EdgeScript>` — `audits`/`delegate` outcome specs (scalar repeats, queue consumed per dispatch), `mutate` document/store mutators applied when the delegate completes (`task` records honor `runId` + `expectedVersion` CAS pins; a store refusal becomes `authority-required`), `commitEvidence` to commit during evidence persistence, `checkpointEvidence` to replace the checkpoint's default task-doc declaration (migrated corpora carry no `docs/tasks` — name the refs that exist), `output` to override the delegate's declared primary output (e.g. bind the run's `execution-task` record transition), `proof` to pin a provider-shaped proof, `subDispatches` internal dispatch plan, `reportActual` to simulate a dishonest self-report. Unscripted effects throw — no silent defaults. |
 | `script.subDispatches` | `SubDispatchSpec[]` (repeats per delegate dispatch that resolves `completed` — a `yield`/`retry` spec consumes nothing, so queues stay aligned across yields; e2e-15c depends on this) or `SubDispatchSpec[][]` (one plan consumed per completed dispatch). Fields: `target` (internal dispatch name), `requested` (mode, default `same-context`), `method` (override the mechanism report), `mutate` (mutators), `writeScope` (required for delegated requests that mutate — fail-closed refusal otherwise), `refuse` (decline outright), `staleReturn` (execute but return unresolvable evidence → delegate yields), `reportActual` (dishonest mode report → runner rejects). A refused/rejected entry stops the plan and forces the delegate to `yield authority-required`. |
 | `unsupportedModes` | `ExecutionMode[]` the simulated host cannot execute — a dispatch requesting one declines `not-executed` + `yield` instead of silently switching. |
 | `buildHandoff` | Optional `CallerRunnerOptions.buildHandoff` override; the runner calls it for every delegated policy decision and rejects a falsy return or a handoff whose `executionMode` mismatches the request. |
-| `steps` | Multi-leg runs. Each leg: `mutateBefore` (applied between runs), `options` (`focus`/`signals`/`current`/`mode`/`maxHops`, plus `resume:false` for a fresh run — on resumed legs the prior `CallerHandoff` wins `current`/`mode`/`maxHops`), `expect` (trace checks use that leg's partition). |
-| `expect` | Final-leg expectations: `yield`, `edgeSequence`, `completedEdges` scope to the last leg; `events` tallies span the whole run; `blockersContain`/`tasksContain` match `route-selected` payloads; `finalFiles` re-reads end-of-run repo state. |
+| `steps` | Multi-leg runs. Each leg: `mutateBefore` (applied between runs), `options` (`focus`/`signals`/`current`/`runId`/`mode`/`maxHops`, plus `resume:false` for a fresh run — on resumed legs the prior `CallerHandoff` wins `current`/`mode`/`maxHops`), `expect` (trace checks use that leg's partition). |
+| `expect` | Final-leg expectations: `yield` (optional — ops-only and expected-throw cases emit no run-yield), `edgeSequence`, `completedEdges` scope to the last leg; `events` tallies span the whole run; `blockersContain`/`tasksContain`/`tasksAbsent` match `route-selected` payloads; `finalFiles` re-reads end-of-run repo state; `fileCount`/`absentFiles`/`gitDirty` assert filesystem/git truth. |
+| `expect.cli` | Assert recorded `ops`/`postOps` CLI results by `saveAs` or `index`: `exit` code, `jsonMatch` (recursive subset match on parsed stdout JSON — arrays match exactly), `stdoutMatch`/`stderrMatch` (substring or RegExp). |
+| `expect.preflight` | Fresh `evaluateSchemaPreflight` status at end of run — never the op's own report. |
+| `expect.verification` | Re-run the real `evidence_store summary --json` CLI at validation time: `verdict` plus `reasonsContain` collected across summary/check/claim/evidence levels; `subject` (default `commit:HEAD`) and `args` pass extra flags verbatim. |
+| `expect.evidence` / `expect.receiptsContain` | Evidence Store records re-read from disk (count + per-record fields) and Effect Receipts re-read from the run's store — the two halves of the receipt-vs-evidence boundary. |
+| `expect.run` | End-of-run Execution Store assertions: `runId` (`$run:only` resolves), `tasks` (status/title/CAS version), `planApproved`, `planDigest`. |
+| `expect.treeSnapshotEquals` | The end-of-run tree digest deep-equals a named `snapshot` op — proof an operation wrote zero bytes. |
+| `expect.throwMatch` | A refusal the caller raised, matched against the thrown error message (stale router payloads, unreadable state). An unexpected throw is a failure of its own. |
 | `expect.briefingAudit` | Run the real source `audit_briefing` CLI via tsx against the fixture (`spec`, `adr`, and expected `consistent`); check both JSON and exit status. A step expectation runs immediately after that leg; a top-level expectation reads the final state. |
 | `expect.checkpointReceipts` | Assert counts of Execution-Store checkpoint records by edge. Step expectations read at the leg boundary; top-level expectations read final state. A checkpoint is not a trace event; trace `run-yield.completedEdges` is asserted separately. |
 
@@ -148,7 +157,7 @@ report); the aligned pass/fail table is emitted via test diagnostics.
 
 | Criterion | Where it lands |
 | --- | --- |
-| >= 10 regression cases | 33 `E2ECase` entries in `cases/` (15 files; e2e-07/10/12/13/15 carry a/b/c/… siblings). |
+| >= 10 regression cases | 66 `E2ECase` entries in `cases/` (31 files; e2e-07/10/12/13/15/17/19/21/22/23/24/25/26/30 carry a/b/c/… siblings). |
 | Real CLI + filesystem + git + Markdown + fresh projection | Every case: real temp git repo, `route_graph` spawned via tsx once per hop, projection recomputed per invocation. |
 | Deterministic delegate/audit replacement incl. error/yield/resume/commit | `scriptedDispatcher` (completed/retry/yield/malformed); exercised by e2e-03/11 (retry), e2e-04 (resume), e2e-08 (resume after budget), e2e-09 (commit), e2e-10 (rejections), e2e-02 (input-required). |
 | Reproducible + contract-violation detection (hard gates) | Seven universal invariants + per-case expectation DSL; `compareNormalizedTraces` for reproducibility; e2e-05/07/10 target contract violations. |
@@ -189,6 +198,31 @@ report); the aligned pass/fail table is emitted via test diagnostics.
 | e2e-15h | Executed research spawn returns a stale output -> delegate yield | stale-output rejection on delegated path |
 | e2e-15i | Policy delegates briefing-flow itself; caller-built handoff scopes writes; `actual: subagent` | requested mode -> handoff -> scoped execution -> observed actual |
 | e2e-15j | Policy delegates briefing-flow but host lacks `subagent` -> top-level dispatch declines `not-executed` + `yield` | top-level capability refusal, no silent switch |
+| e2e-16 | Mixed legacy corpus -> `route_graph` blocked by schema preflight; `migrate plan` still runs | preflight halts normal execution; migration lane only |
+| e2e-17a | `migrate plan` on a current repo: classification `current`, zero planned writes, zero bytes written | read-only plan, treeSnapshotEquals |
+| e2e-17b | `migrate apply --expect` plan-hash drift refuses before any write | hash-pinned apply refusal |
+| e2e-17c | Pinned manifest-only apply stamps `schema.json`; second apply is an explicit no-op | apply + idempotent re-apply |
+| e2e-18 | `migrate apply` crash at publish -> `migrate recovery --resume` -> migrated run routes task-graph -> terminal | journaled migration interruption/resume; legacy Plan/Task portability ($run:only) |
+| e2e-19a | Unfocused run yields `input-required`; run-token focus selects `e2e-run`, foreign run's tasks never leak | focus-required, run selection, projection isolation |
+| e2e-19b | Claim-reference focus resolves through the Knowledge Graph and resumes to terminal | claim-ref focus resolution |
+| e2e-20 | `approval-required` yield -> plan digest drift invalidates approval -> re-approval resumes to terminal | digest-bound plan approval |
+| e2e-21a | `wont-do` predecessor blocks the dependent -> no task-graph condition matches -> `unrecoverable-blocker` | DAG semantics; post-leg `route_graph` re-projection |
+| e2e-21b | Dangling `depends-on` (raw `runFiles` record) -> `missing-task-reference` -> `budget-exhausted` | fail-closed task graph |
+| e2e-22a | Two independent tasks runnable in one projection -> one edge completes both -> terminal | parallel tasks |
+| e2e-22b | CAS conflict (`expectedVersion`) inside the delegate's store write -> `authority-required`; record untouched | compare-and-swap refusal |
+| e2e-23a | Provider-proof audit -> approval yield -> resume reuses receipt (idempotency key) -> terminal | provider idempotency + receipt reuse |
+| e2e-23b/c | Delegate outcome missing proof / scope-mismatched inputs -> `authority-required` | delegate contract rejection |
+| e2e-24a/b/c | Claim revision / check design revision / subject commit+workspace drift -> `*-mismatch` -> check undetermined | evidence invalidation axes |
+| e2e-25a/b/c | `passed` with unavailable / unverified / absent artifacts -> integrity fails -> undetermined | evidence integrity gate |
+| e2e-25d | `passed` + digest-verified artifact -> `sufficient` -> `verified` | positive control |
+| e2e-26a | One of two required checks satisfied -> claim `partial` -> indeterminate | partial coverage |
+| e2e-26b/c | Valid / malformed not-applicable verdict -> `out-of-scope` vs `rejected-not-applicable` | impact-analysis basis gate |
+| e2e-26d/e | Expired / valid waiver -> `waiver-expired`+`rejected-waiver` vs `waiver-applied` -> `verified` | waiver authority + expiry |
+| e2e-27 | `knowledge-doc` completes with no new Markdown -> `fileCount` unchanged -> terminal | zero-new-knowledge exit |
+| e2e-28 | `knowledge-doc` consolidates into the existing record -> no new file, no impl chronology -> terminal | knowledge consolidation |
+| e2e-29 | Graph routes with `omitIndexes`; explicit `index plan/apply` materializes managed READMEs | index materialization boundary |
+| e2e-30a/b | `schemaVersion:2` route / v3 route carrying `proofPath` -> caller throws `non-v3 route` before dispatch | stale GraphRoute refusal |
+| e2e-31 | `evidence_store` CLI: immutable `put`, `record-conflict` on re-put, live `get`/`query` | Evidence Store boundary |
 
 ## What this harness does NOT verify
 

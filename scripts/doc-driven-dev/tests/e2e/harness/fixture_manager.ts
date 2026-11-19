@@ -4,6 +4,7 @@
  * front matter (fixed ids/statuses/dates — no wall-clock values), and real
  * git history. Git commands only ever run inside the fixture repo.
  */
+import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -17,6 +18,7 @@ import {
   loadRun,
   updateTask,
 } from "../../../src/skills/lib/execution_store";
+import { schemaManifestText } from "../../../src/skills/lib/schema_preflight";
 
 /**
  * The deterministic Execution Store run every fixture carries (Issue #237):
@@ -117,6 +119,31 @@ export function commitAll(repo: string): void {
 }
 
 /**
+ * Deterministic content digest of every file under the repo (excluding
+ * `.git` internals): `relpath:sha256` lines in path order. Used by
+ * expectations that must prove an operation wrote ZERO bytes — `migrate
+ * plan` on a current repo, a refused apply — without trusting the
+ * operation's own report.
+ */
+export function snapshotTree(repo: string): string {
+  const out: string[] = [];
+  const visit = (dir: string, rel: string): void => {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      const abs = path.join(dir, entry.name);
+      const relPath = rel === "" ? entry.name : `${rel}/${entry.name}`;
+      if (relPath === ".git" || relPath.startsWith(".git/")) continue;
+      if (entry.isDirectory()) visit(abs, relPath);
+      else if (entry.isFile()) {
+        out.push(`${relPath}:${crypto.createHash("sha256").update(fs.readFileSync(abs)).digest("hex")}`);
+      }
+    }
+  };
+  visit(repo, "");
+  return out.join("\n");
+}
+
+/**
  * Add one task to an existing fixture: the legacy corpus doc (inventory,
  * never consulted) plus the authoritative task record in the run.
  */
@@ -134,10 +161,28 @@ export function addTask(repo: string, index: number, status: TaskStatus = "todo"
  * The oracle `fixtureRepo` default document set (run-to-yield lines 587–636),
  * parameterized by task statuses / dependencies / optional second plan.
  */
+/**
+ * The pre-v3 corpus keys the default doc set writes (plan / task /
+ * test-spec / impl records and their legacy relation fields). `v3Only`
+ * fixtures remove them so the tree scans clean under a declared schema
+ * manifest — they are the ONLY default docs a Registry-3 tree must not
+ * carry, so removing them by key prefix is exhaustive here.
+ */
+const LEGACY_CORPUS_PREFIXES = ["docs/plans/", "docs/tasks/", "docs/test-specs/", "docs/impl/"];
+
+/**
+ * The scaffold dirs the pre-v3 corpus needs — a `v3Only` repo never
+ * materializes them at all: ANY file under `docs/impl/**` (index READMEs
+ * included) scans as `legacy-execution-doc`, and a genuinely current
+ * Registry-3 tree carries no execution-bound dirs.
+ */
+const LEGACY_SCAFFOLD_DIRS = new Set(["docs/plans", "docs/tasks", "docs/test-specs", "docs/impl/ir", "docs/impl/exp"]);
+
 function defaultDocs(options: {
   taskStatuses?: TaskStatus[];
   dependsOn?: string[][];
   secondPlan?: boolean;
+  v3Only?: boolean;
 }): Record<string, DocSpec> {
   const docs: Record<string, DocSpec> = {
     "docs/specs/0001-graph.md": {
@@ -202,6 +247,11 @@ function defaultDocs(options: {
       body: "# Other\n",
     };
   }
+  if (options.v3Only) {
+    for (const rel of Object.keys(docs)) {
+      if (LEGACY_CORPUS_PREFIXES.some((prefix) => rel.startsWith(prefix))) delete docs[rel];
+    }
+  }
   return docs;
 }
 
@@ -254,6 +304,27 @@ export const KNOWLEDGE_DOC_SPEC: DocSpec = {
   body: "# Graph Knowledge\n",
 };
 
+/**
+ * An additional Execution Store run beside the default `e2e-run` — used by
+ * focus/run-selection cases (a run the focused chain must never select,
+ * an unreadable or finalized sibling). Same createRun+approvePlan shape as
+ * the default run; `focus` defaults to null (unbound — never an implicit
+ * candidate).
+ */
+export type ExtraRunSpec = {
+  runId: string;
+  focus?: string[] | null;
+  plan?: string;
+  planApproved?: boolean;
+  tasks?: Array<{
+    taskId: string;
+    title?: string;
+    status?: TaskStatus;
+    dependsOn?: string[];
+    scope?: string[];
+  }>;
+};
+
 export function createFixtureRepo(options: {
   /**
    * Applied over the default doc set: `DocSpec` writes an artifact with
@@ -266,6 +337,25 @@ export function createFixtureRepo(options: {
   dependsOn?: string[][];
   taskScopes?: string[][];
   secondPlan?: boolean;
+  /**
+   * Drop the legacy corpus (plan/task/test-spec/impl Markdown + legacy
+   * relation fields) so the tree scans clean under a declared manifest —
+   * the "already current" migration-plan case.
+   */
+  v3Only?: boolean;
+  /**
+   * Write `docs/.doc-driven-dev/schema.json` — the declared-current schema
+   * manifest the shared preflight validates against. With the default
+   * legacy corpus still present this yields `migration-required`; with
+   * `v3Only` it yields `current`.
+   */
+  schemaManifest?: boolean;
+  /**
+   * Scaffold the canonical dirs but write NO README index files — a
+   * worktree whose managed indexes were never materialized. The graph
+   * must route regardless; only `index apply` materializes them.
+   */
+  omitIndexes?: boolean;
   /**
    * Write the Registry 3 verification document the `verification` audit's
    * durable scope binds. Off by default: corpus consumers (lifecycle stats)
@@ -293,6 +383,8 @@ export function createFixtureRepo(options: {
   planContent?: string;
   /** Default true: approvePlan binds the current digest. */
   planApproved?: boolean;
+  /** Additional Execution Store runs beside the default run. */
+  extraRuns?: ExtraRunSpec[];
   /**
    * Raw files written inside `runs/<runId>/` AFTER createRun — the only way
    * to materialize corrupt state the write API would refuse (e.g. two
@@ -303,9 +395,17 @@ export function createFixtureRepo(options: {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), "doc-driven-dev-e2e-"));
   if (options.scaffoldDirs !== false) {
     for (const directory of SCAFFOLD_DIRS) {
+      if (options.v3Only && LEGACY_SCAFFOLD_DIRS.has(directory)) continue;
       fs.mkdirSync(path.join(repo, directory), { recursive: true });
-      fs.writeFileSync(path.join(repo, directory, "README.md"), `# ${directory}\n`, "utf8");
+      if (options.omitIndexes !== true) {
+        fs.writeFileSync(path.join(repo, directory, "README.md"), `# ${directory}\n`, "utf8");
+      }
     }
+  }
+  if (options.schemaManifest) {
+    const manifestPath = path.join(repo, "docs", ".doc-driven-dev", "schema.json");
+    fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
+    fs.writeFileSync(manifestPath, schemaManifestText(), "utf8");
   }
   const docs: Record<string, DocSpec | string> = defaultDocs(options);
   if (options.verificationDoc) docs[VERIFICATION_DOC] = VERIFICATION_DOC_SPEC;
@@ -355,6 +455,24 @@ export function createFixtureRepo(options: {
       const file = path.join(repo, ".apm", "state", "doc-driven-dev", "runs", runId, rel);
       fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.writeFileSync(file, content, "utf8");
+    }
+  }
+  for (const extra of options.extraRuns ?? []) {
+    createRun(repo, {
+      runId: extra.runId,
+      graphId: "doc-driven-dev",
+      focus: extra.focus ?? null,
+      plan: extra.plan ?? E2E_PLAN_CONTENT,
+      tasks: (extra.tasks ?? []).map((task) => ({
+        taskId: task.taskId,
+        title: task.title ?? task.taskId,
+        status: task.status ?? ("todo" as TaskStatus),
+        dependsOn: task.dependsOn,
+        scope: task.scope,
+      })),
+    });
+    if (extra.planApproved !== false) {
+      approvePlan(repo, extra.runId, { actor: "e2e" });
     }
   }
   return repo;

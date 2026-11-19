@@ -331,6 +331,14 @@ function mutateRun<T>(
     const snapshot = loadSnapshot(resolved, runId);
     requireMutableManifest(snapshot.manifest);
     requireRevision(snapshot.manifest, expectedRevision);
+    // A run dir always carries the record skeleton — createRun materializes
+    // it eagerly, but import paths (execution-run import, migration import)
+    // stage files only, so an empty `receipts/` or `checkpoints/` never
+    // lands on disk. Restoring the skeleton under the writer lock keeps
+    // every record write's tmp+rename inside an existing directory.
+    for (const subdir of STATE_SUBDIRS) {
+      fs.mkdirSync(path.join(runDir, subdir), { recursive: true });
+    }
     return mutate({ runDir, manifest: snapshot.manifest, snapshot });
   } finally {
     release();
