@@ -65,7 +65,7 @@ the expectations are unambiguous:
 
 Measured 2026-11-19 against a fresh headless session:
 
-```
+```text
 pstack-inherit            -> swe-2-max
 pstack-swe-2-flash-high   -> swe-2-flash-high
 ```

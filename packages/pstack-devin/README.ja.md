@@ -59,8 +59,12 @@ pstack 自体は opt-in — ユーザーが pstack スキルまたは
 - 外部スキル依存の `deslop`、`control-cli`、`control-ui` は
   `.cursor-plugin/` マニフェストのみを持つ `cursor-team-kit` に
   同梱されており、Devin プラグインとしてはインストールできない。
-  アダプターはバンドルせず、平文による同等パスのフォールバックを
-  規定する。`docs/devin-adapter-decisions.md` を参照。
+  APM consumer には実スキルが推移的に届く — `apm.yml` が上流と
+  同一コミットにピンした仮想 `claude_skill` 依存として宣言し、
+  ターゲットのスキルディレクトリ(Devin も読む `.agents/skills/`
+  を含む)に展開される。`devin plugins install` 経路は依存を表現
+  できないため、プラグイン consumer には引き続きアダプターの平文
+  フォールバックが適用される。`docs/devin-adapter-decisions.md` を参照。
 
 この対応付け契約は機械検証される: `audit:compat` スクリプトが生成
 ツリーを走査し、未分類のハーネス API 参照があれば失敗する。上流に
@@ -146,7 +150,7 @@ mise exec -- pnpm --dir scripts/pstack-devin run verify   # L1 + L2 + L3 + ユ�
 
 ```text
 packages/pstack-devin/
-  apm.yml            # マニフェスト。上流を `dependencies:` には含めない
+  apm.yml            # マニフェスト。cursor-team-kit の3スキル依存を含む。上流ツリーは `dependencies:` に含めない
   upstream.yml       # ピン留めした上流座標(唯一の権威)
   apm.lock.yaml      # `apm install` が生成。保証としてコミット
   docs/              # 検証ログと設計記録(メンテナー向け)

@@ -32,6 +32,7 @@ Failing at step k means steps 1..k-1 ran for real, so accumulated earlier
 side-effects are covered by construction.
 
 **Bounds — what a pass does NOT claim:**
+
 - At most one step fails per run; steps are sequential (that is the
   pipeline's real control flow).
 - Rollback's own three git commands (reset / checkout / clean) are assumed
@@ -79,7 +80,7 @@ inside the normal suite. Expect ~40s standalone, exit 0 on a clean pass.
 Every scenario asserts `post-rollback snapshot == pre-run snapshot` and
 prints the differing paths on violation, e.g.:
 
-```
+```text
 atomicity violation — step "build" failed (dirty) but post-rollback state
 differs from pre-run state:
   file content differs after rollback: packages/pstack-devin/devin-plugin/tracked.md

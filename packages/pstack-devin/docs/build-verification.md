@@ -1,16 +1,25 @@
 # Build verification log — generated `devin-plugin/` (issues `#213`/`#214`)
 
 Reproduction contract: every command below was run on the recorded date and
-platform against worktree `.worktrees/pstack-devin-214`
-(branch `feat/pstack-devin-issue-214`). Re-run blocks verbatim from the
-repository root to reproduce; divergence means the generated tree is stale
-and must be rebuilt. (`#213` recorded the same blocks against
+platform from the repository root on branch `feat/pstack-team-kit-deps`
+(the earlier `#214` log ran against worktree `.worktrees/pstack-devin-214`
+at pin `bf0c7cd80abdbf7fe47b634978a7d1b4071f71a7`). Re-run blocks verbatim
+from the repository root to reproduce; divergence means the generated tree
+is stale and must be rebuilt. (`#213` recorded the same blocks against
 `.worktrees/pstack-devin-213`; the tree shape then was 549 files with no
 exercised overwrite.)
 
+Note on this run: GitHub rate-limited anonymous `git fetch` (HTTP 429), so
+the upstream objects were reconstructed from the GitHub REST API into a
+local bare mirror — every commit/tree/blob object sha-verified byte-exact —
+and served to the build over `git://localhost` via a per-process
+`url.insteadOf` override. The produced tree sha is identical to what a
+direct GitHub fetch yields; the pin and object integrity checks are
+unchanged.
+
 ## 1. Environment
 
-- date: 2026-11-17
+- date: 2026-11-19
 - platform: windows, git-bash (`core.fileMode=false` — executable bits are
   carried by the git index via `git update-index --chmod=+x`, not by the
   filesystem)
@@ -22,19 +31,17 @@ exercised overwrite.)
 mise exec -- pnpm --dir scripts/pstack-devin run build
 ```
 
-Output (verbatim; the absolute path prefix is worktree-specific):
+Output (verbatim; the absolute path prefix is machine-specific):
 
 ```text
 $ tsx src/cli.ts build
-overlay allow_overwrite entry unused: skills/setup-pstack/SKILL.md
-built G:\repositry\apm-packages\.worktrees\pstack-devin-214\packages\pstack-devin\devin-plugin: 550 files, upstream tree c1b4ae4da06c9815864bc7fe609cc5fb5324108c
+built G:\repositry\apm-packages\packages\pstack-devin\devin-plugin: 544 files, upstream tree 9f63e68efd0e0de310d8164d7d43b00c549a839f
 ```
 
-The `allow_overwrite entry unused` line is expected, not an error:
-`overlay.yml` declares `skills/setup-pstack/SKILL.md` as a permitted
-overwrite reserved for `#215`, which ships no overwrite content yet. The
-second allowlist entry, `agents/poteto-agent.md`, IS exercised — the
-Devin-native profile overwrite added in `#214`.
+Both `overlay.yml` `allow_overwrite` entries are now exercised —
+`agents/poteto-agent.md` (the Devin-native profile, `#214`) and
+`skills/setup-pstack/SKILL.md` (the Devin delegation entry, `#215`) — so
+the earlier "entry unused" warning no longer appears.
 
 ## 3. Provenance
 
@@ -44,13 +51,13 @@ Devin-native profile overwrite added in `#214`.
 | Field | Value |
 | --- | --- |
 | `upstream.repo` / `upstream.path` | `cursor/plugins` / `harness/pstack/claude-code` |
-| `upstream.commit` | `bf0c7cd80abdbf7fe47b634978a7d1b4071f71a7` |
-| `upstream.tree_sha` | `c1b4ae4da06c9815864bc7fe609cc5fb5324108c` |
-| `upstream.version` | `0.15.42` |
-| `upstream.file_count` | 546 |
-| `executables` | 6 paths (see §6) |
-| `overlay.additions` | `.devin-plugin/plugin.json`, `AGENTS.md`, `docs/harness/devin.md` |
-| `overlay.overwrites` | `agents/poteto-agent.md` |
+| `upstream.commit` | `b4a4f6151b8e77f8d71045f09f553a733cf0ed37` |
+| `upstream.tree_sha` | `9f63e68efd0e0de310d8164d7d43b00c549a839f` |
+| `upstream.version` | `0.15.43` |
+| `upstream.file_count` | 537 |
+| `executables` | 5 paths (see §6) |
+| `overlay.additions` | `.devin-plugin/plugin.json`, `AGENTS.md`, `docs/harness/devin.md`, `skills/setup-pstack-devin/` (3 files) |
+| `overlay.overwrites` | `agents/poteto-agent.md`, `skills/setup-pstack/SKILL.md` |
 
 The provenance record carries no timestamps: identical inputs produce an
 identical file, so it is itself part of the byte-stability contract.
@@ -65,13 +72,13 @@ steady state, and the current record matches the committed blob bytes.
 
 ```bash
 find packages/pstack-devin/devin-plugin -type f | wc -l
-# -> 550
+# -> 544
 ```
 
-550 = 546 upstream files + 3 overlay additions (`.devin-plugin/plugin.json`,
-`AGENTS.md`, `docs/harness/devin.md`) + 1 generated `provenance.json`.
-The `agents/poteto-agent.md` overwrite replaces an upstream path, so it
-does not change the count.
+544 = 537 upstream files + 6 overlay additions (`.devin-plugin/plugin.json`,
+`AGENTS.md`, `docs/harness/devin.md`, plus the three
+`skills/setup-pstack-devin/` files) + 1 generated `provenance.json`.
+The two overwrites replace upstream paths, so they do not change the count.
 
 ## 5. Determinism — `check-generated` is the second build
 
@@ -79,12 +86,11 @@ does not change the count.
 mise exec -- pnpm --dir scripts/pstack-devin run check-generated
 ```
 
-Output (verbatim):
+Output (verbatim, pre-commit mode — see below):
 
 ```text
 $ tsx src/cli.ts check
-overlay allow_overwrite entry unused: skills/setup-pstack/SKILL.md
-check-generated PASS: 550 files, upstream tree c1b4ae4da06c9815864bc7fe609cc5fb5324108c
+check-generated PASS: 544 files, upstream tree 9f63e68efd0e0de310d8164d7d43b00c549a839f
 ```
 
 `check` performs a full rebuild into `packages/pstack-devin/build/check-out`
@@ -118,7 +124,6 @@ git ls-files -s -- packages/pstack-devin/devin-plugin | grep '^100755'
 ```
 
 ```text
-100755 c3ddc398997d29d3c97a414e5c2b37172b901254 0  packages/pstack-devin/devin-plugin/skills/poteto-mode/scripts/check-plan.mjs
 100755 99807d577c3b006cfe6ee9e149cf2914bfd4afd6 0  packages/pstack-devin/devin-plugin/skills/poteto-mode/scripts/watch-pr/watch-pr
 100755 47e08919d7b08c32923a7bdaaa70b17ca708f5f6 0  packages/pstack-devin/devin-plugin/skills/poteto-mode/scripts/worktree-audit.sh
 100755 052e53b7e1090579eaec1d3d59f7a1cd2f2e452a 0  packages/pstack-devin/devin-plugin/skills/show-me-your-work/scripts/log.sh
@@ -129,7 +134,8 @@ git ls-files -s -- packages/pstack-devin/devin-plugin | grep '^100755'
 (The stage field `0` and the path are TAB-separated in real output; the tab
 is rendered as spaces above.)
 
-Six `100755` index entries, exactly matching `provenance.executables`.
+Five `100755` index entries, exactly matching `provenance.executables`
+(`check-plan.mjs` lost its upstream exec bit since the previous pin).
 `check` enforces this set equality and fails on any drift.
 
 ## 7. Compatibility audit (`#214`)
@@ -141,16 +147,17 @@ mise exec -- pnpm --dir scripts/pstack-devin run audit:compat
 Output (summary line, verbatim):
 
 ```text
-compat audit: 547 files scanned, 610 findings, 0 unknowns
+compat audit: 541 files scanned, 505 findings, 0 unknowns
 ```
 
-547 = the 546 upstream files plus the generated `docs/harness/devin.md`
-(the scanner skips only `.devin-plugin/`, `AGENTS.md`, and
-`provenance.json`). Every finding resolves to a vocabulary row and zero
-unknowns means no unclassified harness-API-shaped text exists in the
-tree — including the adapter doc's own Devin-side tool names, which are
-lowercase and intentionally never flagged. Per-class counts and the
-mapping rationale live in `docs/devin-adapter-decisions.md`.
+541 = the 537 upstream files plus the generated `docs/harness/devin.md`
+and the three `skills/setup-pstack-devin/` files (the scanner skips only
+`.devin-plugin/`, `AGENTS.md`, and `provenance.json`). Every finding
+resolves to a vocabulary row and zero unknowns means no unclassified
+harness-API-shaped text exists in the tree — including the adapter doc's
+own Devin-side tool names, which are lowercase and intentionally never
+flagged. Per-class counts and the mapping rationale live in
+`docs/devin-adapter-decisions.md`.
 
 ## 8. Acceptance mapping (issue `#213`)
 
@@ -158,7 +165,7 @@ mapping rationale live in `docs/devin-adapter-decisions.md`.
 | --- | --- |
 | Snapshot + overlay + provenance in one pipeline | `build` produces all three in one run (§2); tests in `scripts/pstack-devin/tests/` |
 | Allowlist enforcement + fixture tamper detection | `overlay.test.ts`, `check.test.ts` — `pnpm --dir scripts/pstack-devin test` |
-| All 546 upstream files + assets present | `provenance.upstream.file_count: 546` (§3); committed tree 550 files (§4) |
+| All 537 upstream files + assets present | `provenance.upstream.file_count: 537` (§3); committed tree 544 files (§4) |
 | Previous artifact survives a failed build | atomic swap in `src/build.ts` (`keepPrev`), exercised by `build.test.ts` |
 | Byte-stability | `check-generated` internal rebuild + sha256 compare PASS (§5) |
 | `build` / `check-generated` entries with `git diff --exit-code` gate | `scripts/pstack-devin/package.json` scripts; cached-diff gate in `src/check.ts` (§5) |

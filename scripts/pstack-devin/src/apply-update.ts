@@ -129,6 +129,33 @@ export function setDevDepRef(yaml: string, sha: string): string {
   throw new Error("apm.yml: no \"ref:\" line under \"devDependencies.apm\"");
 }
 
+/** Replace the `#<ref>` suffix on every `dependencies.apm` shorthand list
+ *  item, preserving every other byte. Absent `dependencies:` or an empty
+ *  `apm:` block is a no-op — deps are optional. Only 40-hex refs match;
+ *  config.ts requires commit refs, so anything else failing to rewrite is
+ *  caught there loudly. */
+export function setDepRefs(yaml: string, sha: string): string {
+  const lines = yaml.split("\n");
+  const depIdx = lines.findIndex((l) => /^dependencies:\s*$/.test(l));
+  if (depIdx < 0) return yaml;
+  let apmIndent = -1;
+  for (let i = depIdx + 1; i < lines.length; i++) {
+    const l = lines[i];
+    if (l.trim() === "" || l.trimStart().startsWith("#")) continue;
+    const indent = l.length - l.trimStart().length;
+    if (indent === 0) break; // left dependencies:
+    if (apmIndent < 0) {
+      const m = /^(\s*)apm:\s*$/.exec(l);
+      if (m !== null) apmIndent = m[1].length;
+      continue;
+    }
+    if (indent <= apmIndent) break; // left the apm: block
+    const m = /^(\s*-\s+\S+)#[0-9a-f]{40}(.*)$/.exec(l);
+    if (m !== null) lines[i] = `${m[1]}#${sha}${m[2]}`;
+  }
+  return lines.join("\n");
+}
+
 /** Rewrite values under the top-level `observed:` block of upstream.yml,
  *  preserving every other byte (comments, key order, unrelated keys).
  *  Only keys listed in `fields` are rewritten; a `fields` key with no
@@ -328,7 +355,9 @@ export function applyUpdate(
     } | null;
     const deps = lock?.dependencies ?? [];
     const dep =
-      deps.find((d) => d.resolved_commit === candidateSha) ?? deps[0];
+      deps.find(
+        (d) => d.resolved_commit === candidateSha && d.is_dev === true,
+      ) ?? deps.find((d) => d.is_dev === true);
     const fields: Record<string, string> = {};
     const v = prov.upstream?.version;
     if (typeof v === "string" && v !== "") {
@@ -358,7 +387,10 @@ export function applyUpdate(
     },
     {
       name: "apm.yml",
-      run: () => editFile("apm.yml", (y) => setDevDepRef(y, candidateSha)),
+      run: () =>
+        editFile("apm.yml", (y) =>
+          setDevDepRef(setDepRefs(y, candidateSha), candidateSha),
+        ),
     },
     {
       name: "apm install",

@@ -129,23 +129,54 @@ export function loadBuildConfig(repoRoot: string): BuildConfig {
     ? `https://${host}/${repo}.git`
     : reqString(dep.git, "apm.yml devDependencies.apm[0].git");
 
+  // Optional `dependencies.apm`: shorthand `owner/repo/path#ref` entries
+  // (e.g. the cursor-team-kit skills pstack references). Every ref must
+  // equal the upstream commit — single-authority pinning — and no dep may
+  // resolve the upstream pstack subtree itself: the tree ships through the
+  // copilot-scoped devDependency only, never to consumers.
+  const deps = (manifest.dependencies as { apm?: unknown } | undefined)?.apm;
+  if (deps !== undefined) {
+    if (!Array.isArray(deps) || deps.some((d) => typeof d !== "string")) {
+      throw new Error(
+        "apm.yml dependencies.apm must be a list of shorthand `owner/repo/path#ref` strings",
+      );
+    }
+    for (const d of deps as string[]) {
+      const hashIdx = d.lastIndexOf("#");
+      const depPath = hashIdx === -1 ? d : d.slice(0, hashIdx);
+      const depRef = hashIdx === -1 ? "" : d.slice(hashIdx + 1);
+      if (depRef !== commit) {
+        throw new Error(
+          `apm.yml dependencies ref (${depRef || "<none>"}) does not match upstream.yml commit (${commit}) — deps pin to the same upstream commit`,
+        );
+      }
+      if (depPath.endsWith(`/${upPath}`)) {
+        throw new Error(
+          "apm.yml dependencies must not resolve the upstream pstack subtree — it ships via the copilot-scoped devDependency only",
+        );
+      }
+    }
+  }
+
   const lock = readYaml("apm.lock.yaml") as {
     dependencies?: Array<Record<string, unknown>>;
   } | null;
-  if (!Array.isArray(lock?.dependencies) || lock.dependencies.length !== 1) {
-    throw new Error("apm.lock.yaml dependencies must list exactly one entry");
-  }
-  const lockEntry = lock.dependencies[0];
-  if (lockEntry.resolved_commit !== commit) {
+  const devEntries = (lock?.dependencies ?? []).filter(
+    (e) => e.is_dev === true,
+  );
+  if (!Array.isArray(lock?.dependencies) || devEntries.length !== 1) {
     throw new Error(
-      `apm.lock.yaml resolved_commit (${lockEntry.resolved_commit}) does not match upstream.yml commit (${commit})`,
+      "apm.lock.yaml dependencies must contain exactly one devDependency pin entry",
     );
   }
-  if (lockEntry.is_dev !== true) {
-    throw new Error(
-      "apm.lock.yaml dependencies[0].is_dev must be true (provenance pin is a devDependency)",
-    );
+  for (const e of lock.dependencies) {
+    if (e.resolved_commit !== commit) {
+      throw new Error(
+        `apm.lock.yaml resolved_commit (${e.resolved_commit}) does not match upstream.yml commit (${commit})`,
+      );
+    }
   }
+  const lockEntry = devEntries[0];
   if (lockEntry.package_type !== "agent_plugin") {
     process.stderr.write(
       `warning: apm.lock.yaml package_type is ${JSON.stringify(lockEntry.package_type)}, expected "agent_plugin"\n`,
