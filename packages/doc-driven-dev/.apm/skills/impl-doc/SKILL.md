@@ -12,7 +12,7 @@ license: MIT
 Use this skill to audit what was actually implemented and what was tried
 during implementation in a pre-v3 corpus — as migration input only.
 
-`impl-doc` is a document-generation sibling of `adr-doc`, `spec-doc`,
+`impl-doc` is an audit/migration sibling of `adr-doc`, `spec-doc`,
 `design-doc`, `plan-doc`, and `task-doc`. It is not an implementation workflow
 skill.
 

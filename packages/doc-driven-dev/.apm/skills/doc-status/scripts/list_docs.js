@@ -27974,7 +27974,7 @@ function parseArgs(argv) {
   return args;
 }
 function usage() {
-  return "Usage: node scripts/list_docs.js --type idea|brainstorm|discovery|spec|plan|task|design|adr|knowledge|verification|test-spec [--status <status>] [--dir <path>] [--json]";
+  return "Usage: node scripts/list_docs.js --type idea|brainstorm|discovery|spec|design|adr|knowledge|verification [--status <status>] [--dir <path>] [--json]";
 }
 async function main() {
   try {

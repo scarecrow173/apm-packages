@@ -83,13 +83,15 @@ without a verifiable upstream contract loses its purpose: do not create one.
 
 ## Lifecycle Position
 
-Inside `planning-flow`, test specs are created after plan approval and before
-task breakdown. They derive from the approved spec and design — not from task
-slices — because task boundaries may change while the guarantees must hold.
-When the plan declares no verifiable behavior, skip creation and record
-`test-spec-skip: "<reason>"` under `relations:` in the plan front matter — a
-reason string, not a link target — so audits can tell a deliberate skip from
-an omission.
+This section describes the **pre-v3 (Registry 2) flow**, retained as
+migration context — Registry 3 ships no `test-spec` creation path, so no
+normal run performs it. In the pre-v3 `planning-flow`, test specs were
+created after plan approval and before task breakdown. They derived from the
+approved spec and design — not from task slices — because task boundaries
+could change while the guarantees had to hold. When the plan declared no
+verifiable behavior, creation was skipped and `test-spec-skip: "<reason>"`
+was recorded under `relations:` in the plan front matter — a reason string,
+not a link target — so audits could tell a deliberate skip from an omission.
 
 ## Required Content
 

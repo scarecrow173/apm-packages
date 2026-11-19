@@ -160,9 +160,9 @@ Task edge direction is exact: a `relations.depends-on` value that resolves to
 another selected task creates `dependency -> this task`; a
 `relations.blocks` value creates `this task -> blocked task`. References that
 resolve to a plan, spec, ADR, or design are upstream artifact relations, not
-Task DAG edges. The task authoring script records references but does not
-validate the whole DAG; `build_task_graph.js` performs resolution and graph
-validation.
+Task DAG edges. The pre-v3 task authoring script recorded references but did
+not validate the whole DAG; `build_task_graph.js` performs resolution and
+graph validation.
 
 ## Follow-up Classification
 

@@ -13,7 +13,7 @@ license: MIT
 実装中に何を試したか」を監査するために使います —— migration の入力としてのみ。
 
 `impl-doc` は `adr-doc`、`spec-doc`、`design-doc`、`plan-doc`、`task-doc` と
-同列の文書生成スキルです。実装フェーズのワークフロースキルではありません。
+同列の監査・migration スキルです。実装フェーズのワークフロースキルではありません。
 
 ## Document Registry v3 の位置づけ
 

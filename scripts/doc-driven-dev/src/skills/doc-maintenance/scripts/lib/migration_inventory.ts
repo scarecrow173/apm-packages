@@ -2203,8 +2203,10 @@ function buildMigrationPlan(cwd: string): MigrationPlanReport {
                 ? `content is already consistent — run doc_maintenance.js migrate apply --expect ${planHash.slice(0, 12)}… to install the manifest; ${sortedDecisions.length} advisory decision(s) also remain`
                 : `content is already consistent — run doc_maintenance.js migrate apply --expect ${planHash.slice(0, 12)}… to install the manifest`
               : blockers.length > 0
-                ? "legacy artifacts or unsafe state block the bounded apply — resolve them, or wait for the journaled migration machinery (#247)"
-                : `migration plan assembled: ${plannedWrites.length} planned write(s), ${sortedDecisions.length} semantic decision(s) pending explicit input — the full apply machinery arrives with #247`;
+                ? sortedDecisions.length > 0
+                  ? `legacy artifacts or unsafe state block the bounded apply — resolve them, or settle ${sortedDecisions.length} pending decision(s) and run doc_maintenance.js migrate apply --expect ${planHash.slice(0, 12)}… --resolutions <file>`
+                  : `legacy artifacts or unsafe state block the bounded apply — resolve them, or run doc_maintenance.js migrate apply --expect ${planHash.slice(0, 12)}… for the journaled migration`
+                : `migration plan assembled: ${plannedWrites.length} planned write(s), ${sortedDecisions.length} semantic decision(s) pending explicit input — resolve them in a resolutions file, then run doc_maintenance.js migrate apply --expect ${planHash.slice(0, 12)}… --resolutions <file>`;
 
   return {
     preflight: emittedPreflight,

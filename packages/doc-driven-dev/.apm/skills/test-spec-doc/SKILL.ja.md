@@ -82,13 +82,15 @@ test spec を作成するには、少なくとも 1 つの upstream document を
 
 ## ライフサイクル上の位置
 
-`planning-flow` の中で、test spec は plan 承認後・task 分解前に作成します。
-task 分割ではなく approved spec と design から派生させます。task 境界は
-変わり得ますが、保証すべき内容は維持されなければならないからです。
-plan に検証可能な振る舞いが無い場合は作成を skip し、plan の front matter の
-`relations:` に `test-spec-skip: "<理由>"` を記録します —— リンク先ではなく
-理由文字列です。これにより audit が意図的な skip と
-単純な欠落を区別できます。
+このセクションは **Registry 2 以前(pre-v3)のフロー** を説明するもので、
+migration context として残しています —— Registry 3 には `test-spec` の作成経路が
+なく、通常実行でこの手順を行うものはありません。pre-v3 の `planning-flow`
+では、test spec は plan 承認後・task 分解前に作成していました。task 分割ではなく
+approved spec と design から派生させていました。task 境界は変わり得ますが、
+保証すべき内容は維持されなければならなかったからです。plan に検証可能な
+振る舞いが無い場合は作成を skip し、plan の front matter の `relations:` に
+`test-spec-skip: "<理由>"` を記録していました —— リンク先ではなく理由文字列です。
+これにより audit が意図的な skip と単純な欠落を区別できました。
 
 ## 必須コンテンツ
 

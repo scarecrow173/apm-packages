@@ -199,8 +199,9 @@ graph execution. `briefing-flow` reads the spec and ADR, `design-doc`
 reads the spec and ADR and records design evidence, `planning-flow` reads the
 selected approved design and records the selected run's `plan.md` and all
 produced task records, `implementation-flow` reads the selected run's task
-records plus the design, and records its
-Implementation Record, `knowledge-doc` reads the durable knowledge and
+records plus the design, and records the run's task-record transitions —
+with the knowledge record when the slice's conditional consolidation
+produces one — `knowledge-doc` reads the durable knowledge and
 verification documents and records the knowledge record, and
 `doc-status` reads the declared document set. Script-adapter inputs are
 `migrate_docs` (declared document set), `scaffold_docs` (workspace-root bootstrap input), and
@@ -219,7 +220,7 @@ This contract renders existing semantics; it does not add workflow states.
 | `briefing-flow` | briefing gate passes | recoverable document gap | `input-required` for an unresolved user-only requirement |
 | `design-doc` | design is approved | — | `approval-required` for its designated reviewer; `input-required` for an upstream user decision |
 | `planning-flow` | digest-approved run plan plus materialized task records | changed run plan/task repair evidence | `approval-required` when plan review is pending; `input-required` when a user-owned planning choice is missing; `unrecoverable-blocker` when no declared safe repair exists |
-| `implementation-flow` | task slice is verified and its Implementation Record is complete | declared spec/design/constraint repair | `commit-required` when its slice produced changes it cannot commit within granted authority; `authority-required` for an irreversible effect without permission; `unrecoverable-blocker` when no declared safe repair exists |
+| `implementation-flow` | task slice is verified and its task-record transition is recorded in the run (conditional knowledge consolidation applied) | declared spec/design/constraint repair | `commit-required` when its slice produced changes it cannot commit within granted authority; `authority-required` for an irreversible effect without permission; `unrecoverable-blocker` when no declared safe repair exists |
 | `knowledge-doc` | the consolidation decision is recorded (integrated findings or a deliberate no-op) | recoverable knowledge-document gap | `input-required` for a user-owned consolidation choice |
 | `doc-status` | documents are Completable | Returned with declared repair evidence | `unrecoverable-blocker` when Returned has no safe repair |
 

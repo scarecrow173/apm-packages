@@ -186,10 +186,11 @@ plan レベルの検証項目は実装 step ごとのものです。task 分割�
 verification matrix へ意図を複写せず、task から `relations.verified-by` で
 リンクします。
 
-plan が test spec を生成した場合は、plan 側の `relations.verified-by` から
-リンクします。plan に検証可能な振る舞いが正当に存在しない場合は、代わりに
-`relations:` に理由を記録します —— `test-spec-skip` は置き換える
-`verified-by` の隣に置く理由文字列であり、relation のリンク先ではありません。
+pre-v3 の plan が test spec を生成した場合、plan 側の
+`relations.verified-by` からリンクしていました。plan に検証可能な
+振る舞いが正当に存在しない場合は、代わりに `relations:` に理由が記録されて
+いました —— `test-spec-skip` は置き換える `verified-by` の隣に置く理由文字列
+であり、relation のリンク先ではありません。
 
 ```yaml
 relations:
@@ -198,7 +199,9 @@ relations:
 ```
 
 test-spec リンクも
-skip 理由もない approved plan は audit で指摘されます。
+skip 理由もない approved plan は、pre-v3 の audit で指摘されていました。
+Registry 3 の run plan は `relations` front matter を持ちません —— 上流
+binding は run manifest の `focus` リストが担います。
 
 ## タスク粒度
 

@@ -160,8 +160,9 @@ Task の辺の向きは次のとおり固定します。別の選択 task に解
 `relations.depends-on` は `dependency -> この task` の辺を作り、
 `relations.blocks` は `この task -> ブロックされる task` の辺を作ります。
 plan、spec、ADR、design に解決される参照は上流 artifact relation であり、
-Task DAG の辺ではありません。task 作成スクリプトは参照を記録しますが、DAG
-全体は検証しません。解決と graph 検証は `build_task_graph.js` が行います。
+Task DAG の辺ではありません。pre-v3 の task 作成スクリプトは参照を記録して
+いましたが、DAG 全体は検証しませんでした。解決と graph 検証は
+`build_task_graph.js` が行います。
 
 ## フォローアップ分類
 
