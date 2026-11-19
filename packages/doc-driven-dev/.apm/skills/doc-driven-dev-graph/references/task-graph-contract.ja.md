@@ -32,7 +32,10 @@ active run がちょうど 1 つのときだけ暗黙に選択します — 候�
 fail closed します（`task-graph-run-ambiguous`）。
 
 projection は `schemaVersion: 2`、`runId`、`plan`、`nodes`、`edges`、
-および後述の status list を持ちます。`plan` は
+および後述の status list を持ちます。この version は Task Graph
+*projection payload* 系の版数です —— v1 は v3 以前の `docs/tasks`
+ファイル形式、v2 はこの Execution-Store 形式であり、撤去済みの
+Registry-2 runtime とは無関係です。`plan` は
 `{ path, digest, approved }` で、`path` は state-root 相対の
 `runs/<run-id>/plan.md` です。各 node は
 `{ id, path, title, status, dependsOn, blocks, scope, version }` で、

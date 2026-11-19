@@ -16,9 +16,9 @@ document.
 `plan` is **execution-bound** (`persistence: ephemeral`) under Document
 Registry 3: plan state lives in the Execution Store, not in a durable Git
 document, and `docs/plans` / `docs/implementation-plans` are *former*
-directories that accept no durable writes. `new_plan.js` therefore refuses
-at the registry gate — before the design gate, scope checks, or any write —
-with:
+directories that accept no durable writes. No `new_plan.js` creator ships
+(Issue #249 removed it) — the only `plan` interpreter left is the registry,
+whose type name still refuses on the shared query surface with:
 
 `Document type "plan" is execution-bound (persistence: ephemeral): it has no durable Git form under Document Registry 3 — plan/task state lives in the Execution Store`
 
@@ -77,9 +77,9 @@ share the same critical path and the same release intent.
    confirm the front matter schema, status values, relation semantics, and the
    design gate. The plan body depends on these conventions being correct.
 
-   Under Document Registry 3 `new_plan.js` refuses at the registry gate (see
-   *Document Registry v3 status* above) — `plan` is execution-bound, so the
-   record is created in the Execution Store, not as a `docs/plans` file.
+   Under Document Registry 3 no `new_plan.js` creator ships (see *Document
+   Registry v3 status* above) — `plan` is execution-bound, so the record is
+   created in the Execution Store, not as a `docs/plans` file.
    `assets/templates/plan.md` remains the reference body structure for the
    record.
 
@@ -111,10 +111,10 @@ share the same critical path and the same release intent.
 
 The design gate remains the planning contract: a run plan should not be
 written before `docs/designs/overview.md` exists and a non-overview design
-carries `status: "approved"`. The script refuses at the registry gate
-first, so the gate is a caller-enforced convention — the Task Graph gate
-is what binds: a run whose `plan.md` is missing or lacks a digest-bound
-approval projects `plan-not-approved` and routes no task to execution.
+carries `status: "approved"`. No creator script enforces it — the gate is a
+caller-enforced convention, and the Task Graph gate is what binds: a run
+whose `plan.md` is missing or lacks a digest-bound approval projects
+`plan-not-approved` and routes no task to execution.
 
 ## Implementation Readiness Matrix
 
@@ -246,8 +246,9 @@ re-point its still-open tasks.
 
 ## Resources
 
-- `scripts/new_plan.js`: refuses at the registry gate under Registry 3 —
-  `plan` is execution-bound and has no durable creation path.
+- `new_plan.js`: *removed* under Registry 3 — `plan` is
+  execution-bound and has no durable creation path; run plans are minted
+  only as Execution Store records by `planning-flow`.
 - `references/plan-conventions.md`: status values, relations, required
   content, and conventions for plan records
   — load MANDATORY before authoring plan content.

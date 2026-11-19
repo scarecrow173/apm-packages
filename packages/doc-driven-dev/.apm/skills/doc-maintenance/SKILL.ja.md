@@ -289,7 +289,7 @@ preview-first に従う:
   rename し、触れた index をすべてオーナー writer 経由で再生成
   （shared 領域は managed-index writer、`docs/adr` は ADR writer、
   `docs/impl/ir` / `docs/impl/exp` は impl safe sync ライブラリ ——
-  `sync_impl_index` は拒否されるため直接呼び出し）
+  `sync_impl_index` CLI は削除済みのため直接呼び出し）
   してから、`doc-status` audit（duplicate id、未解決 relation、
   壊れた link、index 整合性）でリポジトリを再検証する。各 index は
   `regenerated`、`skipped`、`blocked` のいずれかを報告し、
@@ -320,7 +320,7 @@ preview-first に従う:
   `index apply`。
 - オーナー局所の明示的 writer は自前の durable ディレクトリ向けに残る:
   `docs/adr` には `update_index.js`（adr-doc）。`sync_impl_index.js`
-  （impl-doc）は Registry 3 では registry ゲートで拒否される —— impl
+  （impl-doc）は Registry 3 で削除された —— impl
   索引は migration-owned であり、`migrate_ids` の内部でのみ再同期
   される。
 - migration も同じ preview-first contract で plan / apply されるが、

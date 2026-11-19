@@ -5,8 +5,6 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 
-import { appendExperimentEvent, buildExperimentEvent } from "../src/skills/impl-doc/scripts/lib/impl_doc_utils";
-
 const skillRoot = path.resolve(__dirname, "../../../packages/doc-driven-dev/.apm/skills");
 
 function tempRepo() {
@@ -50,24 +48,19 @@ test("audit_docs reports unparseable front matter instead of crashing", () => {
   assert.match(list.stdout, /created 2026-09-15/);
 });
 
-test("new_task refuses at the registry gate before status validation", () => {
+test("the pre-v3 task creator is gone — task state is Execution-Store-only", () => {
   const repo = tempRepo();
-  // Registry 3: task is execution-bound — the refusal fires before any
-  // status vocabulary check, and nothing is written either way (Issue #234).
-  const res = runScript("task-doc", "new_task.js", ["--title", "Sample", "--status", "bogus"], repo);
-  assert.equal(res.status, 1);
-  assert.match(res.stderr, /execution-bound|ephemeral|Execution Store/);
+  // Registry 3: task is execution-bound (Issue #234); Issue #249 removed
+  // the new_task.js entrypoint entirely, so no invocation can mint a
+  // durable task file.
+  assert.equal(
+    fs.existsSync(path.join(skillRoot, "task-doc", "scripts", "new_task.js")),
+    false,
+    "new_task.js must not ship",
+  );
   const dir = path.join(repo, "docs/tasks");
   const docs = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith(".md")) : [];
   assert.deepEqual(docs, []);
-});
-
-test("new_task rejects a status containing YAML-breaking characters", () => {
-  const repo = tempRepo();
-  const res = runScript("task-doc", "new_task.js", ["--title", "Sample", "--status", 'a"b'], repo);
-  assert.equal(res.status, 1);
-  const dir = path.join(repo, "docs/tasks");
-  assert.ok(!fs.existsSync(dir) || fs.readdirSync(dir).length === 0);
 });
 
 test("new_spec rejects a malformed --date before writing", () => {
@@ -177,52 +170,18 @@ test("relate_adr writes nothing when the inverse target is missing", () => {
   assert.equal(fs.readFileSync(path.join(dir, "a.md"), "utf8"), before);
 });
 
-test("experiment log summary containing quotes produces valid JSONL", () => {
-  const repo = tempRepo();
-  // Registry 3: the CLI refuses (legacy migration-only type); the escaping
-  // contract lives in the library the migration surface reuses (Issue #234).
-  const res = runScript("impl-doc", "new_experiment_log.js", ["--title", "exp", "--type", "start", "--summary", 'say "hi"'], repo);
-  assert.equal(res.status, 1, "new_experiment_log must refuse under Registry 3");
-  assert.match(res.stderr, /legacy format|migration-only|migration tooling/);
-
-  const event = buildExperimentEvent({
-    cwd: repo,
-    filePath: path.join(repo, "docs/impl/exp/exp.jsonl"),
-    seq: 1,
-    type: "start",
-    ts: "2026-09-15T00:00:00Z",
-    summary: 'say "hi"',
-  });
-  assert.equal(JSON.parse(JSON.stringify(event)).summary, 'say "hi"');
-});
-
-test("append_experiment_event preserves unparseable existing lines", () => {
+test("legacy exp corpus with unparseable lines survives audit unchanged", () => {
   const repo = tempRepo();
   const dir = path.join(repo, "docs/impl/exp");
   fs.mkdirSync(dir, { recursive: true });
   const file = path.join(dir, "exp.jsonl");
-  fs.writeFileSync(
-    file,
-    '{"schema":"experiment_event.v1","experiment":"docs/impl/exp/exp.jsonl","seq":1,"type":"start","ts":"2026-09-15T00:00:00Z"}\n{corrupt line\n',
-    "utf8",
-  );
-  // Registry 3: the CLI refuses; the corrupt-line-preserving write path is
-  // the library used inside migration tooling.
-  const res = runScript("impl-doc", "append_experiment_event.js", ["--file", "docs/impl/exp/exp.jsonl", "--type", "observation"], repo);
-  assert.equal(res.status, 1, "append_experiment_event must refuse under Registry 3");
-  assert.match(res.stderr, /legacy format|migration-only|migration tooling/);
-
-  const event = buildExperimentEvent({
-    cwd: repo,
-    filePath: file,
-    seq: 2,
-    type: "observation",
-    ts: "2026-09-15T00:00:01Z",
-    summary: "observed",
-  });
-  appendExperimentEvent(file, event);
-  const lines = fs.readFileSync(file, "utf8").trim().split("\n");
-  assert.equal(lines.length, 3);
-  assert.equal(lines[1], "{corrupt line");
-  assert.equal(JSON.parse(lines[2]).seq, 2);
+  const corpus =
+    '{"schema":"experiment_event.v1","experiment":"docs/impl/exp/exp.jsonl","seq":1,"type":"start","ts":"2026-09-15T00:00:00Z"}\n{corrupt line\n';
+  fs.writeFileSync(file, corpus, "utf8");
+  // Issue #249: the JSONL writers (new_experiment_log / append / edit) were
+  // removed — the read-only owner audit inspects the legacy corpus for
+  // migration and never rewrites it.
+  const res = runScript("impl-doc", "audit_experiment_log.js", ["--json"], repo);
+  assert.equal(res.status, 0, res.stderr);
+  assert.equal(fs.readFileSync(file, "utf8"), corpus, "audit must never rewrite the legacy log");
 });

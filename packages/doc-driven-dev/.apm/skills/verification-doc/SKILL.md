@@ -124,8 +124,8 @@ Status values: `draft`, `proposed`, `approved`, `deprecated`, `superseded`.
 ## NEVER
 
 - NEVER create `test-spec` documents — `test-spec` is a legacy,
-  migration-only type under Registry 3; `new_test_spec.js` refuses at the
-  registry gate and preflight routes legacy files to migration
+  migration-only type under Registry 3; no `new_test_spec.js` ships and
+  preflight routes legacy files to migration
 - NEVER record pass/fail outcomes in this document — execution results are
   volatile evidence, not durable verification intent
 - NEVER duplicate Check→Claim links in `relations` — `checks[].target` is

@@ -31,7 +31,10 @@ graph — zero candidates leave `taskGraph` null without a blocker
 ambiguous (`task-graph-run-ambiguous`).
 
 The projection carries `schemaVersion: 2`, `runId`, `plan`, `nodes`,
-`edges`, and the status lists below. `plan` is
+`edges`, and the status lists below. That version stamps the Task Graph
+*projection payload* lineage — v1 was the pre-v3 `docs/tasks`
+file-backed form, v2 is this Execution-Store-backed form — and is
+unrelated to the removed Registry-2 runtime. `plan` is
 `{ path, digest, approved }` with `path` the state-root-relative
 `runs/<run-id>/plan.md`. Each node is
 `{ id, path, title, status, dependsOn, blocks, scope, version }` where

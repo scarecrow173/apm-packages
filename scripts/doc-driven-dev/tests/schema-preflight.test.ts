@@ -334,20 +334,12 @@ const GUARDED_ENTRYPOINTS: Array<{ skill: string; script: string; args: string[]
   { skill: "design-doc", script: "new_design.js", args: ["--title", "D"] },
   { skill: "discovery-doc", script: "new_discovery.js", args: ["--title", "D"] },
   { skill: "idea-doc", script: "new_idea.js", args: ["--title", "I"] },
-  { skill: "impl-doc", script: "append_experiment_event.js", args: ["--file", "docs/impl/exp/x.jsonl", "--type", "observation"] },
   { skill: "impl-doc", script: "audit_experiment_log.js", args: [] },
   { skill: "impl-doc", script: "audit_impl_record.js", args: [] },
-  { skill: "impl-doc", script: "edit_experiment_log.js", args: ["--file", "docs/impl/exp/x.jsonl", "--seq", "1", "--set", "k=v"] },
-  { skill: "impl-doc", script: "new_experiment_log.js", args: ["--title", "E"] },
-  { skill: "impl-doc", script: "new_impl_record.js", args: ["--title", "IR"] },
-  { skill: "impl-doc", script: "sync_impl_index.js", args: ["--kind", "ir"] },
   { skill: "implementation-flow", script: "check_parallel.js", args: [] },
   { skill: "knowledge-doc", script: "new_knowledge.js", args: ["--title", "K", "--kind", "lesson"] },
   { skill: "knowledge-doc", script: "consolidate_knowledge.js", args: ["assess", "--title", "K"] },
-  { skill: "plan-doc", script: "new_plan.js", args: ["--title", "P"] },
   { skill: "spec-doc", script: "new_spec.js", args: ["--title", "S"] },
-  { skill: "task-doc", script: "new_task.js", args: ["--title", "T"] },
-  { skill: "test-spec-doc", script: "new_test_spec.js", args: ["--title", "TS"] },
 ];
 
 test("guard: every normal entrypoint fails closed with a machine-readable refusal on migration-required", () => {

@@ -74,19 +74,17 @@ Registry 3 は上記の行を 3 つの persistence クラスに分ける:
   `update_verification` は verification 型のインプレース設計更新
   ツール(チェックの upsert と削除)であり、`resolve_verification`
   は読み取り専用の Claim/Check リゾルバとして、共有インスペクタと
-  並ぶ auditor に宣言されている。廃止された
-  creator のうち宣言が残るのは `new_test_spec` のみ(レガシー
-  test-spec ディレクトリ上)で、registry ゲートで拒否される。
-  `new_plan` と `new_task` のスクリプトも残置され同様に拒否するが、
-  execution-bound または migration-only の型に durable な作成経路は
-  ないため、registry はこれらの mutator を宣言していない
-  (`mutators: []`)。
+  並ぶ auditor に宣言されている。廃止された creator はすべて削除
+  された: `new_test_spec`、`new_plan`、`new_task` は Issue #249 で
+  除去されており、execution-bound または migration-only の型に
+  durable な作成経路はないため、registry はこれらの mutator を
+  宣言していない(`mutators: []`)。
 - `adr-doc`: `new_adr`、`update_index`、`relate_adr`、`promote_index`、
   `doc_maintenance`、`scaffold_docs`、`migrate_docs`、`migrate_ids`
 - `impl-doc`: `migrate_ids`、`promote_index`。`new_impl_record`、
   `new_experiment_log`、`append_experiment_event`、
-  `edit_experiment_log`、`sync_impl_index` は registry ゲートで拒否
-  される。impl/exp 形式は migration-owned であり、その index エンジンは
+  `edit_experiment_log`、`sync_impl_index` は Issue #249 で削除された。
+  impl/exp 形式は migration-owned であり、その index エンジンは
   `migrate_ids` の内部(同期ライブラリの直接呼び出し)でのみ動作する。
 
 ## Audit owners per owner
@@ -142,8 +140,8 @@ index 書き込みをブロックする。`promote_index`(preview、`--apply` �
 - `migrate_ids` は触れた index をすべてオーナー writer 経由で再生成
   する。durable `shared-4col` は共有 managed-index writer、`docs/adr`
   は ADR managed writer、`impl-4col` と `exp-1col` は impl safe sync
-  エンジン(拒否される `sync_impl_index` CLI ではなくライブラリ直接
-  呼び出し)である。オーナー index を直接書き込むことはなく、オーナーが
+  エンジン(`sync_impl_index` CLI は廃止されライブラリ直接呼び出し)
+  である。オーナー index を直接書き込むことはなく、オーナーが
   拒否した index は強制されず `skipped` または `blocked` として報告
   される。
 - `docs/impl` は resident type を持たないオーナー管理コンテナであり、

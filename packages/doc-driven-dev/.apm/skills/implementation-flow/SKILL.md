@@ -25,9 +25,9 @@ Under Document Registry 3 `task` is execution-bound (`persistence:
 ephemeral`) — `task-doc` creation steps below describe Execution Store
 records, not durable Git documents. The `impl-doc` Implementation Record
 and Experiment Log formats are legacy migration-only types:
-`new_impl_record.js` / `new_experiment_log.js` refuse at the registry gate,
-and the phases that mention them describe the pre-v3 evidence contract that
-migration tooling reads. Durable verification evidence is recorded by
+no `new_impl_record.js` / `new_experiment_log.js` writers ship (removed in
+Issue #249), and the phases that mention them describe the pre-v3 evidence
+contract that migration tooling reads. Durable verification evidence is recorded by
 `verification-doc` under `docs/verification`; durable findings consolidate
 conditionally through `knowledge-doc`.
 
@@ -204,7 +204,7 @@ For detailed category definitions, see the adapter's `classification.taxonomy` i
 
 Under Registry 3 the always-on generation contract is abolished: **no
 Implementation Record or Experiment Log is opened before code changes** —
-`new_impl_record.js` / `new_experiment_log.js` refuse at the registry gate,
+no `new_impl_record.js` / `new_experiment_log.js` writers ship,
 and a normal implementation change completes with no IR, no EXP, and no
 forced Knowledge document.
 
@@ -368,8 +368,8 @@ failure patterns. They defeat systematic skill routing.
 <HARD-GATE>
 Documentation is never forced by this flow — but consolidation decisions are
 explicit, not silent.
-- No Implementation Record or Experiment Log is opened; `impl`/`exp` mutators
-  refuse at the registry gate.
+- No Implementation Record or Experiment Log is opened; no `impl`/`exp`
+  mutators ship — the registry treats both as migration-only types.
 - When durable findings exist, run
   `node ../knowledge-doc/scripts/consolidate_knowledge.js assess` and apply
   exactly one decision before close-out; `none` is valid only when nothing

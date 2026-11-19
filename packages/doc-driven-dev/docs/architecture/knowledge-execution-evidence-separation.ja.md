@@ -2,8 +2,11 @@
 
 `#232` とその子Issue `#233`–`#249` で追跡している `doc-driven-dev`
 刷新の、メンテナ向けアーキテクチャ文書。各Issueで合意済みの内容を整理し、
-現在の(v2)アーキテクチャ、移行後の(v3)アーキテクチャ、および両者の
-対応関係を一つの参照文書にまとめたものである。
+導入済みの(v3)アーキテクチャ、それが置き換えたv3以前のアーキテクチャ、
+および両者の対応関係を一つの参照文書にまとめたものである。
+`#249` でプログラムは完了し、Knowledge / Execution / Evidence モデルが
+唯一の利用者向け契約となった。§2 に記すv3以前のruntimeは通常処理から
+除去済みで、そのreaderはmigration tooling内にのみ残る。
 
 正本: `#232`(親契約・受け入れ条件)と §6 に列挙する子Issue。本文書とIssueが
 矛盾する場合はIssueが優先する。現行アーキテクチャのコードレベルの権威は、
@@ -13,10 +16,10 @@ Graph Definition(`graphs/doc-driven-dev.yaml`)、
 
 ## 1. 目的
 
-現行の `doc-driven-dev-graph` は、持続的知識(Spec / Design / ADR /
+v3以前の `doc-driven-dev-graph` は、持続的知識(Spec / Design / ADR /
 Discovery)、一時的な実行状態(Plan / Task / 承認 / Checkpoint)、実装履歴
 (IR / EXP)、検証の意図と結果を、単一のGit管理Markdown Artifact Graph上で
-扱っている。`#127` が示したコストは、文書量の増大、共有Markdownへの更新
+扱っていた。`#127` が示したコストは、文書量の増大、共有Markdownへの更新
 競合、実行状態と長期知識の責務混在である。`#232` はこれを、archive/index
 の最適化ではなく、データモデルの責務分離によって解決する。
 
@@ -35,7 +38,11 @@ Discovery)、一時的な実行状態(Plan / Task / 承認 / Checkpoint)、実�
    Migrationへ誘導** する。通常実行の後方互換パーサー・v2 Graph並走・旧文書
    フォールバックは作らない。
 
-## 2. 現在のアーキテクチャ(v2)
+## 2. v3以前のアーキテクチャ(削除済み)
+
+本節はプログラムが置き換えたモデルの記録であり、migrationの文脈のために
+残す。`#249` 以降、そのいずれも通常処理からは到達不能であり、残る
+readerは `doc-maintenance` のmigration toolingのみである。
 
 ### 2.1 4つの層
 
@@ -165,7 +172,7 @@ ADRにリンクしたFeature / Rule / Example構造)。結果は第一級アー�
   (`derives-from` 等)は機械的に安全な再割当てができない曖昧な意味を持つ。
 - **スキーマ境界がない**。CLI境界で現行repoと旧repoを区別する仕組みがない。
 
-## 3. 移行後のアーキテクチャ(v3)
+## 3. 現行アーキテクチャ(v3)
 
 ### 3.1 3つのStore、それ以外はすべて派生
 

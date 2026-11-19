@@ -67,7 +67,10 @@ On `focus-required` or `focus-invalid` the result carries no metadata.
 canonical docs directories. It is a corpus-scan selector only — it widens
 which Markdown documents retrieval reads and has nothing to do with task
 authority: plan/task state lives in the Execution Store and is selected with
-`route_graph.js --run`/`--state-root`, never here. The same selector is
+`route_graph.js --run`/`--state-root`, never here. Note the asymmetry:
+unlike `route_graph.js`/`inspect_graph.js`, which refuse `--task-dir`
+outright, `fetch_context.js` keeps it as this read-only corpus-scan
+selector. The same selector is
 accepted by L2 and L3 and it is containment-checked — see the guards below.
 
 ## L2 — body fetch

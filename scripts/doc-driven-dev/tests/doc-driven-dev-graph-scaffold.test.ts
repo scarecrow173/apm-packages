@@ -115,10 +115,13 @@ test("scaffolded owner indexes accept explicit materialization end to end", () =
   assert.doesNotMatch(adrApply.stdout + adrApply.stderr, /hand-curated/);
   assert.match(fs.readFileSync(path.join(repo, "docs/adr/README.md"), "utf8"), /adopt-madr\.md/);
 
-  // Legacy creator entrypoints refuse at the registry gate (Issue #234).
-  const ir = runSkill(implRoot, "new_impl_record.js", ["--title", "Extract foo", "--cwd", repo], repo);
-  assert.notEqual(ir.status, 0);
-  assert.match(ir.stderr, /legacy format|migration/);
+  // Issue #249: the legacy creator entrypoint is removed entirely — no
+  // shipped surface can mint an impl artifact.
+  assert.equal(
+    fs.existsSync(path.join(implRoot, "scripts", "new_impl_record.js")),
+    false,
+    "new_impl_record.js must not ship",
+  );
   assert.equal(fs.existsSync(path.join(repo, "docs/impl/ir")), false, "no impl artifact is minted");
 
   // A legacy dir that exists on disk stays migration-owned: the normal

@@ -65,7 +65,10 @@ L1 は、どの document を読むかを決めるときや、handoff の focus l
 scan 集合へ追加します。これは corpus-scan selector にすぎません —
 retrieval が読む Markdown 文書を広げるだけで、task authority とは無関係です。
 plan/task 状態は Execution Store にあり、`route_graph.js --run`/`--state-root`
-で選択するもので、ここでは扱いません。同じ selector が L2 と L3 でも受け付けられ、
+で選択するもので、ここでは扱いません。非対称性に注意してください:
+`--task-dir` を拒否する `route_graph.js`/`inspect_graph.js` とは異なり、
+`fetch_context.js` はこの flag を read-only の corpus-scan selector として
+維持しています。同じ selector が L2 と L3 でも受け付けられ、
 containment 検査が適用されます — 後述の guard を参照してください。
 
 ## L2 — body fetch

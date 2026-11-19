@@ -22,8 +22,8 @@ effect: { kind: delegate, id: implementation-flow }
 inputs:
   - { kind: execution-task, runId: RUN-7QwErTyUiOpAsDfGhJkLmN, taskId: TASK-0H5nCkR2mW9xVbYqZeLp3s, version: 1 }
 outputs:
-  - { kind: durable-document, path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:evidence }
-proof: { kind: durable-document, path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:evidence }
+  - { kind: durable-document, path: docs/knowledge/example-finding.md, id: KNOW-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:evidence }
+proof: { kind: durable-document, path: docs/knowledge/example-finding.md, id: KNOW-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:evidence }
 ```
 
 ```yaml
@@ -48,7 +48,7 @@ effect: { kind: delegate, id: implementation-flow }
 inputs:
   - { kind: execution-task, runId: RUN-7QwErTyUiOpAsDfGhJkLmN, taskId: TASK-0H5nCkR2mW9xVbYqZeLp3s, version: 1 }
 outputs:
-  - { kind: durable-document, path: docs/impl/ir/example-task.md, id: IMPL-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:checkpoint }
+  - { kind: durable-document, path: docs/knowledge/example-finding.md, id: KNOW-5RfVgTgBnHkLmQwErTyUiO, revision: sha256:checkpoint }
 reason: authority-required
 ```
 
@@ -193,8 +193,9 @@ document の整合性だけを評価するため、missing または stale な i
 gate することはありません。`briefing-flow` は spec と ADR を読み、`design-doc`
 は spec と ADR を読み design evidence を記録し、`planning-flow` は selected approved design を
 読み、選択された run の `plan.md` と生成されたすべての task record を記録します。
-`implementation-flow` は選択された run の task record と design を読み Implementation Record を記録し、
-`knowledge-doc` は durable な knowledge・verification 文書を読み
+`implementation-flow` は選択された run の task record と design を読み、run の task record
+transition を記録します（slice の conditional consolidation が durable finding を生成した場合は
+その knowledge record も記録します）。`knowledge-doc` は durable な knowledge・verification 文書を読み
 knowledge record を記録し、
 `doc-status` は declared document set を読みます。script-adapter input は
 `migrate_docs`（declared document set）、`scaffold_docs`
@@ -211,7 +212,7 @@ reference は使用前に current state と照合して resolve しなければ�
 | `briefing-flow` | briefing gate が通過する | recoverable document gap | unresolved user-only requirement の `input-required` |
 | `design-doc` | design が approved になる | — | designated reviewer を待つ `approval-required`、upstream user decision がない `input-required` |
 | `planning-flow` | digest 承認済みの run plan と materialize された task record | changed run plan/task repair evidence | plan review が pending の `approval-required`、user-owned planning choice が missing の `input-required`、declared safe repair がない場合の `unrecoverable-blocker` |
-| `implementation-flow` | task slice が verified され Implementation Record が complete になる | declared spec/design/constraint repair | granted authority の範囲で commit できない変更を slice が生成した場合の `commit-required`、permission のない irreversible effect の `authority-required`、declared safe repair がない場合の `unrecoverable-blocker` |
+| `implementation-flow` | task slice が verified され、その task-record transition が run に記録される（conditional knowledge consolidation が適用される） | declared spec/design/constraint repair | granted authority の範囲で commit できない変更を slice が生成した場合の `commit-required`、permission のない irreversible effect の `authority-required`、declared safe repair がない場合の `unrecoverable-blocker` |
 | `knowledge-doc` | consolidation 判断が記録される（finding の統合、または意図的な no-op） | recoverable な knowledge 文書ギャップ | user が所有する consolidation 選択の `input-required` |
 | `doc-status` | documents が Completable になる | declared repair evidence を伴う Returned | safe repair のない Returned の `unrecoverable-blocker` |
 

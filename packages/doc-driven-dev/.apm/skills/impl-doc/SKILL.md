@@ -12,7 +12,7 @@ license: MIT
 Use this skill to audit what was actually implemented and what was tried
 during implementation in a pre-v3 corpus — as migration input only.
 
-`impl-doc` is a document-generation sibling of `adr-doc`, `spec-doc`,
+`impl-doc` is an audit/migration sibling of `adr-doc`, `spec-doc`,
 `design-doc`, `plan-doc`, and `task-doc`. It is not an implementation workflow
 skill.
 
@@ -23,14 +23,16 @@ formats** under Document Registry 3: they are interpreted only by migration
 tooling and cannot be created or linted as durable documents. `docs/impl/ir`,
 `docs/impl/exp`, and the `docs/impl` container are migration-owned scopes.
 
-Every write entrypoint refuses at the registry gate — before any gate check,
-scope check, or write:
+No write entrypoint ships (Issue #249 removed the pre-v3 creators and
+mutators) — the registry still refuses the `impl`/`exp` type names on the
+shared query surface with:
 
 `Document type "impl" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document`
 
-- **Refusing mutators**: `new_impl_record.js`, `new_experiment_log.js`,
+- **Removed mutators**: `new_impl_record.js`, `new_experiment_log.js`,
   `append_experiment_event.js`, `edit_experiment_log.js`,
-  `sync_impl_index.js`.
+  `sync_impl_index.js` no longer ship — nothing in the distribution can
+  mint or mutate the legacy corpus.
 - **Read-only audits stay available**: `audit_impl_record.js` and
   `audit_experiment_log.js` still inspect existing corpora, including index
   drift findings.
@@ -92,11 +94,11 @@ The pre-v3 contract produced these artifacts per task:
 
 ## Workflow
 
-### Refused write paths (Registry 3)
+### Removed write paths (Registry 3)
 
 `new_impl_record.js`, `new_experiment_log.js`,
-`append_experiment_event.js`, and `edit_experiment_log.js` all refuse at
-the registry gate: `impl` and `exp` are legacy formats with no durable
+`append_experiment_event.js`, and `edit_experiment_log.js` no longer ship:
+`impl` and `exp` are legacy formats with no durable
 creation or mutation path. Use `verification-doc` for durable verification
 intent and the Evidence Store for evidence relations.
 
@@ -111,8 +113,8 @@ node scripts/audit_experiment_log.js --json
 
 `docs/impl/ir/README.md` and `docs/impl/exp/README.md` are managed indexes
 whose reconciliation is **migration-owned** under Registry 3.
-`sync_impl_index.js` refuses at the registry gate like every other impl
-writer; the safe sync engine (`planImplIndexSync` / `applyImplIndexSync`)
+`sync_impl_index.js` was removed with the other impl writers; the safe
+sync engine (`planImplIndexSync` / `applyImplIndexSync`)
 runs only inside `migrate_ids`, which calls the library directly.
 
 - Verdicts the engine reports: `in-sync` (no-op), `sync` (reconcile drift),
@@ -145,7 +147,7 @@ Both audits are read-only and report index drift as findings:
 ## NEVER
 
 - NEVER attempt to create or mutate `impl`/`exp` documents under Registry 3 —
-  every mutator refuses at the registry gate; durable findings consolidate
+  no mutator ships; durable findings consolidate
   through `knowledge-doc` instead
 - NEVER treat the legacy corpus table as a normal-run instruction — no
   Implementation Record is opened before code changes; the always-on
@@ -153,8 +155,8 @@ Both audits are read-only and report index drift as findings:
 - NEVER conflate reduced recording volume with erased verification results —
   migration reads the corpus as-is; nothing is deleted to slim it
 - NEVER manually edit JSONL files in a corpus destined for migration or
-  audit - use `append_experiment_event` or `edit_experiment_log` on a pre-v3
-  tree only; direct edits break sequential `seq` integrity
+  audit — the pre-v3 `append_experiment_event` / `edit_experiment_log`
+  entrypoints are removed, and direct edits break sequential `seq` integrity
 - NEVER merge multiple tasks into one ir when interpreting a corpus - one
   task = one ir; traceability depends on this 1:1 mapping
 - NEVER skip the audit step before reporting a corpus readable for migration -
@@ -169,8 +171,8 @@ Both audits are read-only and report index drift as findings:
 - `metadata.validation` is not used in v1.
 - Experiment Log `start` events are optional at creation time (in the legacy
   corpus).
-- All `new_*`, `append_*`, `edit_*`, and `sync_impl_index` commands refuse at
-  the registry gate under Registry 3 — audits and migration tooling are the
+- All `new_*`, `append_*`, `edit_*`, and `sync_impl_index` commands were
+  removed under Registry 3 — audits and migration tooling are the
   only entrypoints that touch these formats.
 
 ## Resources

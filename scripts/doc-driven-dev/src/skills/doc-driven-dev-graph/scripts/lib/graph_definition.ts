@@ -192,7 +192,9 @@ function validateGraphDefinition(value: z.infer<typeof graphDefinitionSchema>): 
 export const GRAPH_MIGRATION_GUIDANCE =
   "Graph Definition schemaVersion 2 is not supported by normal runtime. " +
   "Run `node .apm/skills/doc-maintenance/scripts/doc_maintenance.js migrate plan --json` " +
-  "to evaluate the repository's legacy artifacts, then `migrate apply --expect <planHash>`";
+  "to evaluate the repository's legacy artifacts, then `migrate apply --expect <planHash>`. " +
+  "If an earlier apply was interrupted, `migrate recovery --resume` continues " +
+  "and `migrate recovery --rollback` undoes it.";
 
 function detectLegacySchema(parsed: unknown): void {
   if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {

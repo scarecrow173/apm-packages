@@ -4,8 +4,8 @@ These conventions define how `task-doc` creates, audits, indexes, and routes
 implementation tasks.
 
 Under Document Registry 3 `task` is execution-bound (`persistence: ephemeral`):
-it has no durable Git form and `new_task.js` refuses at the registry gate
-before task preconditions, scope checks, or any write. `docs/tasks/` and the
+it has no durable Git form and no `new_task.js` creator ships (Issue #249).
+`docs/tasks/` and the
 candidate directories below are former directories — owned scopes kept for
 migration reading of pre-v3 corpora. These conventions describe that legacy
 document shape plus the contract Execution Store task records follow.
@@ -160,9 +160,9 @@ Task edge direction is exact: a `relations.depends-on` value that resolves to
 another selected task creates `dependency -> this task`; a
 `relations.blocks` value creates `this task -> blocked task`. References that
 resolve to a plan, spec, ADR, or design are upstream artifact relations, not
-Task DAG edges. The task authoring script records references but does not
-validate the whole DAG; `build_task_graph.js` performs resolution and graph
-validation.
+Task DAG edges. The pre-v3 task authoring script recorded references but did
+not validate the whole DAG; `build_task_graph.js` performs resolution and
+graph validation.
 
 ## Follow-up Classification
 

@@ -53,7 +53,6 @@ function usage(): string {
 type SliceInput = {
   taskId: string;
   declaredScope: string[];
-  evidencePaths: string[];
   touchedPaths?: string[];
   baseRef?: string;
 };
@@ -83,8 +82,17 @@ function parseSliceInputs(raw: unknown): SliceInput[] {
     if (!isStringArray(slice.declaredScope)) {
       throw new Error(`${label}.declaredScope must be an array of strings`);
     }
-    if (!isStringArray(slice.evidencePaths)) {
-      throw new Error(`${label}.evidencePaths must be an array of strings`);
+    // `evidencePaths` was the v2 repo-path evidence surface (files under
+    // docs/impl/ that had to name the task ID). Under the current contract
+    // verification evidence lives in the Git-untracked Evidence Store and
+    // never appears in a merge diff — a caller still declaring repo-path
+    // evidence is stale input and fails closed (Issue #249).
+    if (slice.evidencePaths !== undefined) {
+      throw new Error(
+        `${label}.evidencePaths is not accepted — repo-path evidence was removed (Issue #249); ` +
+        "verification evidence lives in the Evidence Store (.apm/state/doc-driven-dev/evidence/) " +
+        "and never appears in a merge diff",
+      );
     }
     if (slice.touchedPaths !== undefined && !isStringArray(slice.touchedPaths)) {
       throw new Error(`${label}.touchedPaths must be an array of strings when present`);
@@ -95,7 +103,6 @@ function parseSliceInputs(raw: unknown): SliceInput[] {
     return {
       taskId: slice.taskId,
       declaredScope: slice.declaredScope,
-      evidencePaths: slice.evidencePaths,
       ...(slice.touchedPaths !== undefined ? { touchedPaths: slice.touchedPaths } : {}),
       ...(slice.baseRef !== undefined ? { baseRef: slice.baseRef } : {}),
     };
@@ -135,7 +142,6 @@ function runMergeVerification(cwd: string, args: CliArgs): MergeReport {
   const slices: SliceOutcome[] = inputs.map((input) => ({
     taskId: input.taskId,
     declaredScope: input.declaredScope,
-    evidencePaths: input.evidencePaths,
     touchedPaths: input.touchedPaths
       ?? collectChangedPaths(cwd, input.baseRef ?? args.baseRef ?? "HEAD"),
   }));

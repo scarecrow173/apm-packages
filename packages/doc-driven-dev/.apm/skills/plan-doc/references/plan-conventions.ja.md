@@ -4,8 +4,8 @@
 基準を定めます。
 
 Document Registry 3 では `plan` は execution-bound（`persistence: ephemeral`）
-で、durable な Git 上の形を持たず、`new_plan.js` は design gate・スコープ
-検証・書き込みの前に registry gate で拒否します。以下の `docs/plans/` などの
+で、durable な Git 上の形を持たず、`new_plan.js` creator は配布されていません
+（Issue #249）。以下の `docs/plans/` などの
 候補ディレクトリは former ディレクトリ — v3 以前のコーパスをマイグレーション
 が読み取るための owned scope です。この規約はそのレガシーな文書形状と、
 Execution Store の計画レコードが従う契約を記述します。
@@ -186,10 +186,11 @@ plan レベルの検証項目は実装 step ごとのものです。task 分割�
 verification matrix へ意図を複写せず、task から `relations.verified-by` で
 リンクします。
 
-plan が test spec を生成した場合は、plan 側の `relations.verified-by` から
-リンクします。plan に検証可能な振る舞いが正当に存在しない場合は、代わりに
-`relations:` に理由を記録します —— `test-spec-skip` は置き換える
-`verified-by` の隣に置く理由文字列であり、relation のリンク先ではありません。
+pre-v3 の plan が test spec を生成した場合、plan 側の
+`relations.verified-by` からリンクしていました。plan に検証可能な
+振る舞いが正当に存在しない場合は、代わりに `relations:` に理由が記録されて
+いました —— `test-spec-skip` は置き換える `verified-by` の隣に置く理由文字列
+であり、relation のリンク先ではありません。
 
 ```yaml
 relations:
@@ -198,7 +199,9 @@ relations:
 ```
 
 test-spec リンクも
-skip 理由もない approved plan は audit で指摘されます。
+skip 理由もない approved plan は、pre-v3 の audit で指摘されていました。
+Registry 3 の run plan は `relations` front matter を持ちません —— 上流
+binding は run manifest の `focus` リストが担います。
 
 ## タスク粒度
 
@@ -222,15 +225,14 @@ plan 作成前に次を満たします。
 - overview 以外の design file が少なくとも 1 つ存在し、front matter
   `status: "approved"` が exact match であること。
 
-gate に失敗した場合、`new_plan` は次を返します。
+v3 以前の runtime で gate に失敗した場合、`new_plan` は次を返していました。
 
 `PLAN-DOC-GATE-001: approved design-doc is required before creating a plan. Ensure docs/designs/overview.md exists and provide at least one design doc with front matter status: "approved".`
 
-推奨作成コマンド:
-
-```bash
-node scripts/new_plan.js --title "Implement checkout flow" --implements docs/specs/define-checkout-flow.md --design docs/designs/design-checkout-orchestration.md
-```
+v3 以前の `new_plan.js` creator コマンドは削除されました — run plan は
+run の Execution Store 内で `execution_store.js save-plan` を通じて書かれ、
+拘束する gate は creator フラグではなく Task Graph の `plan-not-approved`
+blocker（digest-bound 承認）です。
 
 plan は、既知なら具体的な file、module、command、ownership boundary を書きます。
 不明な detail は、実装可能であるふりをせず gap として明記します。

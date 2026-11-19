@@ -4,8 +4,8 @@ These conventions define how `plan-doc` creates, audits, indexes, and routes
 implementation plans.
 
 Under Document Registry 3 `plan` is execution-bound (`persistence: ephemeral`):
-it has no durable Git form and `new_plan.js` refuses at the registry gate
-before the design gate, scope validation, or any write. `docs/plans/` and the
+it has no durable Git form and no `new_plan.js` creator ships (Issue #249).
+`docs/plans/` and the
 candidate directories below are former directories — owned scopes kept for
 migration reading of pre-v3 corpora. These conventions describe that legacy
 document shape plus the contract Execution Store planning records follow.
@@ -187,11 +187,11 @@ guarantees that must outlive task slicing belong to `test-spec` documents
 (`docs/test-specs/`); link them from tasks via `relations.verified-by` rather
 than copying their intent into the plan's verification matrix.
 
-When the plan produces test specs, link them from the plan with
-`relations.verified-by`. When the plan legitimately has no verifiable
-behavior, record the reason under `relations:` instead — `test-spec-skip` is
-a reason string recorded next to the `verified-by` it replaces, not a
-relation target:
+When a pre-v3 plan produced test specs, they were linked from the plan with
+`relations.verified-by`. When the plan legitimately had no verifiable
+behavior, the reason was recorded under `relations:` instead —
+`test-spec-skip` is a reason string placed next to the `verified-by` it
+replaces, not a relation target:
 
 ```yaml
 relations:
@@ -199,8 +199,9 @@ relations:
   test-spec-skip: "docs-only change; no verifiable behavior"
 ```
 
-Audits flag approved plans that have neither a test-spec link nor a skip
-reason.
+Pre-v3 audits flagged approved plans that had neither a test-spec link nor a
+skip reason. Registry 3 run plans carry no `relations` front matter — the
+run manifest's `focus` list carries the upstream binding.
 
 ## Task Granularity
 
@@ -224,15 +225,14 @@ Before creating a plan:
 - At least one non-overview design file must have front matter
   `status: "approved"` (exact match).
 
-If the gate fails, `new_plan` must return:
+If the gate fails under the pre-v3 runtime, `new_plan` returned:
 
 `PLAN-DOC-GATE-001: approved design-doc is required before creating a plan. Ensure docs/designs/overview.md exists and provide at least one design doc with front matter status: "approved".`
 
-Recommended creation command:
-
-```bash
-node scripts/new_plan.js --title "Implement checkout flow" --implements docs/specs/define-checkout-flow.md --design docs/designs/design-checkout-orchestration.md
-```
+The pre-v3 `new_plan.js` creator command is removed — a run plan is written
+through `execution_store.js save-plan` inside the run's Execution Store, and
+the binding gate is now the Task Graph's `plan-not-approved` blocker
+(digest-bound approval), not a creator flag.
 
 Plans should name concrete files, modules, commands, or ownership boundaries
 when they are known. If a detail is not known, mark the gap explicitly instead

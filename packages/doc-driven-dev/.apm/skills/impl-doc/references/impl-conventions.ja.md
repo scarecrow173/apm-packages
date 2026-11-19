@@ -3,7 +3,8 @@
 Document Registry 3 では `impl`（Implementation Record）と `exp`
 （Experiment Log）はレガシーの migration-only 種別です。durable 文書として
 作成・lint できず、`new_impl_record.js` / `new_experiment_log.js` /
-`sync_impl_index.js` は registry gate で拒否します。以下のディレクトリは
+`sync_impl_index.js` の各エントリポイントは削除されました（Issue #249）。
+以下のディレクトリは
 migration-owned scope です。この規約は、マイグレーションが読み取る v3 以前
 の文書形状と、`migrate_ids.js` が reconcile する索引契約を記述します。
 
@@ -112,9 +113,11 @@ Experiment Log は JSONL です。
 
 - 1 行 = 1 イベント
 - `start` は作成時必須ではない
-- 通常の更新は `append_experiment_event`
-- 例外修正は `edit_experiment_log`
-- Experiment Log の JSONL は `append_experiment_event` または `edit_experiment_log` だけで更新する。
+- v3 以前の runtime では通常の更新に `append_experiment_event` を使いました
+  （Registry 3 で削除 — イベント writer は配布されていません）。
+- 例外修正には `edit_experiment_log` を使いました（同様に削除済み）。
+- Experiment Log の JSONL は migration がそのまま読みます — 更新経路は
+  存在しません。
 
 許可するイベント種別:
 
@@ -178,11 +181,12 @@ finding を報告します(コード一覧は impl-doc スキルを参照)。
   テーブルに、settled なステータス（`completed`、`abandoned`、`superseded`）の
   記録は下段の `## Settled` テーブルにファイル名昇順で掲載します。Settled の
   行もリンクは維持され、履歴を隠さずに強調を抑える構成です。
-- 記録の追加や `status` の変更時は索引を reconcile してください —
-  materialize は明示的です（creator は索引を書き込みません）。
-  `sync_impl_index.js --kind ir` が同期内容をプレビューします
-  （verdict は `in-sync` / `sync` / `create` / `rejected`）。
-  `--apply` で書き込みます。適用するまでの間、
+- v3 以前の契約では記録の追加や `status` の変更時に索引を reconcile
+  しました（materialize は明示的 — creator は索引を書き込みません）。
+  Registry 3 では同じ safe sync エンジン（`planImplIndexSync` /
+  `applyImplIndexSync`、verdict は `in-sync` / `sync` / `create` /
+  `rejected`）が `migrate_ids` の内部でのみ動作します —
+  公開の `sync_impl_index.js` CLI はありません。適用するまでの間、
   `audit_impl_record.js` がドリフト（`index-missing-entry`、
   `index-stale-entry`、`index-metadata-mismatch`、`index-tier-mismatch`、
   `index-ordering`）を報告します。`doc_status` と `doc_maintenance` の
@@ -205,10 +209,11 @@ finding を報告します(コード一覧は impl-doc スキルを参照)。
 各ログの参照は Implementation Record 側の `metadata.experiments` と relations が
 担うため、README はディレクトリ概覧の役割のみ持ちます。
 
-この索引も `sync_impl_index.js --kind exp` で同様に同期します。デフォルトは
-プレビュー、`--apply` で書き込み、手作業キュレートや不正な README は
-`rejected` になります。
+この索引も同じ sync エンジンが同様に同期します — verdict は
+`in-sync` / `sync` / `create` / `rejected`、手作業キュレートや不正な
+README は `rejected` — `migrate_ids` の内部でのみ動作します。
 
-新規 Experiment Log の追加では creator は索引を書き込みません（deferred）。
-同じ明示的同期（`--apply`）または `doc_maintenance.js index apply` で
-materialize します。
+v3 以前の契約で新規 Experiment Log を追加しても creator は索引を
+書き込みませんでした（deferred）。Registry 3 では Experiment Log を
+mint する経路自体が存在せず、索引は `migrate_ids` 内の
+migration-owned sync エンジンだけが reconcile します。

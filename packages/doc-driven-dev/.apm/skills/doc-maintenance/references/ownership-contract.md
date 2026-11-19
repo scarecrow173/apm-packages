@@ -72,19 +72,16 @@ Registry 3 splits the rows above into three persistence classes:
   `scaffold_docs`, `migrate_docs`, `migrate_ids`. `update_verification`
   is the verification type's in-place design updater (check upserts and
   removals); `resolve_verification` is its read-only Claim/Check
-  resolver, declared as an auditor alongside the shared inspectors. Of
-  the retired
-  creators, only `new_test_spec` remains declared — on the legacy
-  test-spec dirs — and it refuses at the registry gate; the `new_plan`
-  and `new_task` scripts still exist and refuse the same way, but the
-  registry declares no mutator for them (`mutators: []`) since
-  execution-bound or migration-only types have no durable creation
-  path.
+  resolver, declared as an auditor alongside the shared inspectors. The
+  retired creators are gone entirely: `new_test_spec`, `new_plan`, and
+  `new_task` were removed in Issue #249 — the registry declares no
+  mutator for these types (`mutators: []`) since execution-bound or
+  migration-only types have no durable creation path.
 - `adr-doc`: `new_adr`, `update_index`, `relate_adr`, `promote_index`,
   `doc_maintenance`, `scaffold_docs`, `migrate_docs`, `migrate_ids`
 - `impl-doc`: `migrate_ids`, `promote_index`. `new_impl_record`,
   `new_experiment_log`, `append_experiment_event`, `edit_experiment_log`,
-  and `sync_impl_index` refuse at the registry gate — the impl/exp
+  and `sync_impl_index` were removed in Issue #249 — the impl/exp
   formats are migration-owned; their index engine runs only inside
   `migrate_ids` (which calls the sync library directly).
 
@@ -138,7 +135,7 @@ and left byte-identical; there is no force path for unverified files.
 - `migrate_ids` regenerates every touched index through the owning writer —
   the shared managed-index writer for durable `shared-4col`, the ADR
   managed writer for `docs/adr`, and the impl safe sync engine (called
-  directly, not through the refused `sync_impl_index` CLI) for
+  directly — the `sync_impl_index` CLI no longer ships) for
   `impl-4col` and `exp-1col`. It never writes an owner index directly;
   an index the owner refuses is reported `skipped` or `blocked`, never
   forced.

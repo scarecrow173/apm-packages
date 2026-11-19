@@ -4280,7 +4280,7 @@ var require_parse2 = __commonJS({
 var require_gray_matter = __commonJS({
   "node_modules/.pnpm/gray-matter@4.0.3/node_modules/gray-matter/index.js"(exports2, module2) {
     "use strict";
-    var fs7 = require("fs");
+    var fs6 = require("fs");
     var sections = require_section_matter();
     var defaults = require_defaults();
     var stringify = require_stringify2();
@@ -4364,7 +4364,7 @@ var require_gray_matter = __commonJS({
       return stringify(file, data, options2);
     };
     matter2.read = function(filepath, options2) {
-      const str2 = fs7.readFileSync(filepath, "utf8");
+      const str2 = fs6.readFileSync(filepath, "utf8");
       const file = matter2(str2, options2);
       file.path = filepath;
       return file;
@@ -4393,8 +4393,8 @@ var require_gray_matter = __commonJS({
 });
 
 // src/skills/implementation-flow/scripts/check_parallel.ts
-var import_node_fs6 = __toESM(require("node:fs"));
-var import_node_path7 = __toESM(require("node:path"));
+var import_node_fs5 = __toESM(require("node:fs"));
+var import_node_path6 = __toESM(require("node:path"));
 
 // src/skills/doc-driven-dev-graph/scripts/lib/task_graph.ts
 var import_node_path5 = __toESM(require("node:path"));
@@ -4857,10 +4857,10 @@ var legacyDocTypes = {
     settledStatuses: ["deprecated", "superseded"],
     owner: "doc-suite",
     indexFormat: "shared-4col",
-    mutators: ["new_test_spec", "doc_maintenance", "scaffold_docs", "migrate_docs", "migrate_ids"],
+    mutators: ["doc_maintenance", "scaffold_docs", "migrate_docs", "migrate_ids"],
     auditors: ["doc_status", "audit_docs", "list_docs"],
     requiredFields: [],
-    note: "Legacy verification-intent type, superseded by `verification` (#239); migration-only."
+    note: "Legacy verification-intent type, superseded by `verification` (#239); migration-only. Its pre-v3 creator was removed (#249) \u2014 no normal-path entrypoint writes a test-spec."
   },
   impl: {
     type: "impl",
@@ -4874,7 +4874,10 @@ var legacyDocTypes = {
     owner: "impl-doc",
     indexFormat: "impl-4col",
     indexTitle: "Implementation Records",
-    mutators: ["new_impl_record", "migrate_ids", "promote_index", "sync_impl_index"],
+    // Only migration tooling mutates the impl corpus: `migrate_ids` /
+    // `promote_index` drive the owned impl-4col index engine. The pre-v3
+    // creator/mutator entrypoints were removed (#249).
+    mutators: ["migrate_ids", "promote_index"],
     auditors: ["audit_impl_record"],
     requiredFields: ["metadata"],
     note: "Legacy implementation record; interpretation is migration-only (#240 extracts durable knowledge)."
@@ -4892,7 +4895,9 @@ var legacyDocTypes = {
     owner: "impl-doc",
     indexFormat: "exp-1col",
     indexTitle: "Experiment Logs",
-    mutators: ["new_experiment_log", "append_experiment_event", "edit_experiment_log", "migrate_ids", "promote_index", "sync_impl_index"],
+    // Same migration-only mutator set as `impl`; the JSONL event writers
+    // were removed with the other pre-v3 entrypoints (#249).
+    mutators: ["migrate_ids", "promote_index"],
     auditors: ["audit_experiment_log"],
     requiredFields: [],
     note: "Legacy experiment log (JSONL, no front matter); interpretation is migration-only."
@@ -8503,12 +8508,12 @@ function evaluateParallelSafety(taskGraph, tasks) {
       if (!patternsA || !patternsB) continue;
       for (const patternA of patternsA) {
         for (const patternB of patternsB) {
-          const path8 = overlapPath(patternA, patternB);
-          if (path8 === null) continue;
-          const key = `${a}\0${b}\0${path8}`;
+          const path7 = overlapPath(patternA, patternB);
+          if (path7 === null) continue;
+          const key = `${a}\0${b}\0${path7}`;
           if (!seenConflicts.has(key)) {
             seenConflicts.add(key);
-            conflicts.push({ a, b, path: path8 });
+            conflicts.push({ a, b, path: path7 });
           }
           addReason(a, "write-conflict");
           addReason(b, "write-conflict");
@@ -8529,8 +8534,6 @@ function evaluateParallelSafety(taskGraph, tasks) {
 }
 
 // src/skills/implementation-flow/scripts/lib/merge_verification.ts
-var import_node_fs5 = __toESM(require("node:fs"));
-var import_node_path6 = __toESM(require("node:path"));
 var import_node_child_process = require("node:child_process");
 function normalizeGitPath(raw) {
   let text = raw.replace(/\\/g, "/");
@@ -8597,29 +8600,13 @@ function collectChangedPaths(repo, baseRef = "HEAD") {
   }
   return [...changed].sort();
 }
-function verifyEvidenceBinding(cwd, evidencePath, taskId) {
-  if (!taskId.trim()) return false;
-  const normalized = normalizeVerifiedPath(evidencePath);
-  if (normalized === null) return false;
-  try {
-    if (!isInsideRealpath(cwd, import_node_path6.default.join(cwd, normalized))) return false;
-    const resolved = import_node_fs5.default.realpathSync(import_node_path6.default.join(cwd, normalized));
-    return import_node_fs5.default.readFileSync(resolved, "utf8").includes(taskId);
-  } catch {
-    return false;
-  }
-}
-function isAllowedEvidencePath(normalized) {
-  const key = scopeKey(normalized);
-  return key.startsWith("docs/impl/");
-}
 var BLOCKED_SEVERITY = 2;
 var REVIEW_SEVERITY = 1;
 function bindRunTask(outcome, runId, tasksById, findings) {
   const record = tasksById.get(outcome.taskId);
   if (!record) {
     findings.push({
-      code: "evidence-mismatch",
+      code: "scope-violation",
       taskId: outcome.taskId,
       message: `${outcome.taskId} is not a task in run ${runId}; the slice cannot bind its declared scope`,
       severity: BLOCKED_SEVERITY
@@ -8649,9 +8636,9 @@ function verifyParallelMerge(cwd, runId, slices, options2 = {}) {
   for (const outcome of slices) {
     if (!outcome.taskId.trim()) {
       findings.push({
-        code: "evidence-mismatch",
+        code: "scope-violation",
         taskId: outcome.taskId,
-        message: "slice outcome has an empty task ID; evidence cannot be bound",
+        message: "slice outcome has an empty task ID; it cannot bind a task record's scope",
         severity: BLOCKED_SEVERITY
       });
     } else if (seenTaskIds.has(outcome.taskId)) {
@@ -8667,9 +8654,6 @@ function verifyParallelMerge(cwd, runId, slices, options2 = {}) {
   const bound = slices.map((outcome) => bindRunTask(outcome, runId, tasksById, findings));
   for (const [index, outcome] of slices.entries()) {
     const { docScope } = bound[index];
-    const declaredEvidenceKeys = new Set(
-      outcome.evidencePaths.map((raw) => normalizeVerifiedPath(raw)).filter((normalized) => normalized !== null).map(scopeKey).filter((key) => key.startsWith("docs/impl/"))
-    );
     const patterns = [];
     for (const rawScope of outcome.declaredScope) {
       const pattern = parseScopeEntry(rawScope);
@@ -8720,9 +8704,6 @@ function verifyParallelMerge(cwd, runId, slices, options2 = {}) {
         });
         continue;
       }
-      if (declaredEvidenceKeys.has(touchedKey)) {
-        continue;
-      }
       if (patterns.some((pattern) => scopeContains(pattern, touched))) continue;
       findings.push({
         code: "scope-violation",
@@ -8752,40 +8733,6 @@ function verifyParallelMerge(cwd, runId, slices, options2 = {}) {
       message: `${touched} was touched by multiple slices (${taskIds.join(", ")}); refusing last-writer-win`,
       severity: REVIEW_SEVERITY
     });
-  }
-  for (const outcome of slices) {
-    for (const raw of outcome.evidencePaths) {
-      const evidencePath = normalizeVerifiedPath(raw);
-      if (evidencePath === null) {
-        findings.push({
-          code: "evidence-mismatch",
-          taskId: outcome.taskId,
-          path: raw,
-          message: `${outcome.taskId} evidence path ${JSON.stringify(raw)} is not a verifiable repo-relative path`,
-          severity: BLOCKED_SEVERITY
-        });
-        continue;
-      }
-      if (!isAllowedEvidencePath(evidencePath)) {
-        findings.push({
-          code: "evidence-mismatch",
-          taskId: outcome.taskId,
-          path: evidencePath,
-          message: `${outcome.taskId} evidence ${evidencePath} is outside the docs/impl/ evidence scope`,
-          severity: BLOCKED_SEVERITY
-        });
-        continue;
-      }
-      if (!verifyEvidenceBinding(cwd, evidencePath, outcome.taskId)) {
-        findings.push({
-          code: "evidence-mismatch",
-          taskId: outcome.taskId,
-          path: evidencePath,
-          message: `${outcome.taskId} evidence ${evidencePath} is missing or does not reference the task ID`,
-          severity: BLOCKED_SEVERITY
-        });
-      }
-    }
   }
   findings.sort((left, right) => right.severity - left.severity);
   const verdict = findings.some((finding) => finding.severity === BLOCKED_SEVERITY) ? "blocked" : findings.length > 0 ? "merge-review" : "merge";
@@ -8834,8 +8781,10 @@ function parseSliceInputs(raw) {
     if (!isStringArray(slice.declaredScope)) {
       throw new Error(`${label}.declaredScope must be an array of strings`);
     }
-    if (!isStringArray(slice.evidencePaths)) {
-      throw new Error(`${label}.evidencePaths must be an array of strings`);
+    if (slice.evidencePaths !== void 0) {
+      throw new Error(
+        `${label}.evidencePaths is not accepted \u2014 repo-path evidence was removed (Issue #249); verification evidence lives in the Evidence Store (.apm/state/doc-driven-dev/evidence/) and never appears in a merge diff`
+      );
     }
     if (slice.touchedPaths !== void 0 && !isStringArray(slice.touchedPaths)) {
       throw new Error(`${label}.touchedPaths must be an array of strings when present`);
@@ -8846,7 +8795,6 @@ function parseSliceInputs(raw) {
     return {
       taskId: slice.taskId,
       declaredScope: slice.declaredScope,
-      evidencePaths: slice.evidencePaths,
       ...slice.touchedPaths !== void 0 ? { touchedPaths: slice.touchedPaths } : {},
       ...slice.baseRef !== void 0 ? { baseRef: slice.baseRef } : {}
     };
@@ -8861,10 +8809,10 @@ function runParallelCheck(cwd, args) {
 }
 function runMergeVerification(cwd, args) {
   const slicesArg = args.verifyMerge;
-  const slicesFile = import_node_path7.default.resolve(cwd, slicesArg);
+  const slicesFile = import_node_path6.default.resolve(cwd, slicesArg);
   let parsed;
   try {
-    parsed = JSON.parse(import_node_fs6.default.readFileSync(slicesFile, "utf8"));
+    parsed = JSON.parse(import_node_fs5.default.readFileSync(slicesFile, "utf8"));
   } catch (error) {
     throw new Error(`Unable to read slices JSON ${JSON.stringify(slicesArg)}: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -8872,7 +8820,6 @@ function runMergeVerification(cwd, args) {
   const slices = inputs.map((input) => ({
     taskId: input.taskId,
     declaredScope: input.declaredScope,
-    evidencePaths: input.evidencePaths,
     touchedPaths: input.touchedPaths ?? collectChangedPaths(cwd, input.baseRef ?? args.baseRef ?? "HEAD")
   }));
   return verifyParallelMerge(cwd, args.run, slices, {
@@ -8891,7 +8838,7 @@ function main() {
     if (args.verifyMerge && !args.run) {
       throw new Error("--verify-merge requires --run <run-id>");
     }
-    const cwd = import_node_path7.default.resolve(args.cwd);
+    const cwd = import_node_path6.default.resolve(args.cwd);
     if (!schemaEntrypointGuard(cwd)) return;
     if (args.verifyMerge) {
       const report = runMergeVerification(cwd, args);

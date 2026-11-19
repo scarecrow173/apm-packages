@@ -71,6 +71,37 @@ async function cleanupOutputDir(dir: string): Promise<void> {
   }));
 }
 
+async function walkDirs(dir: string): Promise<string[]> {
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  const dirs = await Promise.all(
+    entries
+      .filter((entry) => entry.isDirectory())
+      .map(async (entry) => {
+        const fullPath = path.join(dir, entry.name);
+        return [fullPath, ...(await walkDirs(fullPath))];
+      })
+  );
+  return dirs.flat();
+}
+
+// Every generated output lives under `<skill>/scripts/` — there are no
+// hand-maintained .js files there. Cleaning every scripts dir (not only
+// the dirs this build emits into) is what removes the generated .js of a
+// deleted source entrypoint from the distribution (Issue #249).
+async function cleanAllScriptDirs(): Promise<void> {
+  const scriptDirs = (await walkDirs(OUTPUT_ROOT))
+    .filter((dir) => toPosix(path.relative(OUTPUT_ROOT, dir)).endsWith("/scripts"));
+  for (const dir of scriptDirs) {
+    await cleanupOutputDir(dir);
+  }
+  // Drop scripts dirs left completely empty (skill whose source scripts
+  // were all deleted).
+  for (const dir of scriptDirs) {
+    const entries = await fs.readdir(dir);
+    if (entries.length === 0) await fs.rmdir(dir);
+  }
+}
+
 async function main(): Promise<void> {
   const allFiles = await walk(SOURCE_ROOT);
   const entryPoints = allFiles.filter(isEntryPoint);
@@ -79,6 +110,8 @@ async function main(): Promise<void> {
     console.log("No TypeScript entry points found under src/skills/**/scripts/*.ts");
     return;
   }
+
+  await cleanAllScriptDirs();
 
   const cleanedDirs = new Set<string>();
 

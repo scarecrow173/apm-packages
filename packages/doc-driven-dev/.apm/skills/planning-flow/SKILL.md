@@ -10,9 +10,9 @@ license: MIT
 design and its plan/task evidence.
 
 Under Document Registry 3 `plan` and `task` are execution-bound
-(`persistence: ephemeral`): `new_plan.js`/`new_task.js` refuse at the
-registry gate and plan/task state lives in the Execution Store run the
-graph selected; the `plan-doc`/`task-doc` conventions govern the record
+(`persistence: ephemeral`): no `new_plan.js`/`new_task.js` creators ship
+(Issue #249 removed them) and plan/task state lives in the Execution Store
+run the graph selected; the `plan-doc`/`task-doc` conventions govern the record
 contract and pre-v3 corpus migration. `test-spec` is a legacy
 migration-only format — durable verification evidence is recorded by
 `verification-doc` under `docs/verification`.

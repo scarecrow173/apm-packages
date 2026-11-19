@@ -21,9 +21,9 @@ spec や design が変更されたときに「何を守るべきか」「その�
 Document Registry 3 では `test-spec` は **legacy 形式**です。migration
 ツーリング(doc-maintenance の `migrate_docs` / `migrate_ids`)のみが解釈
 し、durable 文書としての作成・lint はできません。`docs/test-spec` と
-`docs/test-specs` は migration-owned scope です。`new_test_spec.js` は
-registry ゲートで拒否されます — TEST-SPEC-DOC ゲート、scope チェック、
-あらゆる書き込みより先に:
+`docs/test-specs` は migration-owned scope です。`new_test_spec.js` creator は
+配布されていません(Issue #249 で削除) — `test-spec` を解釈するのは
+registry だけであり、その型名は共有クエリ面で拒否します:
 
 `Document type "test-spec" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document`
 
@@ -54,8 +54,8 @@ test spec を作成するには、少なくとも 1 つの upstream document を
    criteria を確認し、新しい test spec が既存の保証と重複しないようにします。
 2. 検証意図を `verification` 文書として記録します。
 
-   Document Registry 3 では `new_test_spec.js` が registry ゲートで拒否
-   されます(上記 *Document Registry v3 の位置づけ* 参照)。durable な
+   Document Registry 3 では `new_test_spec.js` creator は配布されていません
+   (上記 *Document Registry v3 の位置づけ* 参照)。durable な
    検証意図は `docs/verification` にあり、**verification-doc** が作成
    します:
 
@@ -82,13 +82,15 @@ test spec を作成するには、少なくとも 1 つの upstream document を
 
 ## ライフサイクル上の位置
 
-`planning-flow` の中で、test spec は plan 承認後・task 分解前に作成します。
-task 分割ではなく approved spec と design から派生させます。task 境界は
-変わり得ますが、保証すべき内容は維持されなければならないからです。
-plan に検証可能な振る舞いが無い場合は作成を skip し、plan の front matter の
-`relations:` に `test-spec-skip: "<理由>"` を記録します —— リンク先ではなく
-理由文字列です。これにより audit が意図的な skip と
-単純な欠落を区別できます。
+このセクションは **Registry 2 以前(pre-v3)のフロー** を説明するもので、
+migration context として残しています —— Registry 3 には `test-spec` の作成経路が
+なく、通常実行でこの手順を行うものはありません。pre-v3 の `planning-flow`
+では、test spec は plan 承認後・task 分解前に作成していました。task 分割ではなく
+approved spec と design から派生させていました。task 境界は変わり得ますが、
+保証すべき内容は維持されなければならなかったからです。plan に検証可能な
+振る舞いが無い場合は作成を skip し、plan の front matter の `relations:` に
+`test-spec-skip: "<理由>"` を記録していました —— リンク先ではなく理由文字列です。
+これにより audit が意図的な skip と単純な欠落を区別できました。
 
 ## 必須コンテンツ
 
@@ -128,8 +130,8 @@ plan に検証可能な振る舞いが無い場合は作成を skip し、plan �
 
 ## リソース
 
-- `scripts/new_test_spec.js`: Registry 3 では registry ゲートで拒否されます。
-  `test-spec` は legacy・migration 専用形式です。検証意図は代わりに
+- `new_test_spec.js`: Registry 3 で*削除*されました。`test-spec` は
+  legacy・migration 専用形式で、creator 経路はありません。検証意図は代わりに
   **verification-doc**(`new_verification.js`)で作成します。
 - `references/test-spec-conventions.ja.md`: legacy corpus の契約です。
   directory、filename、status、relations、必須コンテンツ —— migration

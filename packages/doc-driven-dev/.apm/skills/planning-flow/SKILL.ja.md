@@ -10,9 +10,9 @@ license: MIT
 composition boundary です。
 
 Document Registry 3 では `plan` と `task` は execution-bound
-（`persistence: ephemeral`）: `new_plan.js`/`new_task.js` は registry gate
-で拒否され、plan/task の状態は graph が選択した Execution Store run に
-保持されます。`plan-doc`/`task-doc` の規約は store record contract と
+（`persistence: ephemeral`）: `new_plan.js`/`new_task.js` creator は
+配布されていません（Issue #249 で削除）。plan/task の状態は graph が
+選択した Execution Store run に保持されます。`plan-doc`/`task-doc` の規約は store record contract と
 v3 以前コーパスの migration を対象にします。`test-spec` はレガシーの
 migration-only 形式で、durable な検証証跡は `verification-doc` が
 `docs/verification` に記録します。

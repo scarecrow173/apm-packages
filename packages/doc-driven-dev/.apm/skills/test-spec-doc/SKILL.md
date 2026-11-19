@@ -21,8 +21,9 @@ spec or design changes, and whether a test is still necessary at all.
 interpreted only by migration tooling (`migrate_docs` / `migrate_ids` in
 doc-maintenance) and cannot be created or linted as a durable document.
 `docs/test-spec` and `docs/test-specs` are migration-owned scopes.
-`new_test_spec.js` refuses at the registry gate — before the TEST-SPEC-DOC
-gate checks, scope checks, or any write — with:
+No `new_test_spec.js` creator ships (Issue #249 removed it) — the only
+`test-spec` interpreter left is the registry, whose type name still refuses
+on the shared query surface with:
 
 `Document type "test-spec" is a legacy format under Document Registry 3: it is interpreted only by migration tooling and cannot be created or linted as a durable document`
 
@@ -53,8 +54,8 @@ without a verifiable upstream contract loses its purpose: do not create one.
    guarantee.
 2. Record the verification intent as a `verification` document.
 
-   Under Document Registry 3 `new_test_spec.js` refuses at the registry gate
-   (see *Document Registry v3 status* above). Durable verification intent
+   Under Document Registry 3 no `new_test_spec.js` creator ships (see
+   *Document Registry v3 status* above). Durable verification intent
    lives in `docs/verification` and is created by
    **verification-doc**:
 
@@ -82,13 +83,15 @@ without a verifiable upstream contract loses its purpose: do not create one.
 
 ## Lifecycle Position
 
-Inside `planning-flow`, test specs are created after plan approval and before
-task breakdown. They derive from the approved spec and design — not from task
-slices — because task boundaries may change while the guarantees must hold.
-When the plan declares no verifiable behavior, skip creation and record
-`test-spec-skip: "<reason>"` under `relations:` in the plan front matter — a
-reason string, not a link target — so audits can tell a deliberate skip from
-an omission.
+This section describes the **pre-v3 (Registry 2) flow**, retained as
+migration context — Registry 3 ships no `test-spec` creation path, so no
+normal run performs it. In the pre-v3 `planning-flow`, test specs were
+created after plan approval and before task breakdown. They derived from the
+approved spec and design — not from task slices — because task boundaries
+could change while the guarantees had to hold. When the plan declared no
+verifiable behavior, creation was skipped and `test-spec-skip: "<reason>"`
+was recorded under `relations:` in the plan front matter — a reason string,
+not a link target — so audits could tell a deliberate skip from an omission.
 
 ## Required Content
 
@@ -127,9 +130,9 @@ Rules of thumb:
 
 ## Resources
 
-- `scripts/new_test_spec.js`: refuses at the registry gate under Registry 3 —
-  `test-spec` is a legacy, migration-only format. Create verification intent
-  via **verification-doc** (`new_verification.js`) instead.
+- `new_test_spec.js`: *removed* under Registry 3 — `test-spec` is a
+  legacy, migration-only format with no creator path. Create verification
+  intent via **verification-doc** (`new_verification.js`) instead.
 - `references/test-spec-conventions.md`: the legacy corpus contract —
   directory, filename, status, relations, and required content, used by
   migration tooling and for reading pre-v3 files.

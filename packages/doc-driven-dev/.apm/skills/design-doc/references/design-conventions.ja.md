@@ -113,8 +113,9 @@ docs/designs/
 
 ## plan-doc の gate ルール
 
-Document Registry 3 では `plan` は execution-bound で、`new_plan.js` はこの
-gate を評価する前に registry gate で拒否します。この gate は Execution
+Document Registry 3 では `plan` は execution-bound で、`new_plan.js` は
+削除されました（Issue #249 — creator がこの gate に到達することは
+ありません）。この gate は Execution
 Store の計画フローにおける契約として残り、次が必須です。
 
 - `docs/designs/overview.md` が存在する。

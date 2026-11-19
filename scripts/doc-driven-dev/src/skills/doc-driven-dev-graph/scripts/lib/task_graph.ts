@@ -92,6 +92,10 @@ export type TaskGraphPlan = {
 };
 
 export type TaskGraphResult = {
+  // Versions the Task Graph *projection payload* lineage: v1 was the
+  // pre-v3 `docs/tasks` file-backed form; v2 is the Execution-Store-backed
+  // form. It is unrelated to the removed Registry-2 / Graph-Definition-2
+  // runtime — the projection is recomputed per invocation, never persisted.
   schemaVersion: 2;
   runId: string;
   plan: TaskGraphPlan | null;

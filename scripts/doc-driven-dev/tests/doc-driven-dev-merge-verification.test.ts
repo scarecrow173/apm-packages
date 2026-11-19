@@ -7,7 +7,6 @@ import { commitAll, createFixtureRepo } from "./e2e/harness/fixture_manager";
 import { createRun, updateTask } from "../src/skills/lib/execution_store";
 import {
   collectChangedPaths,
-  verifyEvidenceBinding,
   verifyParallelMerge,
   type SliceOutcome,
 } from "../src/skills/implementation-flow/scripts/lib/merge_verification";
@@ -41,7 +40,6 @@ function slice(overrides: Partial<SliceOutcome> = {}): SliceOutcome {
     taskId: "TASK-0001",
     declaredScope: [],
     touchedPaths: [],
-    evidencePaths: [],
     ...overrides,
   };
 }
@@ -115,59 +113,31 @@ test("collectChangedPaths dedupes staged entries reported by porcelain and diff"
   assert.deepEqual(second, first);
 });
 
-// --- verifyEvidenceBinding ----------------------------------------------------
-
-test("verifyEvidenceBinding is true only when the file literally contains the task ID", () => {
-  const repo = createFixtureRepo();
-  writeFile(repo, "docs/impl/0001-evidence.md", "# Evidence\n\nImplements TASK-0001.\n");
-  writeFile(repo, "docs/impl/0002-evidence.md", "# Evidence\n\nImplements TASK-0002.\n");
-  assert.equal(verifyEvidenceBinding(repo, "docs/impl/0001-evidence.md", "TASK-0001"), true);
-  assert.equal(verifyEvidenceBinding(repo, "docs/impl/0002-evidence.md", "TASK-0001"), false);
-  assert.equal(verifyEvidenceBinding(repo, "docs/impl/missing.md", "TASK-0001"), false);
-});
-
 // --- verifyParallelMerge ------------------------------------------------------
+//
+// Issue #249 removed the repo-path evidence surface: verification evidence
+// lives in the Git-untracked Evidence Store, never in a merge diff, so
+// `docs/impl/` writes are ordinary scope questions like any other path.
 
-test("clean slices with in-scope diffs and bound evidence merge", () => {
+test("clean slices with in-scope diffs merge", () => {
   const repo = createFixtureRepo({
     taskStatuses: ["todo", "todo"],
     taskScopes: [["src/a.ts"], ["src/auth/"]],
   });
-  writeFile(repo, "docs/impl/0001-evidence.md", "# Evidence\n\nTASK-0001 done.\n");
-  writeFile(repo, "docs/impl/0002-evidence.md", "# Evidence\n\nTASK-0002 done.\n");
   const report = verifyParallelMerge(repo, RUN_ID, [
     slice({
       taskId: "TASK-0001",
       declaredScope: ["src/a.ts"],
       touchedPaths: ["src/a.ts"],
-      evidencePaths: ["docs/impl/0001-evidence.md"],
     }),
     slice({
       taskId: "TASK-0002",
       declaredScope: ["src/auth/"],
       touchedPaths: ["src/auth/login.ts"],
-      evidencePaths: ["docs/impl/0002-evidence.md"],
     }),
   ]);
   assert.equal(report.verdict, "merge");
   assert.deepEqual(report.findings, []);
-});
-
-test("a legacy task doc is ordinary repo content, not evidence — only docs/impl/ binds", () => {
-  const repo = createFixtureRepo();
-  declareTaskScope(repo, 1, ["src/a.ts"]);
-  const report = verifyParallelMerge(repo, RUN_ID, [
-    slice({
-      declaredScope: ["src/a.ts"],
-      touchedPaths: ["src/a.ts"],
-      // v2 accepted the slice's own task doc as evidence; under the store the
-      // doc is migration corpus — evidence lives under docs/impl/ only.
-      evidencePaths: ["docs/tasks/0001-task.md"],
-    }),
-  ]);
-  assert.equal(report.verdict, "blocked");
-  assert.equal(report.findings[0].code, "evidence-mismatch");
-  assert.equal(report.findings[0].path, "docs/tasks/0001-task.md");
 });
 
 test("touching an undeclared path is a scope-violation needing merge-review", () => {
@@ -209,21 +179,6 @@ test("a touched path inside the execution state root is blocked even when declar
   assert.equal(report.findings[0].path, storePath);
 });
 
-test("declared docs/impl/ evidence needs no scope declaration; other paths still do", () => {
-  const repo = createFixtureRepo();
-  declareTaskScope(repo, 1, ["src/a.ts"]);
-  writeFile(repo, "docs/impl/0001-record.md", "# Record\n\nTASK-0001 done.\n");
-  const report = verifyParallelMerge(repo, RUN_ID, [
-    slice({
-      declaredScope: ["src/a.ts"],
-      touchedPaths: ["src/a.ts", "docs/impl/0001-record.md"],
-      evidencePaths: ["docs/impl/0001-record.md"],
-    }),
-  ]);
-  assert.equal(report.verdict, "merge");
-  assert.deepEqual(report.findings, []);
-});
-
 test("the same path touched by two slices is a write-collision", () => {
   const repo = createFixtureRepo({
     taskStatuses: ["todo", "todo"],
@@ -244,78 +199,32 @@ test("the same path touched by two slices is a write-collision", () => {
   );
 });
 
-test("evidence bound to another task's ID is an evidence-mismatch and blocks", () => {
-  const repo = createFixtureRepo();
-  declareTaskScope(repo, 1, ["src/a.ts"]);
-  writeFile(repo, "docs/impl/0001-evidence.md", "# Evidence\n\nTASK-0002 done.\n");
-  const report = verifyParallelMerge(repo, RUN_ID, [
-    slice({
-      declaredScope: ["src/a.ts"],
-      touchedPaths: ["src/a.ts"],
-      evidencePaths: ["docs/impl/0001-evidence.md"],
-    }),
-  ]);
-  assert.equal(report.verdict, "blocked");
-  assert.equal(report.findings[0].code, "evidence-mismatch");
-  assert.equal(report.findings[0].taskId, "TASK-0001");
-  assert.equal(report.findings[0].path, "docs/impl/0001-evidence.md");
-});
-
-test("evidence outside docs/impl/ is an evidence-mismatch", () => {
-  const repo = createFixtureRepo();
-  declareTaskScope(repo, 1, ["src/a.ts"]);
-  writeFile(repo, "docs/notes/evidence.md", "# Evidence\n\nTASK-0001 done.\n");
-  const report = verifyParallelMerge(repo, RUN_ID, [
-    slice({
-      declaredScope: ["src/a.ts"],
-      touchedPaths: ["src/a.ts"],
-      evidencePaths: ["docs/notes/evidence.md"],
-    }),
-  ]);
-  assert.equal(report.verdict, "blocked");
-  assert.equal(report.findings[0].code, "evidence-mismatch");
-  assert.equal(report.findings[0].path, "docs/notes/evidence.md");
-});
-
-test("a missing evidence file is an evidence-mismatch and blocks", () => {
-  const repo = createFixtureRepo();
-  declareTaskScope(repo, 1, ["src/a.ts"]);
-  const report = verifyParallelMerge(repo, RUN_ID, [
-    slice({
-      declaredScope: ["src/a.ts"],
-      touchedPaths: ["src/a.ts"],
-      evidencePaths: ["docs/impl/nonexistent.md"],
-    }),
-  ]);
-  assert.equal(report.verdict, "blocked");
-  assert.equal(report.findings[0].code, "evidence-mismatch");
-});
-
 test("the worst verdict wins and findings sort blocked-severity first", () => {
   const repo = createFixtureRepo({
     taskStatuses: ["todo", "todo"],
     taskScopes: [["src/a.ts"], ["src/b.ts"]],
   });
-  writeFile(repo, "docs/impl/0002-evidence.md", "# Evidence\n\nTASK-0001 only.\n");
   const report = verifyParallelMerge(repo, RUN_ID, [
     slice({
       taskId: "TASK-0001",
       declaredScope: ["src/a.ts"],
       touchedPaths: ["src/a.ts", "src/other.ts"],
     }),
+    // An unbound taskId is a blocked finding; TASK-0001's undeclared
+    // src/other.ts touch is the review-severity one.
     slice({
-      taskId: "TASK-0002",
+      taskId: "TASK-0099",
       declaredScope: ["src/b.ts"],
       touchedPaths: ["src/b.ts"],
-      evidencePaths: ["docs/impl/0002-evidence.md"],
     }),
   ]);
   assert.equal(report.verdict, "blocked");
-  assert.equal(report.findings[0].code, "evidence-mismatch");
   assert.deepEqual(
     report.findings.map((finding) => finding.code),
-    ["evidence-mismatch", "scope-violation"],
+    ["scope-violation", "scope-violation"],
   );
+  assert.equal(report.findings[0].taskId, "TASK-0099");
+  assert.equal(report.findings[1].path, "src/other.ts");
 });
 
 // --- unverifiable path rejection (fail closed) ------------------------------
@@ -329,21 +238,6 @@ test("a traversal in a touched path is a blocked scope-violation, not in-scope",
   assert.equal(report.verdict, "blocked");
   assert.equal(report.findings[0].code, "scope-violation");
   assert.equal(report.findings[0].path, "src/../outside.ts");
-});
-
-test("a traversal in an evidence path cannot escape docs/impl/", () => {
-  const repo = createFixtureRepo();
-  declareTaskScope(repo, 1, ["src/a.ts"]);
-  const report = verifyParallelMerge(repo, RUN_ID, [
-    slice({
-      declaredScope: ["src/a.ts"],
-      touchedPaths: ["src/a.ts"],
-      evidencePaths: ["docs/impl/../tasks/0001-task.md"],
-    }),
-  ]);
-  assert.equal(report.verdict, "blocked");
-  assert.equal(report.findings[0].code, "evidence-mismatch");
-  assert.equal(report.findings[0].path, "docs/impl/../tasks/0001-task.md");
 });
 
 test("a whitespace-padded traversal is still rejected after trimming", () => {
@@ -365,19 +259,6 @@ test("unverifiable declared scope entries are blocked scope-violations", () => {
   }
 });
 
-test("verifyEvidenceBinding rejects unverifiable paths without reading outside cwd", () => {
-  const repo = createFixtureRepo();
-  assert.equal(verifyEvidenceBinding(repo, "../outside.md", "TASK-0001"), false);
-  assert.equal(verifyEvidenceBinding(repo, "/etc/passwd", "TASK-0001"), false);
-});
-
-test("verifyEvidenceBinding rejects an empty task ID instead of matching everything", () => {
-  const repo = createFixtureRepo();
-  writeFile(repo, "docs/impl/evidence.md", "# Evidence\n");
-  assert.equal(verifyEvidenceBinding(repo, "docs/impl/evidence.md", ""), false);
-  assert.equal(verifyEvidenceBinding(repo, "docs/impl/evidence.md", "  "), false);
-});
-
 // --- bad-input fail-closed checks --------------------------------------------
 
 test("duplicate slice taskIds are blocked instead of masking collisions", () => {
@@ -396,20 +277,18 @@ test("an empty slice list fails closed to blocked, not a vacuous merge", () => {
   assert.equal(report.verdict, "blocked");
 });
 
-test("an empty slice taskId fails closed instead of binding any evidence", () => {
+test("an empty slice taskId fails closed instead of binding any scope", () => {
   const repo = createFixtureRepo();
   declareTaskScope(repo, 1, ["src/a.ts"]);
-  writeFile(repo, "docs/impl/evidence.md", "# Evidence\n");
   const report = verifyParallelMerge(repo, RUN_ID, [
     slice({
       taskId: "",
       declaredScope: ["src/a.ts"],
       touchedPaths: ["src/a.ts"],
-      evidencePaths: ["docs/impl/evidence.md"],
     }),
   ]);
   assert.equal(report.verdict, "blocked");
-  assert.equal(report.findings[0].code, "evidence-mismatch");
+  assert.equal(report.findings[0].code, "scope-violation");
 });
 
 // --- state-root option --------------------------------------------------------
@@ -537,20 +416,6 @@ test("paths compare case-insensitively for scope and collisions", () => {
   );
 });
 
-// --- evidence symlink containment ----------------------------------------------
-
-test("an evidence symlink escaping the repo fails binding", () => {
-  const repo = createFixtureRepo();
-  const outside = fs.mkdtempSync(path.join(repo, "..", "evidence-outside-"));
-  writeFile(outside, "leak.md", "# Leak\n\nTASK-0001\n");
-  try {
-    fs.symlinkSync(path.join(outside, "leak.md"), path.join(repo, "docs/impl/leak.md"));
-  } catch {
-    return; // platform without symlink permission (e.g. Windows without dev mode)
-  }
-  assert.equal(verifyEvidenceBinding(repo, "docs/impl/leak.md", "TASK-0001"), false);
-});
-
 // --- run/task binding (taskId is asserted, not trusted) ------------------------
 
 test("a slice naming a task that is not in the run is blocked and grants no authority", () => {
@@ -564,7 +429,7 @@ test("a slice naming a task that is not in the run is blocked and grants no auth
   ]);
   assert.equal(report.verdict, "blocked");
   assert.ok(
-    report.findings.some((finding) => finding.code === "evidence-mismatch" && finding.taskId === "TASK-0099"),
+    report.findings.some((finding) => finding.code === "scope-violation" && finding.taskId === "TASK-0099"),
     `expected a binding finding in ${JSON.stringify(report.findings)}`,
   );
 });

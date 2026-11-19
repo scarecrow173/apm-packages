@@ -734,98 +734,30 @@ function runImplScript(name: string, args: string[], cwd: string) {
   return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
 }
 
-const runSync = (args: string[], cwd: string) => runImplScript("sync_impl_index.js", args, cwd);
+// Issue #249: impl/exp are legacy, migration-owned types and their pre-v3
+// entrypoints were removed from the distribution entirely — no public
+// sync/creator CLI remains to refuse. The sync engine itself is exercised
+// at the library level above (and inside migration tooling such as
+// id_migration); these tests pin the removal so a normal-path legacy
+// interpretation can never regress.
 
-// Registry 3 (Issue #234): impl/exp are legacy, migration-owned types — the
-// public sync/creator entrypoints refuse at the registry gate. The sync
-// engine itself is exercised at the library level above (and inside
-// migration tooling such as id_migration); these tests pin the refusal so a
-// normal-path legacy interpretation can never regress.
-
-test("CLI: sync_impl_index refuses every mode at the registry gate", () => {
-  const repo = tempRepo();
-  const a: IrSpec = { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" };
-  writeIr(repo, a);
-  writeIrIndex(repo, { active: [a] });
-  writeExp(repo, "a.jsonl");
-  writeExpIndex(repo, { files: ["a.jsonl"] });
-
-  const before = treeHashes(repo);
-  for (const args of [
-    ["--cwd", repo, "--kind", "ir"],
-    ["--cwd", repo, "--kind", "ir", "--apply"],
-    ["--cwd", repo, "--kind", "ir", "--apply", "--json"],
-    ["--cwd", repo, "--kind", "exp"],
-    ["--cwd", repo, "--kind", "exp", "--apply"],
+test("the pre-v3 impl/exp entrypoints are absent from the distribution", () => {
+  for (const script of [
+    "sync_impl_index.js",
+    "new_impl_record.js",
+    "new_experiment_log.js",
+    "append_experiment_event.js",
+    "edit_experiment_log.js",
   ]) {
-    const result = runSync(args, repo);
-    assert.equal(result.status, 1, `sync ${args.join(" ")} must refuse`);
-    assert.match(result.stderr, /legacy format|migration-only|migration tooling/);
+    assert.equal(
+      fs.existsSync(path.join(implRoot, "scripts", script)),
+      false,
+      `${script} must not ship (Issue #249)`,
+    );
   }
-  assert.deepEqual(treeHashes(repo), before, "a refused sync writes nothing");
 });
 
-test("CLI: invalid invocations exit 1", () => {
-  const repo = tempRepo();
-  writeIr(repo, { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" });
-
-  assert.equal(runSync(["--cwd", repo], repo).status, 1, "missing --kind");
-  assert.equal(runSync(["--cwd", repo, "--kind", "bogus"], repo).status, 1, "bad --kind");
-  assert.equal(runSync(["--cwd", repo, "--kind", "ir", "--bogus"], repo).status, 1, "unknown flag");
-  assert.equal(runSync(["--cwd", repo, "--kind", "ir", "--expect"], repo).status, 1, "--expect needs a value");
-  assert.equal(runSync(["--cwd", repo, "--kind", "ir", "--help"], repo).status, 0, "--help exits 0");
-});
-
-test("CLI: impl/exp creator and mutator entrypoints refuse at the registry gate", () => {
-  const repo = tempRepo();
-  const a: IrSpec = { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" };
-  writeIr(repo, a);
-  writeIrIndex(repo, { active: [a] });
-  writeExp(repo, "a.jsonl");
-  const indexPath = path.join(repo, "docs/impl/ir/README.md");
-  const indexBefore = fs.readFileSync(indexPath, "utf8");
-
-  // Registry 3: IR/EXP content can never be minted or mutated through the
-  // normal creator/mutator surface (Issue #234) — the commands refuse before
-  // any deferral messaging or file write.
-  for (const [script, args] of [
-    ["new_impl_record.js", ["--title", "Gamma Work", "--cwd", repo]],
-    ["new_experiment_log.js", ["--title", "Beta Probe", "--cwd", repo]],
-    ["append_experiment_event.js", ["--file", "docs/impl/exp/a.jsonl", "--type", "observation", "--summary", "x", "--cwd", repo]],
-    ["edit_experiment_log.js", ["--file", "docs/impl/exp/a.jsonl", "--seq", "1", "--set", "summary=x", "--cwd", repo]],
-  ] as const) {
-    const created = runImplScript(script, args, repo);
-    assert.equal(created.status, 1, `${script} must refuse`);
-    assert.match(created.stderr, /legacy format|migration-only|migration tooling/, `${script} refusal reason`);
-  }
-  assert.equal(fs.readFileSync(indexPath, "utf8"), indexBefore, "legacy index untouched");
-  assert.equal(fs.existsSync(path.join(repo, "docs/impl/ir/gamma-work.md")), false, "no IR minted");
-  assert.equal(fs.existsSync(path.join(repo, "docs/impl/exp/beta-probe.jsonl")), false, "no EXP minted");
-});
-
-test("CLI: symlinked README — creator and sync refuse; target stays untouched", (t) => {
-  const repo = tempRepo();
-  const outside = tempRepo();
-  const outsideFile = path.join(outside, "index.md");
-  fs.writeFileSync(outsideFile, "# Implementation Records\n\n", "utf8");
-  fs.mkdirSync(path.join(repo, "docs/impl/ir"), { recursive: true });
-  try {
-    fs.symlinkSync(outsideFile, path.join(repo, "docs/impl/ir", "README.md"));
-  } catch {
-    t.skip("file symlinks are not permitted on this platform");
-    return;
-  }
-
-  const created = runImplScript("new_impl_record.js", ["--title", "Gamma Work", "--cwd", repo], repo);
-  assert.equal(created.status, 1, "creator must refuse (legacy type)");
-  assert.equal(fs.readFileSync(outsideFile, "utf8"), "# Implementation Records\n\n", "symlink target untouched");
-
-  const synced = runSync(["--cwd", repo, "--kind", "ir", "--apply"], repo);
-  assert.equal(synced.status, 1, "sync must refuse (and never write)");
-  assert.equal(fs.readFileSync(outsideFile, "utf8"), "# Implementation Records\n\n", "symlink target untouched");
-});
-
-test("CLI: owner audits stay read-only under the registry gate", () => {
+test("CLI: owner audits stay read-only and write nothing", () => {
   const repo = tempRepo();
   const a: IrSpec = { file: "a.md", id: "IMPL-A", title: "Alpha", status: "draft" };
   for (const spec of [a]) writeIr(repo, spec);
