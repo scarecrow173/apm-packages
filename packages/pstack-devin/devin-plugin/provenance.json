@@ -28,7 +28,7 @@
       },
       {
         "path": "skills/setup-pstack-devin/SKILL.md",
-        "sha256": "89ad8e96451057605b8398998ff8046da2a299de364cabb0bcf2ecb98e93808f"
+        "sha256": "dc0c3ec5176241b282278f176ae551556dd376544ac2a200decc6213db802fd1"
       },
       {
         "path": "skills/setup-pstack-devin/scripts/roles.json",
@@ -36,7 +36,7 @@
       },
       {
         "path": "skills/setup-pstack-devin/scripts/setup.mjs",
-        "sha256": "85ab21c6b3d818a070977db68d6f1f4465b35834829bf39f56f34377ad2474b6"
+        "sha256": "32c40b5696921985296d12d87ca0cfa391d6f5d9a9087c3d32852907e1677e4f"
       }
     ],
     "overwrites": [
