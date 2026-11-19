@@ -157,6 +157,16 @@ plugin**. Options considered:
   `control-cli`/`control-ui`: drive the check with `exec` or hand it to the
   user — and to say the skill was substituted.
 
+**Revised (2026-11):** `apm.yml` now declares all three as `dependencies:`
+entries — `cursor/plugins/cursor-team-kit/skills/<name>#<upstream.commit>`
+— which APM resolves as virtual `claude_skill` packages deploying to target
+skill dirs on every declared target, including `.agents/skills/` (Devin
+reads it). APM consumers therefore get the real skills; the fallback and
+the no-bundling decision still stand for the `devin plugins install`
+route, which cannot express dependencies. Verified by a scratch-consumer
+`apm install`: `is_virtual: true`, `package_type: claude_skill`, deployed
+to `.agents/skills/deslop` + `.claude/skills/deslop`.
+
 ## 4. `pstack` plugin-name collision
 
 `devin plugins install cursor/plugins#harness/pstack/claude-code` installs

@@ -2,6 +2,60 @@ lockfile_version: '1'
 apm_version: 0.33.0
 dependencies:
 - repo_url: cursor/plugins
+  name: control-cli
+  host: github.com
+  resolved_commit: b4a4f6151b8e77f8d71045f09f553a733cf0ed37
+  resolved_ref: b4a4f6151b8e77f8d71045f09f553a733cf0ed37
+  version: unknown
+  virtual_path: cursor-team-kit/skills/control-cli
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/control-cli
+  - .agents/skills/control-cli/SKILL.md
+  - .claude/skills/control-cli
+  - .claude/skills/control-cli/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/control-cli/SKILL.md: sha256:13ac93e595bbda2000849bdb815d5f2ca03f7c2ca63788c8335f9212b9b422a2
+    .claude/skills/control-cli/SKILL.md: sha256:13ac93e595bbda2000849bdb815d5f2ca03f7c2ca63788c8335f9212b9b422a2
+  content_hash: sha256:3f6ccb21788bdf59ee96b54eac9ad35aa75e733e44700910c8d2998b165e888b
+- repo_url: cursor/plugins
+  name: control-ui
+  host: github.com
+  resolved_commit: b4a4f6151b8e77f8d71045f09f553a733cf0ed37
+  resolved_ref: b4a4f6151b8e77f8d71045f09f553a733cf0ed37
+  version: unknown
+  virtual_path: cursor-team-kit/skills/control-ui
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/control-ui
+  - .agents/skills/control-ui/SKILL.md
+  - .claude/skills/control-ui
+  - .claude/skills/control-ui/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/control-ui/SKILL.md: sha256:410cae25bdb1e5d2323b126abc5047b0213be7fdb0195710213fa8de8a751871
+    .claude/skills/control-ui/SKILL.md: sha256:410cae25bdb1e5d2323b126abc5047b0213be7fdb0195710213fa8de8a751871
+  content_hash: sha256:29343abf8da1f692915ef82d11a1ce6d03d211101792b39f8c66e2f7c7868d05
+- repo_url: cursor/plugins
+  name: deslop
+  host: github.com
+  resolved_commit: b4a4f6151b8e77f8d71045f09f553a733cf0ed37
+  resolved_ref: b4a4f6151b8e77f8d71045f09f553a733cf0ed37
+  version: unknown
+  virtual_path: cursor-team-kit/skills/deslop
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/deslop
+  - .agents/skills/deslop/SKILL.md
+  - .claude/skills/deslop
+  - .claude/skills/deslop/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/deslop/SKILL.md: sha256:2f7b7def74af7ed11f5b44b4d32f0f91fca8c5d1f92bf2171e8d12fd33a0f810
+    .claude/skills/deslop/SKILL.md: sha256:2f7b7def74af7ed11f5b44b4d32f0f91fca8c5d1f92bf2171e8d12fd33a0f810
+  content_hash: sha256:8883a7d459c07a0b2ee06972e79baa634009aa3bab969a6650acbefac394ad41
+- repo_url: cursor/plugins
   name: pstack
   host: github.com
   resolved_commit: b4a4f6151b8e77f8d71045f09f553a733cf0ed37
@@ -16,6 +70,114 @@ dependencies:
   - copilot
   declared_license: MIT
 deployments:
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/control-cli
+  runtime: null
+  scope: project
+  owners:
+  - cursor/plugins/cursor-team-kit/skills/control-cli
+  active_owner: cursor/plugins/cursor-team-kit/skills/control-cli
+  content_hash: null
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/control-cli/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - cursor/plugins/cursor-team-kit/skills/control-cli
+  active_owner: cursor/plugins/cursor-team-kit/skills/control-cli
+  content_hash: sha256:13ac93e595bbda2000849bdb815d5f2ca03f7c2ca63788c8335f9212b9b422a2
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/control-ui
+  runtime: null
+  scope: project
+  owners:
+  - cursor/plugins/cursor-team-kit/skills/control-ui
+  active_owner: cursor/plugins/cursor-team-kit/skills/control-ui
+  content_hash: null
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/control-ui/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - cursor/plugins/cursor-team-kit/skills/control-ui
+  active_owner: cursor/plugins/cursor-team-kit/skills/control-ui
+  content_hash: sha256:410cae25bdb1e5d2323b126abc5047b0213be7fdb0195710213fa8de8a751871
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/deslop
+  runtime: null
+  scope: project
+  owners:
+  - cursor/plugins/cursor-team-kit/skills/deslop
+  active_owner: cursor/plugins/cursor-team-kit/skills/deslop
+  content_hash: null
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/deslop/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - cursor/plugins/cursor-team-kit/skills/deslop
+  active_owner: cursor/plugins/cursor-team-kit/skills/deslop
+  content_hash: sha256:2f7b7def74af7ed11f5b44b4d32f0f91fca8c5d1f92bf2171e8d12fd33a0f810
+- kind: project-relative
+  target: claude
+  value: .claude/skills/control-cli
+  runtime: null
+  scope: project
+  owners:
+  - cursor/plugins/cursor-team-kit/skills/control-cli
+  active_owner: cursor/plugins/cursor-team-kit/skills/control-cli
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/control-cli/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - cursor/plugins/cursor-team-kit/skills/control-cli
+  active_owner: cursor/plugins/cursor-team-kit/skills/control-cli
+  content_hash: sha256:13ac93e595bbda2000849bdb815d5f2ca03f7c2ca63788c8335f9212b9b422a2
+- kind: project-relative
+  target: claude
+  value: .claude/skills/control-ui
+  runtime: null
+  scope: project
+  owners:
+  - cursor/plugins/cursor-team-kit/skills/control-ui
+  active_owner: cursor/plugins/cursor-team-kit/skills/control-ui
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/control-ui/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - cursor/plugins/cursor-team-kit/skills/control-ui
+  active_owner: cursor/plugins/cursor-team-kit/skills/control-ui
+  content_hash: sha256:410cae25bdb1e5d2323b126abc5047b0213be7fdb0195710213fa8de8a751871
+- kind: project-relative
+  target: claude
+  value: .claude/skills/deslop
+  runtime: null
+  scope: project
+  owners:
+  - cursor/plugins/cursor-team-kit/skills/deslop
+  active_owner: cursor/plugins/cursor-team-kit/skills/deslop
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/deslop/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - cursor/plugins/cursor-team-kit/skills/deslop
+  active_owner: cursor/plugins/cursor-team-kit/skills/deslop
+  content_hash: sha256:2f7b7def74af7ed11f5b44b4d32f0f91fca8c5d1f92bf2171e8d12fd33a0f810
 - kind: project-relative
   target: claude
   value: .claude/skills/setup-pstack-devin
@@ -33,7 +195,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:89ad8e96451057605b8398998ff8046da2a299de364cabb0bcf2ecb98e93808f
+  content_hash: sha256:dc0c3ec5176241b282278f176ae551556dd376544ac2a200decc6213db802fd1
 - kind: project-relative
   target: claude
   value: .claude/skills/setup-pstack-devin/scripts/roles.json
@@ -51,7 +213,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:611e4016f09d6551ec0bc5a3956b7ac23bddc769d34d90ccf0edc1be0c059521
+  content_hash: sha256:32c40b5696921985296d12d87ca0cfa391d6f5d9a9087c3d32852907e1677e4f
 - kind: project-relative
   target: legacy
   value: .agents/skills/setup-pstack-devin
@@ -69,7 +231,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:89ad8e96451057605b8398998ff8046da2a299de364cabb0bcf2ecb98e93808f
+  content_hash: sha256:dc0c3ec5176241b282278f176ae551556dd376544ac2a200decc6213db802fd1
 - kind: project-relative
   target: legacy
   value: .agents/skills/setup-pstack-devin/scripts/roles.json
@@ -87,7 +249,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:611e4016f09d6551ec0bc5a3956b7ac23bddc769d34d90ccf0edc1be0c059521
+  content_hash: sha256:32c40b5696921985296d12d87ca0cfa391d6f5d9a9087c3d32852907e1677e4f
 local_deployed_files:
 - .agents/skills/setup-pstack-devin
 - .agents/skills/setup-pstack-devin/SKILL.md
@@ -98,9 +260,9 @@ local_deployed_files:
 - .claude/skills/setup-pstack-devin/scripts/roles.json
 - .claude/skills/setup-pstack-devin/scripts/setup.mjs
 local_deployed_file_hashes:
-  .agents/skills/setup-pstack-devin/SKILL.md: sha256:89ad8e96451057605b8398998ff8046da2a299de364cabb0bcf2ecb98e93808f
+  .agents/skills/setup-pstack-devin/SKILL.md: sha256:dc0c3ec5176241b282278f176ae551556dd376544ac2a200decc6213db802fd1
   .agents/skills/setup-pstack-devin/scripts/roles.json: sha256:b7e75310e8fd3d28a45359aa036172fcefa5f95f689b9ab5f6105a83016ea9c8
-  .agents/skills/setup-pstack-devin/scripts/setup.mjs: sha256:611e4016f09d6551ec0bc5a3956b7ac23bddc769d34d90ccf0edc1be0c059521
-  .claude/skills/setup-pstack-devin/SKILL.md: sha256:89ad8e96451057605b8398998ff8046da2a299de364cabb0bcf2ecb98e93808f
+  .agents/skills/setup-pstack-devin/scripts/setup.mjs: sha256:32c40b5696921985296d12d87ca0cfa391d6f5d9a9087c3d32852907e1677e4f
+  .claude/skills/setup-pstack-devin/SKILL.md: sha256:dc0c3ec5176241b282278f176ae551556dd376544ac2a200decc6213db802fd1
   .claude/skills/setup-pstack-devin/scripts/roles.json: sha256:b7e75310e8fd3d28a45359aa036172fcefa5f95f689b9ab5f6105a83016ea9c8
-  .claude/skills/setup-pstack-devin/scripts/setup.mjs: sha256:611e4016f09d6551ec0bc5a3956b7ac23bddc769d34d90ccf0edc1be0c059521
+  .claude/skills/setup-pstack-devin/scripts/setup.mjs: sha256:32c40b5696921985296d12d87ca0cfa391d6f5d9a9087c3d32852907e1677e4f

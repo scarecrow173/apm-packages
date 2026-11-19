@@ -46,10 +46,24 @@ test("upstream.yml pins a full 40-hex commit for cursor/plugins", () => {
 
 test("manifest carries the upstream pin only as a copilot-scoped devDependency", () => {
   assert.equal(manifest.name, "pstack-devin");
+  const deps = ((manifest.dependencies as { apm?: string[] } | undefined)
+    ?.apm ?? []) as string[];
   assert.ok(
-    !("dependencies" in manifest),
+    deps.every(
+      (d) =>
+        !d
+          .split("#")[0]
+          .endsWith(`/${upstream.upstream.path}`),
+    ),
     "upstream tree must not ship via `dependencies:`",
   );
+  for (const d of deps) {
+    assert.equal(
+      d.split("#")[1],
+      upstream.upstream.commit,
+      `dependency ${d} must pin to the upstream commit`,
+    );
+  }
   const dev = (manifest.devDependencies as { apm: unknown[] }).apm;
   assert.equal(dev.length, 1);
   const dep = dev[0] as Record<string, unknown>;
@@ -70,10 +84,16 @@ test("lockfile attests the same commit as upstream.yml", () => {
     dependencies: Array<Record<string, unknown>>;
     deployments?: unknown[];
   };
-  assert.equal(lock.dependencies.length, 1);
-  const entry = lock.dependencies[0];
-  assert.equal(entry.resolved_commit, upstream.upstream.commit);
-  assert.equal(entry.is_dev, true);
+  for (const e of lock.dependencies) {
+    assert.equal(
+      e.resolved_commit,
+      upstream.upstream.commit,
+      `every lock entry must attest the upstream commit, got ${e.name}`,
+    );
+  }
+  const devEntries = lock.dependencies.filter((e) => e.is_dev === true);
+  assert.equal(devEntries.length, 1);
+  const entry = devEntries[0];
   assert.equal(entry.package_type, "agent_plugin");
   assert.deepEqual(entry.target_subset, ["copilot"]);
   assert.ok(
@@ -82,23 +102,26 @@ test("lockfile attests the same commit as upstream.yml", () => {
     "lockfile must attest content_hash",
   );
   // `apm install` records deployments of this package's own `.apm`
-  // primitive into `.claude/` and `.agents/` (gitignored side-effects) —
-  // legitimate local bookkeeping. What the contract forbids is a
-  // deployment of the UPSTREAM tree: any path outside the local skill's
-  // deployment roots means upstream content shipped as installed files
-  // rather than the built devin-plugin tree.
+  // primitive and of the declared cursor-team-kit skill dependencies
+  // into `.claude/` and `.agents/` (gitignored side-effects) — legitimate
+  // local bookkeeping. What the contract forbids is a deployment of the
+  // UPSTREAM tree: any path outside the local skill's and the three
+  // declared deps' deployment roots means upstream content shipped as
+  // installed files rather than the built devin-plugin tree.
   const deployments = (lock.deployments ?? []) as Array<{
     value?: unknown;
   }>;
   const foreign = deployments.filter(
     (d) =>
       typeof d.value !== "string" ||
-      !/^\.(claude|agents)\/skills\/setup-pstack-devin(?:\/|$)/.test(d.value),
+      !/^\.(claude|agents)\/skills\/(setup-pstack-devin|deslop|control-cli|control-ui)(?:\/|$)/.test(
+        d.value,
+      ),
   );
   assert.deepEqual(
     foreign,
     [],
-    "lockfile deployments must cover only the local .apm skill — " +
-      "the upstream tree is built, not installed",
+    "lockfile deployments must cover only the local .apm skill and the " +
+      "three declared cursor-team-kit deps — the upstream tree is built, not installed",
   );
 });

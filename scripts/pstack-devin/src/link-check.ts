@@ -52,8 +52,11 @@ const OUTSIDE_NAMES = new Map<string, RefKind>([
   ["add-plugin", "builtin"],
   ["in-cloud", "builtin"],
   // Other plugins' commands — deslop/control-cli/control-ui ship in
-  // cursor-team-kit; /orchestrate is another plugin's skill per poteto-help.
+  // cursor-team-kit and reach APM consumers as claude_skill deps outside
+  // this tree; /orchestrate is another plugin's skill per poteto-help.
   ["deslop", "external"],
+  ["control-cli", "external"],
+  ["control-ui", "external"],
   ["visualize", "external"],
   ["orchestrate", "external"],
   // Literal metavariables — adapter tables' `/name`, "the **name** skill".

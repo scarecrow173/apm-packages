@@ -5,6 +5,7 @@ import path from "node:path";
 import { loadBuildConfig } from "../src/config.js";
 import {
   applyUpdate,
+  setDepRefs,
   setDevDepRef,
   setObservedFields,
   setUpstreamCommit,
@@ -90,6 +91,47 @@ test("setDevDepRef throws when the apm devDep has no ref", () => {
     /ref/,
   );
   assert.throws(() => setDevDepRef("name: x\n", SHA_B), /devDependencies/);
+});
+
+// --- setDepRefs ----------------------------------------------------------
+
+test("setDepRefs rewrites every shorthand #ref under dependencies.apm", () => {
+  const yaml = [
+    "dependencies:",
+    "  apm:",
+    "    # a comment stays",
+    `    - cursor/plugins/cursor-team-kit/skills/deslop#${SHA_A}`,
+    `    - cursor/plugins/cursor-team-kit/skills/control-ui#${SHA_A}`,
+    "devDependencies:",
+    "  apm:",
+    `    - git: x`,
+    `      ref: ${SHA_A}`,
+    "",
+  ].join("\n");
+  const out = setDepRefs(yaml, SHA_B);
+  assert.equal(out.match(new RegExp(`#${SHA_B}`, "g"))?.length, 2);
+  assert.ok(out.includes(`ref: ${SHA_A}`), "devDep ref untouched");
+  assert.ok(out.includes("# a comment stays"));
+});
+
+test("setDepRefs is a no-op without dependencies or hex refs", () => {
+  const yaml = [
+    "devDependencies:",
+    "  apm:",
+    `    - git: x`,
+    `      ref: ${SHA_A}`,
+  ].join("\n");
+  assert.equal(setDepRefs(yaml, SHA_B), yaml);
+  const branchRef = [
+    "dependencies:",
+    "  apm:",
+    "    - owner/repo/skills/x#main",
+  ].join("\n");
+  assert.equal(
+    setDepRefs(branchRef, SHA_B),
+    branchRef,
+    "non-hex refs are left for config.ts to reject loudly",
+  );
 });
 
 // --- setObservedFields ---------------------------------------------------
