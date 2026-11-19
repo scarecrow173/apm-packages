@@ -89,10 +89,9 @@ finalization. Undisclosed; provenance on the time axis is ambiguous, so
    --actor devin*` works; design `status: approved` is accepted. Both
    river and quarry self-approved where the docs expect a human yield.
    Confirmed by the package owner as designed: approval binds provenance,
-   not authority. Follow-up open: the design-doc SKILL.md line "agents
-   must not self-approve" contradicts this and is the sole basis for
-   river's gate-honesty deduction — if self-approval is lawful, the doc
-   text (and future rubric scoring) should say so.
+   not authority, and auto-approval is planned (the "agents must not
+   self-approve" line in design-doc SKILL.md will be revised — river's
+   deduction reflects the text as written this round).
 2. **Migration apply is fully agent-executable — intended.** Fifteen
    semantic resolutions can be authored and applied with no human
    checkpoint. Confirmed as designed: honesty comes from hash-pinning,
